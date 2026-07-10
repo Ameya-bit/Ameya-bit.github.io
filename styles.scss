@@ -311,9 +311,11 @@ body {
   }
 }
 
-// Post title block: room above the title, and before the body begins
-.quarto-title-block {
-  margin-top: clamp(2.5rem, 1.5rem + 4vw, 5rem);
+// Post title block: room above the title, and before the body begins.
+// Use padding-top (not margin-top) so the space is not eaten by margin
+// collapsing with the content container above it.
+#title-block-header.quarto-title-block {
+  padding-top: clamp(2.5rem, 1.5rem + 4vw, 5rem);
   margin-bottom: clamp(3.5rem, 2.5rem + 3vw, 5.5rem);
 
   .quarto-title h1.title {
