@@ -1,21 +1,28 @@
 project:
   type: website
+  output-dir: _site
 
 website:
   title: "Ameya Panchal"
   site-url: "https://ameya-bit.github.io"
   description: "Mechanistic interpretability and machine learning notes."
   navbar:
+    background: transparent
     title: "Ameya Panchal"
     left:
-      - text: "Posts"
+      - text: "Writing"
         href: index.qmd
     right:
       - icon: github
         href: https://github.com/Ameya-bit
         aria-label: GitHub
+      - icon: linkedin
+        href: https://www.linkedin.com/in/ameya-bit
+        aria-label: LinkedIn
   page-footer:
-    center: "© 2026 Ameya Panchal"
+    border: false
+    left: "© 2026 Ameya Panchal"
+    right: "Built with Quarto"
 
 format:
   html:
@@ -27,3 +34,8 @@ format:
     code-copy: true
     link-external-newwindow: true
     html-math-method: katex
+    include-in-header:
+      - text: |
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">

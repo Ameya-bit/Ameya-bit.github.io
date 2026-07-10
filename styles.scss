@@ -1,73 +1,381 @@
 /*-- scss:defaults --*/
 
-// Barebones LessWrong-adjacent placeholder theme.
-// Deliberately minimal — the real visual direction replaces this file.
+// ---------------------------------------------------------------------------
+// Design language: editorial-architectural.
+// White-paper ground (Warren & Mahoney), minimalist grotesque + reading serif
+// (LessWrong structure), sparse drops of color (wam.studio), snappy motion and
+// native view transitions (cobo fluidity). Type kept smaller and airier than
+// wam. This file is the whole visual direction — iterate here.
+// ---------------------------------------------------------------------------
 
-// Palette
-$lw-green: #5f9b65;
-$lw-green-dark: #4c7f52;
-$body-bg: #fdfdfc;
-$body-color: #2b2b2b;
-$link-color: $lw-green-dark;
+// Type families
+$font-family-sans-serif: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  system-ui, sans-serif;
+$font-family-serif: "Newsreader", Charter, Georgia, "Times New Roman", serif;
+$font-family-base: $font-family-serif; // long-form reads serif
+$headings-font-family: $font-family-sans-serif; // chrome + headings read grotesque
+$headings-font-weight: 600;
+
+$font-size-root: 17px;
+$line-height-base: 1.7;
+
+// Bootstrap link + body hooks (real tokens live in :root below)
+$body-bg: #fbfaf7;
+$body-color: #24262b;
+$link-color: #3f7a52;
 $link-decoration: none;
 
-// Typography: serif for reading, system sans for chrome
-$font-family-serif: "Charter", "Georgia", "Times New Roman", serif;
-$font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI",
-  "Helvetica Neue", Arial, sans-serif;
-$font-family-base: $font-family-serif;
-$headings-font-family: $font-family-sans-serif;
-$headings-font-weight: 600;
-$font-size-root: 18px;
-$line-height-base: 1.65;
-
-// Layout
-$grid-body-width: 720px;
+// Wider gutters; content is constrained per-region in rules, not globally
+$grid-body-width: 900px;
 
 /*-- scss:rules --*/
 
+// ---- Design tokens --------------------------------------------------------
 :root {
-  --space-block: 2rem;
+  // Ground + ink (warm white, cool near-black)
+  --bg: oklch(98.6% 0.004 95);
+  --bg-raised: oklch(100% 0 0);
+  --ink: oklch(26% 0.012 265);
+  --ink-soft: oklch(48% 0.012 265);
+  --ink-faint: oklch(62% 0.01 265);
+  --rule: oklch(90% 0.006 95);
+
+  // Semantic accent — a quiet LessWrong-green through-line
+  --accent: oklch(58% 0.09 155);
+  --accent-strong: oklch(50% 0.1 155);
+
+  // Drops of color — decorative punctuation only (wam.studio)
+  --drop-coral: oklch(72% 0.17 30);
+  --drop-cobalt: oklch(62% 0.16 250);
+  --drop-green: oklch(74% 0.15 150);
+  --drop-amber: oklch(82% 0.14 82);
+
+  // Rhythm
+  --space-section: clamp(4.5rem, 3rem + 8vw, 9rem);
+  --measure: 68ch;
+  --shell: 1160px;
+
+  // Motion — snappy, never a wait
+  --dur-fast: 140ms;
+  --dur: 200ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-// Content column reads like an essay, not a dashboard
-main.content {
-  p,
-  li {
-    font-size: 1.05rem;
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+// ---- Native cross-document view transitions (cobo fluidity) ---------------
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur);
+  animation-timing-function: var(--ease);
+}
+
+// ---- Navbar: architectural, unobtrusive -----------------------------------
+.navbar {
+  background: color-mix(in oklab, var(--bg) 82%, transparent) !important;
+  backdrop-filter: saturate(1.2) blur(8px);
+  border-bottom: 1px solid var(--rule);
+
+  .navbar-brand {
+    font-family: $font-family-sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
-  a {
-    color: $lw-green-dark;
-    border-bottom: 1px solid rgba($lw-green, 0.35);
-    transition: border-color 150ms ease, color 150ms ease;
+  .nav-link {
+    font-family: $font-family-sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--ink-soft) !important;
+    transition: color var(--dur-fast) var(--ease);
 
     &:hover,
     &:focus-visible {
-      color: $lw-green;
-      border-bottom-color: $lw-green;
+      color: var(--ink) !important;
     }
   }
 }
 
-// Post title block
-.quarto-title h1.title {
-  font-family: $font-family-serif;
-  font-weight: 700;
-  line-height: 1.2;
+// ---- Hero / about ---------------------------------------------------------
+.hero {
+  position: relative;
+  max-width: var(--shell);
+  margin-inline: auto;
+  padding-block: clamp(4rem, 3rem + 6vw, 7.5rem) var(--space-section);
+  padding-inline: clamp(1.25rem, 5vw, 2rem);
+  overflow: clip;
 }
 
-// Figures: quiet captions, breathing room
-.figure,
-figure {
-  margin-block: var(--space-block);
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 46rem;
+}
 
-  figcaption {
+.hero-eyebrow {
+  font-family: $font-family-sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 1.5rem;
+}
+
+.hero-headline {
+  font-family: $font-family-serif;
+  font-weight: 500;
+  font-size: clamp(2rem, 1.2rem + 3.4vw, 3.4rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 1.75rem;
+  text-wrap: balance;
+}
+
+.hero-lede {
+  font-family: $font-family-sans-serif;
+  font-size: clamp(1rem, 0.96rem + 0.3vw, 1.15rem);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: 40rem;
+  margin: 0 0 2.25rem;
+}
+
+.hero-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+
+  a {
     font-family: $font-family-sans-serif;
-    font-size: 0.85rem;
-    color: #6b6b6b;
-    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+    padding-bottom: 2px;
+    border-bottom: 1.5px solid var(--rule);
+    transition: border-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease);
+
+    &:hover,
+    &:focus-visible {
+      color: var(--accent-strong);
+      border-bottom-color: var(--accent);
+    }
   }
+}
+
+// Drops of color — sparse, snappy entrance, then still
+.hero-drops {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.drop {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(0.3px);
+  opacity: 0;
+  transform: scale(0.6);
+  animation: drop-in var(--dur) var(--ease) forwards;
+}
+
+.drop--coral {
+  width: 14px;
+  height: 14px;
+  background: var(--drop-coral);
+  top: 12%;
+  right: 14%;
+  animation-delay: 60ms;
+}
+
+.drop--cobalt {
+  width: 10px;
+  height: 10px;
+  background: var(--drop-cobalt);
+  top: 30%;
+  right: 30%;
+  animation-delay: 130ms;
+}
+
+.drop--green {
+  width: 20px;
+  height: 20px;
+  background: var(--drop-green);
+  bottom: 24%;
+  right: 20%;
+  animation-delay: 200ms;
+}
+
+.drop--amber {
+  width: 12px;
+  height: 12px;
+  background: var(--drop-amber);
+  bottom: 34%;
+  right: 40%;
+  animation-delay: 270ms;
+}
+
+@keyframes drop-in {
+  to {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+// ---- Writing section (listing) --------------------------------------------
+.writing-section {
+  max-width: var(--shell);
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 5vw, 2rem);
+  padding-bottom: var(--space-section);
+
+  > h2 {
+    font-family: $font-family-sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding-bottom: 1.25rem;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+}
+
+.quarto-listing {
+  .quarto-post {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: 1.5rem;
+    align-items: baseline;
+    padding-block: 1.75rem;
+    border-bottom: 1px solid var(--rule);
+    transition: transform var(--dur-fast) var(--ease);
+
+    &:hover {
+      transform: translateX(4px);
+
+      .listing-title {
+        color: var(--accent-strong);
+      }
+    }
+  }
+
+  .metadata {
+    font-family: $font-family-sans-serif;
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+  }
+
+  .listing-title {
+    font-family: $font-family-serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  .listing-description {
+    font-family: $font-family-sans-serif;
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  .listing-reading-time {
+    color: var(--ink-faint);
+  }
+}
+
+@media (max-width: 620px) {
+  .quarto-listing .quarto-post {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+}
+
+// ---- Long-form post body (LessWrong reading column) -----------------------
+#quarto-content main.content {
+  a {
+    color: var(--accent-strong);
+    border-bottom: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+    transition: border-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease);
+
+    &:hover,
+    &:focus-visible {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+  }
+
+  p,
+  li {
+    font-size: 1.06rem;
+  }
+}
+
+.quarto-title-block .quarto-title h1.title {
+  font-family: $font-family-serif;
+  font-weight: 600;
+  font-size: clamp(1.9rem, 1.3rem + 2.2vw, 2.7rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.quarto-title-block .description,
+.quarto-title-block .subtitle {
+  font-family: $font-family-sans-serif;
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+}
+
+// Post meta row (date / reading time)
+.quarto-title-meta {
+  font-family: $font-family-sans-serif;
+  color: var(--ink-faint);
+}
+
+// Figures: quiet captions, room to breathe
+figure,
+.quarto-figure {
+  margin-block: clamp(2rem, 1.5rem + 2vw, 3.25rem);
+}
+
+figure img,
+.quarto-figure img {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+
+figcaption,
+.figure-caption {
+  font-family: $font-family-sans-serif !important;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin-top: 0.75rem;
 }
 
 img {
@@ -75,29 +383,65 @@ img {
   height: auto;
 }
 
-// Listing cards: plain rows, LW-feed flavored
-.quarto-listing .list .quarto-post {
-  border-bottom: 1px solid #e6e4de;
-  padding-block: 1.25rem;
+// TOC: light, sans, architectural
+#TOC,
+.sidebar nav[role="doc-toc"] {
+  font-family: $font-family-sans-serif;
+  font-size: 0.85rem;
 
-  .listing-title {
-    font-family: $font-family-serif;
-    font-size: 1.35rem;
-    font-weight: 700;
-  }
+  .nav-link {
+    color: var(--ink-faint);
+    border-left: 2px solid transparent;
+    transition: color var(--dur-fast) var(--ease),
+      border-color var(--dur-fast) var(--ease);
 
-  .listing-description {
-    color: #555;
+    &:hover,
+    &.active {
+      color: var(--ink);
+      border-left-color: var(--accent);
+    }
   }
 }
 
-// Navbar: unobtrusive
-.navbar {
-  background-color: $body-bg;
-  border-bottom: 1px solid #e6e4de;
+// Categories as quiet pills
+.quarto-category {
+  font-family: $font-family-sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+}
 
-  .navbar-brand,
-  .nav-link {
-    font-family: $font-family-sans-serif;
+// Footer
+.nav-footer {
+  font-family: $font-family-sans-serif;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule);
+  background: transparent;
+}
+
+// ---- Motion + accessibility guards ----------------------------------------
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .drop {
+    animation: none;
+    opacity: 0.9;
+    transform: none;
+  }
+
+  .quarto-listing .quarto-post:hover {
+    transform: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
   }
 }
