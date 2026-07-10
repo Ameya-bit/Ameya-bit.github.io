@@ -1,6 +1,7 @@
 ---
 pagetitle: "Ameya Panchal"
 page-layout: full
+toc: false
 listing:
   id: writing
   contents: posts
@@ -13,29 +14,25 @@ listing:
 ---
 
 ```{=html}
-<section class="hero" aria-labelledby="hero-name">
-  <div class="hero-drops" aria-hidden="true">
-    <span class="drop drop--coral"></span>
-    <span class="drop drop--cobalt"></span>
-    <span class="drop drop--green"></span>
-    <span class="drop drop--amber"></span>
+<section class="hero-screen">
+  <div class="hero" aria-labelledby="hero-name">
+    <div class="hero-inner">
+      <p class="hero-eyebrow">Ameya Panchal</p>
+      <h1 id="hero-name" class="hero-headline">Currently, I train small models and take them apart to see what they learned.</h1>
+      <p class="hero-lede">Computer Science, Physics, and AI at Penn State (Schreyer Honors). I'm focused on AI interpretability, with a research background in physics-grade computation. This is where I write up what I find.</p>
+      <nav class="hero-links" aria-label="Profile links">
+        <a href="https://github.com/Ameya-bit">GitHub</a>
+        <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
+        <a href="mailto:ameyapanchal011@gmail.com">Email</a>
+        <a href="assets/Ameya_Panchal_Resume.pdf">Résumé</a>
+      </nav>
+    </div>
   </div>
-  <div class="hero-inner">
-    <p class="hero-eyebrow">Ameya Panchal</p>
-    <h1 id="hero-name" class="hero-headline">I train small models and take them apart to see what they learned.</h1>
-    <p class="hero-lede">Computer Science &amp; Physics at Penn State, Schreyer Honors. Undergraduate researcher in AI and computational modeling — Monte Carlo methods, statistical simulation, and mechanistic interpretability. This is where I write up what I find.</p>
-    <nav class="hero-links" aria-label="Profile links">
-      <a href="https://github.com/Ameya-bit">GitHub</a>
-      <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
-      <a href="mailto:ameyapanchal011@gmail.com">Email</a>
-      <a href="assets/Ameya_Panchal_Resume.pdf">Résumé</a>
-    </nav>
-  </div>
+  <p class="writing-cue">Writing</p>
 </section>
 ```
 
 ::: {.writing-section}
-## Writing
 
 ::: {#writing}
 :::

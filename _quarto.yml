@@ -9,9 +9,6 @@ website:
   navbar:
     background: transparent
     title: "Ameya Panchal"
-    left:
-      - text: "Writing"
-        href: index.qmd
     right:
       - icon: github
         href: https://github.com/Ameya-bit

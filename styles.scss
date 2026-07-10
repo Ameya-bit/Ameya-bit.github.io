@@ -1,11 +1,10 @@
 /*-- scss:defaults --*/
 
 // ---------------------------------------------------------------------------
-// Design language: editorial-architectural.
-// White-paper ground (Warren & Mahoney), minimalist grotesque + reading serif
-// (LessWrong structure), sparse drops of color (wam.studio), snappy motion and
-// native view transitions (cobo fluidity). Type kept smaller and airier than
-// wam. This file is the whole visual direction — iterate here.
+// Structure-first pass. Editorial-architectural bones: white-paper ground,
+// minimalist grotesque + reading serif (LessWrong structure), snappy motion and
+// native view transitions (cobo fluidity). Visual polish (color, texture,
+// TOC choreography) comes in the design phase — this file is deliberately quiet.
 // ---------------------------------------------------------------------------
 
 // Type families
@@ -19,20 +18,17 @@ $headings-font-weight: 600;
 $font-size-root: 17px;
 $line-height-base: 1.7;
 
-// Bootstrap link + body hooks (real tokens live in :root below)
 $body-bg: #fbfaf7;
 $body-color: #24262b;
 $link-color: #3f7a52;
 $link-decoration: none;
 
-// Wider gutters; content is constrained per-region in rules, not globally
 $grid-body-width: 900px;
 
 /*-- scss:rules --*/
 
 // ---- Design tokens --------------------------------------------------------
 :root {
-  // Ground + ink (warm white, cool near-black)
   --bg: oklch(98.6% 0.004 95);
   --bg-raised: oklch(100% 0 0);
   --ink: oklch(26% 0.012 265);
@@ -40,22 +36,13 @@ $grid-body-width: 900px;
   --ink-faint: oklch(62% 0.01 265);
   --rule: oklch(90% 0.006 95);
 
-  // Semantic accent — a quiet LessWrong-green through-line
   --accent: oklch(58% 0.09 155);
   --accent-strong: oklch(50% 0.1 155);
 
-  // Drops of color — decorative punctuation only (wam.studio)
-  --drop-coral: oklch(72% 0.17 30);
-  --drop-cobalt: oklch(62% 0.16 250);
-  --drop-green: oklch(74% 0.15 150);
-  --drop-amber: oklch(82% 0.14 82);
-
-  // Rhythm
-  --space-section: clamp(4.5rem, 3rem + 8vw, 9rem);
   --measure: 68ch;
   --shell: 1160px;
+  --nav-h: 3.75rem;
 
-  // Motion — snappy, never a wait
   --dur-fast: 140ms;
   --dur: 200ms;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -83,7 +70,7 @@ body {
   animation-timing-function: var(--ease);
 }
 
-// ---- Navbar: architectural, unobtrusive -----------------------------------
+// ---- Navbar ---------------------------------------------------------------
 .navbar {
   background: color-mix(in oklab, var(--bg) 82%, transparent) !important;
   backdrop-filter: saturate(1.2) blur(8px);
@@ -109,20 +96,25 @@ body {
   }
 }
 
-// ---- Hero / about ---------------------------------------------------------
-.hero {
-  position: relative;
+// ---- Landing: first screen holds the hero; "Writing" sits at its foot -----
+.hero-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - var(--nav-h));
   max-width: var(--shell);
   margin-inline: auto;
-  padding-block: clamp(4rem, 3rem + 6vw, 7.5rem) var(--space-section);
   padding-inline: clamp(1.25rem, 5vw, 2rem);
-  overflow: clip;
+}
+
+.hero {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
 }
 
 .hero-inner {
-  position: relative;
-  z-index: 1;
   max-width: 46rem;
+  padding-block: clamp(2rem, 6vh, 5rem);
 }
 
 .hero-eyebrow {
@@ -179,95 +171,39 @@ body {
   }
 }
 
-// Drops of color — sparse, snappy entrance, then still
-.hero-drops {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
+.writing-cue {
+  font-family: $font-family-sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-block: 1.5rem 2.25rem;
+  margin: 0;
 }
 
-.drop {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(0.3px);
-  opacity: 0;
-  transform: scale(0.6);
-  animation: drop-in var(--dur) var(--ease) forwards;
-}
-
-.drop--coral {
-  width: 14px;
-  height: 14px;
-  background: var(--drop-coral);
-  top: 12%;
-  right: 14%;
-  animation-delay: 60ms;
-}
-
-.drop--cobalt {
-  width: 10px;
-  height: 10px;
-  background: var(--drop-cobalt);
-  top: 30%;
-  right: 30%;
-  animation-delay: 130ms;
-}
-
-.drop--green {
-  width: 20px;
-  height: 20px;
-  background: var(--drop-green);
-  bottom: 24%;
-  right: 20%;
-  animation-delay: 200ms;
-}
-
-.drop--amber {
-  width: 12px;
-  height: 12px;
-  background: var(--drop-amber);
-  bottom: 34%;
-  right: 40%;
-  animation-delay: 270ms;
-}
-
-@keyframes drop-in {
-  to {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-}
-
-// ---- Writing section (listing) --------------------------------------------
+// ---- Writing list ---------------------------------------------------------
 .writing-section {
   max-width: var(--shell);
   margin-inline: auto;
   padding-inline: clamp(1.25rem, 5vw, 2rem);
-  padding-bottom: var(--space-section);
-
-  > h2 {
-    font-family: $font-family-sans-serif;
-    font-size: 0.82rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    padding-bottom: 1.25rem;
-    margin-bottom: 0;
-    border-bottom: 1px solid var(--rule);
-  }
+  padding-top: 1rem;
+  padding-bottom: clamp(5rem, 4rem + 6vw, 9rem);
 }
 
 .quarto-listing {
   .quarto-post {
     display: grid;
-    grid-template-columns: 8rem 1fr;
-    gap: 1.5rem;
+    grid-template-columns: 1fr 7rem;
+    gap: 2.5rem;
     align-items: baseline;
-    padding-block: 1.75rem;
+    padding-block: 2.25rem;
     border-bottom: 1px solid var(--rule);
     transition: transform var(--dur-fast) var(--ease);
+
+    &:first-child {
+      border-top: 1px solid var(--rule);
+    }
 
     &:hover {
       transform: translateX(4px);
@@ -278,28 +214,38 @@ body {
     }
   }
 
+  // title + description (wide, left)
+  .body {
+    grid-column: 1;
+  }
+
+  // date + reading time (narrow, right)
   .metadata {
+    grid-column: 2;
     font-family: $font-family-sans-serif;
     font-size: 0.82rem;
+    line-height: 1.6;
     color: var(--ink-faint);
+    text-align: right;
   }
 
   .listing-title {
     font-family: $font-family-serif;
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 500;
     line-height: 1.2;
     letter-spacing: -0.015em;
     color: var(--ink);
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.6rem;
     transition: color var(--dur-fast) var(--ease);
   }
 
   .listing-description {
     font-family: $font-family-sans-serif;
-    font-size: 0.98rem;
-    line-height: 1.55;
+    font-size: 1rem;
+    line-height: 1.6;
     color: var(--ink-soft);
+    max-width: 44rem;
   }
 
   .listing-reading-time {
@@ -310,11 +256,17 @@ body {
 @media (max-width: 620px) {
   .quarto-listing .quarto-post {
     grid-template-columns: 1fr;
-    gap: 0.4rem;
+    gap: 0.5rem;
+
+    .metadata {
+      grid-column: 1;
+      text-align: left;
+      order: -1;
+    }
   }
 }
 
-// ---- Long-form post body (LessWrong reading column) -----------------------
+// ---- Long-form post body (LessWrong reading rhythm) -----------------------
 #quarto-content main.content {
   a {
     color: var(--accent-strong);
@@ -331,27 +283,57 @@ body {
 
   p,
   li {
-    font-size: 1.06rem;
+    font-size: 1.14rem;
+    line-height: 1.8;
+  }
+
+  p {
+    margin-bottom: 1.5em;
+  }
+
+  ul,
+  ol {
+    margin-bottom: 1.5em;
+  }
+
+  li + li {
+    margin-top: 0.4em;
+  }
+
+  h2 {
+    margin-top: 3.5rem;
+    margin-bottom: 1.1rem;
+  }
+
+  h3 {
+    margin-top: 2.75rem;
+    margin-bottom: 0.9rem;
   }
 }
 
-.quarto-title-block .quarto-title h1.title {
-  font-family: $font-family-serif;
-  font-weight: 600;
-  font-size: clamp(1.9rem, 1.3rem + 2.2vw, 2.7rem);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
+// Post title block: room before the body begins
+.quarto-title-block {
+  margin-bottom: 3rem;
+
+  .quarto-title h1.title {
+    font-family: $font-family-serif;
+    font-weight: 600;
+    font-size: clamp(1.9rem, 1.3rem + 2.2vw, 2.7rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin-bottom: 0.75rem;
+  }
+
+  .description,
+  .subtitle {
+    font-family: $font-family-sans-serif;
+    font-size: 1.1rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
 }
 
-.quarto-title-block .description,
-.quarto-title-block .subtitle {
-  font-family: $font-family-sans-serif;
-  font-size: 1.1rem;
-  color: var(--ink-soft);
-}
-
-// Post meta row (date / reading time)
 .quarto-title-meta {
   font-family: $font-family-sans-serif;
   color: var(--ink-faint);
@@ -360,7 +342,7 @@ body {
 // Figures: quiet captions, room to breathe
 figure,
 .quarto-figure {
-  margin-block: clamp(2rem, 1.5rem + 2vw, 3.25rem);
+  margin-block: clamp(2.5rem, 2rem + 2.5vw, 4rem);
 }
 
 figure img,
@@ -373,9 +355,9 @@ figcaption,
 .figure-caption {
   font-family: $font-family-sans-serif !important;
   font-size: 0.86rem;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--ink-faint);
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
 }
 
 img {
@@ -383,7 +365,7 @@ img {
   height: auto;
 }
 
-// TOC: light, sans, architectural
+// TOC: light and unobtrusive (design phase will make it recede like LW)
 #TOC,
 .sidebar nav[role="doc-toc"] {
   font-family: $font-family-sans-serif;
@@ -428,12 +410,6 @@ img {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-
-  .drop {
-    animation: none;
-    opacity: 0.9;
-    transform: none;
   }
 
   .quarto-listing .quarto-post:hover {
