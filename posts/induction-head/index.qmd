@@ -9,7 +9,7 @@ reading-time: true
 
 *Confident in the measurements — copying score, OV logits, attention patterns. More exploratory on the interpretations of what the head "knows," two of which I ended up disconfirming myself. My first mechanistic interpretability post; corrections welcome.*
 
-I trained a small character level transformer on Nietzsche texts, and now I interpret on it. Numbers can be flattering, but it's the control that breaks, diverts, or makes a conclusion. In trying to understand a particular head in a custom transformer, the conclusion changed frequently. We chased a copying head, quotation grammar, and parenthesis grammar, with the latter two disconfirmed. The takeaway is having identified a copying head with the OV circuit half of a bracket-completion mechanism, but a QK circuit insufficient to route the attention needed to complete it.
+I trained a small character level transformer on Nietzsche texts, named it Niche, and now I interpret on it. Feel free to ask them questions on highlighted excerpts or in the bottom right. Numbers can be flattering, but it's the control that breaks, diverts, or makes a conclusion. In trying to understand a particular head in a custom transformer, the conclusion changed frequently. We chased a copying head, quotation grammar, and parenthesis grammar, with the latter two disconfirmed. The takeaway is having identified a copying head with the OV circuit half of a bracket-completion mechanism, but a QK circuit insufficient to route the attention needed to complete it.
 
 ## The setup
 
@@ -64,3 +64,10 @@ This could be learned parenthesis grammar. The most notable is the 0.556, when i
 ## What the head actually is
 
 **As we said initially, this is a copying head with an OV circuit that knows how to handle parentheses, but the QK circuit is blind to bracket structure, and thus can't utilize it properly.** It's a small, concrete example of a mechanism sitting half-built in the weights — the OV circuit here already "knows" bracket completion — yet functionally inert because a second circuit never learned to feed it: the kind of latent, partial structure worth watching for when we reason about what a model can and can't do.
+
+*The model this post dissects is awake on this page. Select any passage and ask Niche to explain it — the stripes in the panel are B5H0's attention, live.*
+
+```{=html}
+<link rel="stylesheet" href="/assets/niche/ask-niche.css">
+<script type="module" src="/assets/niche/ask-niche.js"></script>
+```

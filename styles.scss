@@ -1,51 +1,52 @@
 /*-- scss:defaults --*/
 
 // ---------------------------------------------------------------------------
-// Structure-first pass. Editorial-architectural bones: white-paper ground,
-// minimalist grotesque + reading serif (LessWrong structure), snappy motion and
-// native view transitions (cobo fluidity). Visual polish (color, texture,
-// TOC choreography) comes in the design phase — this file is deliberately quiet.
+// Layer 1: the Emil base (see design/direction.md).
+// One type size (16px) for the entire site — hierarchy is weight, warm-gray
+// steps, and whitespace only. 644px measure. No chromatic color, no accent,
+// no page motion, instant hovers. Everything else (TOC minimap, whimsy,
+// transitions) layers on top of this later, one at a time.
 // ---------------------------------------------------------------------------
 
-// Type families
-$font-family-sans-serif: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI",
+$font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
   system-ui, sans-serif;
-$font-family-serif: "Newsreader", Charter, Georgia, "Times New Roman", serif;
-$font-family-base: $font-family-serif; // long-form reads serif
-$headings-font-family: $font-family-sans-serif; // chrome + headings read grotesque
+$font-family-monospace: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+$font-family-base: $font-family-sans-serif;
+$headings-font-family: $font-family-sans-serif;
 $headings-font-weight: 600;
 
-$font-size-root: 17px;
-$line-height-base: 1.7;
+$font-size-root: 16px;
+$line-height-base: 1.5;
 
-$body-bg: #fbfaf7;
-$body-color: #24262b;
-$link-color: #3f7a52;
-$link-decoration: none;
+$body-bg: #fdfdfc;
+$body-color: #21201c;
+$link-color: #21201c;
+$link-decoration: underline;
 
-$grid-body-width: 900px;
+// Equal sidebar/margin widths keep the article column truly centered while
+// the TOC occupies the left column as a normal sticky sidebar.
+$grid-body-width: 692px;
+$grid-sidebar-width: 300px;
+$grid-margin-width: 300px;
 
 /*-- scss:rules --*/
 
-// ---- Design tokens --------------------------------------------------------
+// ---- Tokens: warm 12-step gray (Radix Sand), no chroma --------------------
 :root {
-  --bg: oklch(98.6% 0.004 95);
-  --bg-raised: oklch(100% 0 0);
-  --ink: oklch(26% 0.012 265);
-  --ink-soft: oklch(48% 0.012 265);
-  --ink-faint: oklch(62% 0.01 265);
-  --rule: oklch(90% 0.006 95);
+  --gray-100: #fdfdfc; // page bg
+  --gray-200: #f9f9f8; // raised surfaces (code bg)
+  --gray-300: #f1f0ef;
+  --gray-400: #e9e9e7; // borders
+  --gray-500: #e2e1de; // selection
+  --gray-800: #bcbbb5; // link underlines at rest
+  --gray-900: #8d8d86; // link underlines on hover
+  --gray-1000: #82827c; // tertiary text (dates, captions)
+  --gray-1100: #63635e; // secondary text (descriptions)
+  --gray-1200: #21201c; // ink
 
-  --accent: oklch(58% 0.09 155);
-  --accent-strong: oklch(50% 0.1 155);
-
-  --measure: 68ch;
-  --shell: 1160px;
-  --nav-h: 3.75rem;
-
-  --dur-fast: 140ms;
-  --dur: 200ms;
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --hover-fill: #f5f4f4;
+  --measure-pad: 24px;
+  --shell: 1160px; // homepage-only wide layout
 }
 
 html {
@@ -53,54 +54,236 @@ html {
 }
 
 body {
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--gray-100);
+  color: var(--gray-1200);
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv01", "ss03";
+  font-variant-ligatures: none;
 }
 
-// ---- Native cross-document view transitions (cobo fluidity) ---------------
-@view-transition {
-  navigation: auto;
+::selection {
+  background: var(--gray-500);
 }
 
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: var(--dur);
-  animation-timing-function: var(--ease);
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--gray-100), 0 0 0 4px var(--gray-1100);
+  border-radius: 4px;
 }
 
-// ---- Navbar ---------------------------------------------------------------
+// ---- Flat type scale: every heading is body size, weight carries rank -----
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-size: 1rem;
+  line-height: 1.65;
+  letter-spacing: 0;
+  color: var(--gray-1200);
+}
+
+h1, .h1 { font-weight: 600; }
+h2, .h2 { font-weight: 550; }
+h3, .h3, h4, .h4 { font-weight: 500; }
+
+// ---- Masthead (navbar stripped to a name in the column) --------------------
 .navbar {
-  background: color-mix(in oklab, var(--bg) 82%, transparent) !important;
-  backdrop-filter: saturate(1.2) blur(8px);
-  border-bottom: 1px solid var(--rule);
+  background: transparent !important;
+  border: none;
+  box-shadow: none;
+  padding-block: 2rem 0;
 
-  .navbar-brand {
-    font-family: $font-family-sans-serif;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+  > .container-fluid {
+    max-width: $grid-body-width;
+    margin-inline: auto;
+    padding-inline: var(--measure-pad);
   }
 
-  .nav-link {
-    font-family: $font-family-sans-serif;
-    font-size: 0.9rem;
+  // On the homepage the masthead tracks the wide hero shell instead
+  body:has(.hero-screen) & > .container-fluid {
+    max-width: var(--shell);
+    padding-inline: clamp(1.25rem, 5vw, 2rem);
+  }
+
+  .navbar-brand-container {
+    margin: 0 !important; // Quarto's mx-auto centers the brand; pin it to the column edge
+  }
+
+  .navbar-brand {
+    font-size: 1rem;
     font-weight: 500;
-    color: var(--ink-soft) !important;
-    transition: color var(--dur-fast) var(--ease);
+    color: var(--gray-1200);
+    padding: 0;
+    margin: 0;
+  }
+
+  .navbar-toggler {
+    display: none;
+  }
+}
+
+// ---- Layout ------------------------------------------------------------------
+// The page grid stays intact (symmetric widths set in the defaults above), so
+// Quarto's own sidebar/scroll logic keeps working; we only pad the measure.
+main.content {
+  padding-inline: var(--measure-pad);
+}
+
+body:has(.hero-screen) main.content {
+  padding-inline: 0; // hero and writing shells manage their own padding
+}
+
+// ---- Prose ------------------------------------------------------------------
+#quarto-content main.content {
+  p,
+  li {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: rgba(33, 32, 28, 0.9);
+  }
+
+  p {
+    margin-bottom: 26px;
+  }
+
+  ul,
+  ol {
+    margin-bottom: 26px;
+    padding-left: 1.25rem;
+  }
+
+  li + li {
+    margin-top: 0.5rem;
+  }
+
+  a {
+    color: var(--gray-1200);
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-decoration-color: var(--gray-800);
+    text-underline-position: from-font;
+    text-underline-offset: 2px;
 
     &:hover,
     &:focus-visible {
-      color: var(--ink) !important;
+      text-decoration-color: var(--gray-900);
     }
+  }
+
+  h2 {
+    margin-top: 56px;
+    margin-bottom: 20px;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  h3 {
+    margin-top: 40px;
+    margin-bottom: 16px;
   }
 }
 
-// ---- Landing: first screen holds the hero; "Writing" sits at its foot -----
+// ---- Post title block: flat title, gray metadata, generous air -------------
+#title-block-header.quarto-title-block {
+  padding-top: 64px;
+  margin-bottom: 56px;
+
+  .quarto-title h1.title {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.65;
+    letter-spacing: 0;
+    margin-bottom: 12px;
+  }
+
+  .description,
+  .subtitle {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--gray-1100);
+    margin-bottom: 0;
+  }
+}
+
+.quarto-title-meta,
+.quarto-title-meta-heading,
+.quarto-title-meta-contents {
+  font-size: 1rem;
+  color: var(--gray-1000);
+}
+
+.quarto-title-meta-heading {
+  display: none; // "Published" label is noise; the date speaks for itself
+}
+
+#title-block-header .quarto-categories,
+.quarto-title .quarto-categories {
+  display: none; // no pills in the base layer
+}
+
+// ---- Code -------------------------------------------------------------------
+p code:not(.sourceCode),
+li code:not(.sourceCode),
+td code:not(.sourceCode) {
+  font-size: 0.857em;
+  background: var(--gray-200);
+  border: 1px solid var(--gray-400);
+  border-radius: 6px;
+  padding: 2px 4px;
+  color: var(--gray-1200);
+}
+
+div.sourceCode {
+  background: var(--gray-200);
+  border: 1px solid var(--gray-400);
+  border-radius: 8px;
+  margin-block: 32px;
+
+  pre.sourceCode {
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 16px;
+    max-height: 332px;
+    overflow: auto;
+  }
+}
+
+// ---- Figures & math ---------------------------------------------------------
+figure,
+.quarto-figure {
+  margin-block: 32px;
+}
+
+figure img,
+.quarto-figure img {
+  border: 1px solid var(--gray-400);
+  border-radius: 8px;
+}
+
+figcaption,
+.figure-caption {
+  font-size: 1rem !important;
+  line-height: 1.65;
+  color: var(--gray-1000);
+  margin-top: 12px;
+  text-align: left;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.katex-display {
+  margin: 32px 0;
+}
+
+// ---- Homepage: previous hero layout, Emil materials -------------------------
+// The homepage alone breaks the narrow column: full-viewport hero + wide
+// writing list. Everything is still built from the Emil system (Inter, sand
+// grays, underline links, instant hovers, no accent).
 .hero-screen {
   display: flex;
   flex-direction: column;
-  min-height: calc(100svh - var(--nav-h));
+  min-height: calc(100svh - 9.5rem); // viewport minus masthead, so the Writing cue peeks above the fold
   max-width: var(--shell);
   margin-inline: auto;
   padding-inline: clamp(1.25rem, 5vw, 2rem);
@@ -117,35 +300,23 @@ body {
   padding-block: clamp(2rem, 6vh, 5rem);
 }
 
-.hero-eyebrow {
-  font-family: $font-family-sans-serif;
-  font-size: 0.82rem;
+// Scoped under the content id so these outrank the prose p rules
+#quarto-content main.content .hero-headline {
   font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-bottom: 1.5rem;
-}
-
-.hero-headline {
-  font-family: $font-family-serif;
-  font-weight: 500;
-  font-size: clamp(2rem, 1.2rem + 3.4vw, 3.4rem);
+  font-size: clamp(2rem, 1.2rem + 3vw, 3.25rem);
   line-height: 1.12;
   letter-spacing: -0.02em;
-  color: var(--ink);
-  margin: 0 0 1.75rem;
+  color: var(--gray-1200);
+  margin: 0 0 28px;
   text-wrap: balance;
 }
 
-.hero-lede {
-  font-family: $font-family-sans-serif;
-  font-size: clamp(1rem, 0.96rem + 0.3vw, 1.15rem);
-  font-weight: 400;
+#quarto-content main.content .hero-lede {
+  font-size: 1rem;
   line-height: 1.65;
-  color: var(--ink-soft);
+  color: var(--gray-1100);
   max-width: 40rem;
-  margin: 0 0 2.25rem;
+  margin: 0 0 36px;
 }
 
 .hero-links {
@@ -154,109 +325,115 @@ body {
   gap: 0.5rem 1.75rem;
 
   a {
-    font-family: $font-family-sans-serif;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--ink);
-    padding-bottom: 2px;
-    border-bottom: 1.5px solid var(--rule);
-    transition: border-color var(--dur-fast) var(--ease),
-      color var(--dur-fast) var(--ease);
+    font-size: 1rem;
+    color: var(--gray-1200);
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-decoration-color: var(--gray-800);
+    text-underline-position: from-font;
+    text-underline-offset: 2px;
 
     &:hover,
     &:focus-visible {
-      color: var(--accent-strong);
-      border-bottom-color: var(--accent);
+      text-decoration-color: var(--gray-900);
     }
   }
 }
 
 .writing-cue {
-  font-family: $font-family-sans-serif;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  padding-block: 1.5rem 2.25rem;
+  font-weight: 500;
+  color: var(--gray-1200);
+  padding-block: 1.5rem 2rem;
   margin: 0;
 }
 
-// ---- Writing list ---------------------------------------------------------
 .writing-section {
   max-width: var(--shell);
   margin-inline: auto;
   padding-inline: clamp(1.25rem, 5vw, 2rem);
-  padding-top: 1rem;
   padding-bottom: clamp(5rem, 4rem + 6vw, 9rem);
 }
 
-.quarto-listing {
+main.content > :last-child {
+  margin-bottom: 96px;
+}
+
+// ---- Writing list: stacked title + description, instant hover pill ---------
+// Nested under the content id so these outrank the prose a/h3/p rules above.
+#quarto-content main.content {
+  div.quarto-listing {
+    margin-top: 0;
+  }
+
+  .list.quarto-listing-default {
+    margin-top: 0;
+  }
+
   .quarto-post {
     display: grid;
-    grid-template-columns: 1fr 7rem;
-    gap: 2.5rem;
+    grid-template-columns: 1fr 8rem;
+    gap: 2rem;
     align-items: baseline;
-    padding-block: 2.25rem;
-    border-bottom: 1px solid var(--rule);
-    transition: transform var(--dur-fast) var(--ease);
-
-    &:first-child {
-      border-top: 1px solid var(--rule);
-    }
+    margin: 0 -12px;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
 
     &:hover {
-      transform: translateX(4px);
+      background: var(--hover-fill);
+    }
 
-      .listing-title {
-        color: var(--accent-strong);
+    .thumbnail {
+      display: none;
+    }
+
+    .body {
+      grid-column: 1;
+    }
+
+    .metadata {
+      grid-column: 2;
+      font-size: 1rem;
+      line-height: 1.65;
+      color: var(--gray-1000);
+      text-align: right;
+
+      a {
+        color: var(--gray-1000);
       }
     }
-  }
 
-  // title + description (wide, left)
-  .body {
-    grid-column: 1;
-  }
+    a {
+      text-decoration: none;
+      color: var(--gray-1200);
+    }
 
-  // date + reading time (narrow, right)
-  .metadata {
-    grid-column: 2;
-    font-family: $font-family-sans-serif;
-    font-size: 0.82rem;
-    line-height: 1.6;
-    color: var(--ink-faint);
-    text-align: right;
-  }
+    h3.listing-title {
+      font-size: 1rem;
+      font-weight: 500;
+      line-height: 1.65;
+      letter-spacing: 0;
+      color: var(--gray-1200);
+      margin: 0;
+    }
 
-  .listing-title {
-    font-family: $font-family-serif;
-    font-size: 1.6rem;
-    font-weight: 500;
-    line-height: 1.2;
-    letter-spacing: -0.015em;
-    color: var(--ink);
-    margin-bottom: 0.6rem;
-    transition: color var(--dur-fast) var(--ease);
-  }
+    .listing-description {
+      font-size: 1rem;
+      line-height: 1.65;
+      color: var(--gray-1100);
 
-  .listing-description {
-    font-family: $font-family-sans-serif;
-    font-size: 1rem;
-    line-height: 1.6;
-    color: var(--ink-soft);
-    max-width: 44rem;
-  }
-
-  .listing-reading-time {
-    color: var(--ink-faint);
+      p {
+        color: var(--gray-1100);
+        margin: 0;
+      }
+    }
   }
 }
 
 @media (max-width: 620px) {
-  .quarto-listing .quarto-post {
+  #quarto-content main.content .quarto-post {
     grid-template-columns: 1fr;
-    gap: 0.5rem;
+    gap: 0.25rem;
 
     .metadata {
       grid-column: 1;
@@ -266,161 +443,41 @@ body {
   }
 }
 
-// ---- Long-form post body (LessWrong reading rhythm) -----------------------
-#quarto-content main.content {
-  a {
-    color: var(--accent-strong);
-    border-bottom: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
-    transition: border-color var(--dur-fast) var(--ease),
-      color var(--dur-fast) var(--ease);
-
-    &:hover,
-    &:focus-visible {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
-  }
-
-  p,
-  li {
-    font-size: 1.14rem;
-    line-height: 1.8;
-  }
-
-  p {
-    margin-bottom: 1.5em;
-  }
-
-  ul,
-  ol {
-    margin-bottom: 1.5em;
-  }
-
-  li + li {
-    margin-top: 0.4em;
-  }
-
-  h2 {
-    margin-top: 3.5rem;
-    margin-bottom: 1.1rem;
-  }
-
-  h3 {
-    margin-top: 2.75rem;
-    margin-bottom: 0.9rem;
-  }
-}
-
-// Post title block: room above the title, and before the body begins.
-// Use padding-top (not margin-top) so the space is not eaten by margin
-// collapsing with the content container above it.
-#title-block-header.quarto-title-block {
-  padding-top: clamp(2.5rem, 1.5rem + 4vw, 5rem);
-  margin-bottom: clamp(3.5rem, 2.5rem + 3vw, 5.5rem);
-
-  .quarto-title h1.title {
-    font-family: $font-family-serif;
-    font-weight: 600;
-    font-size: clamp(1.9rem, 1.3rem + 2.2vw, 2.7rem);
-    line-height: 1.15;
-    letter-spacing: -0.02em;
-    text-wrap: balance;
-    margin-bottom: 0.75rem;
-  }
-
-  .description,
-  .subtitle {
-    font-family: $font-family-sans-serif;
-    font-size: 1.1rem;
-    line-height: 1.55;
-    color: var(--ink-soft);
-  }
-}
-
-.quarto-title-meta {
-  font-family: $font-family-sans-serif;
-  color: var(--ink-faint);
-}
-
-// Figures: quiet captions, room to breathe
-figure,
-.quarto-figure {
-  margin-block: clamp(2.5rem, 2rem + 2.5vw, 4rem);
-}
-
-figure img,
-.quarto-figure img {
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-}
-
-figcaption,
-.figure-caption {
-  font-family: $font-family-sans-serif !important;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  color: var(--ink-faint);
-  margin-top: 0.85rem;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-// TOC: light and unobtrusive (design phase will make it recede like LW)
+// ---- TOC: quiet chrome until the minimap layer replaces it ------------------
 #TOC,
 .sidebar nav[role="doc-toc"] {
-  font-family: $font-family-sans-serif;
-  font-size: 0.85rem;
+  font-size: 14px;
+
+  h2,
+  .toc-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray-1000);
+  }
 
   .nav-link {
-    color: var(--ink-faint);
-    border-left: 2px solid transparent;
-    transition: color var(--dur-fast) var(--ease),
-      border-color var(--dur-fast) var(--ease);
+    color: var(--gray-1000);
+    border-left: 1px solid transparent;
 
-    &:hover,
+    &:hover {
+      color: var(--gray-1200);
+    }
+
     &.active {
-      color: var(--ink);
-      border-left-color: var(--accent);
+      color: var(--gray-1200);
+      border-left-color: var(--gray-1200);
     }
   }
 }
 
-// Categories as quiet pills
-.quarto-category {
-  font-family: $font-family-sans-serif;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  padding: 0.15rem 0.7rem;
-}
-
-// Footer
+// ---- Footer: none in the base layer -----------------------------------------
 .nav-footer {
-  font-family: $font-family-sans-serif;
-  font-size: 0.82rem;
-  color: var(--ink-faint);
-  border-top: 1px solid var(--rule);
-  background: transparent;
+  display: none;
 }
 
-// ---- Motion + accessibility guards ----------------------------------------
+// ---- Motion guard (there is almost no motion to guard) ----------------------
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-
-  .quarto-listing .quarto-post:hover {
-    transform: none;
-  }
-
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none;
   }
 }
