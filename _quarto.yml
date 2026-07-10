@@ -1,0 +1,29 @@
+project:
+  type: website
+
+website:
+  title: "Ameya Panchal"
+  site-url: "https://ameya-bit.github.io"
+  description: "Mechanistic interpretability and machine learning notes."
+  navbar:
+    title: "Ameya Panchal"
+    left:
+      - text: "Posts"
+        href: index.qmd
+    right:
+      - icon: github
+        href: https://github.com/Ameya-bit
+        aria-label: GitHub
+  page-footer:
+    center: "© 2026 Ameya Panchal"
+
+format:
+  html:
+    theme:
+      - cosmo
+      - styles.scss
+    toc: true
+    toc-depth: 3
+    code-copy: true
+    link-external-newwindow: true
+    html-math-method: katex

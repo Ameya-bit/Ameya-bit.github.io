@@ -1,0 +1,17 @@
+---
+title: "Ameya Panchal"
+subtitle: "Notes on mechanistic interpretability and machine learning."
+listing:
+  contents: posts
+  type: default
+  sort: "date desc"
+  fields: [title, description, date, reading-time]
+  sort-ui: false
+  filter-ui: false
+  feed: true
+page-layout: full
+title-block-banner: false
+---
+
+I train small models and try to figure out what they actually learned. Posts
+below; more migrating over from GitHub in time.
