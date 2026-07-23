@@ -71,7 +71,7 @@
   // ---- faithful constants ----
   const CELL = 100, FRAME_MS = 140, IMPACT = 80, STEP = 50;
   const ANIM = {
-    walk: [0, 1, 2, 1], stop: [0],
+    walk: [0, 1, 2, 1], stop: [0], idle: [1],   // idle = f1, the legs-together "mid-stride dip" — a settled pose, not the f0 contact stride
     fall: [3, 4, 5, 6, 5, 7], fallen: [7], standUp: [7, 8, 9, 10, 11, 12],
   };
   const ROW = { up: 0, dUp: 1, side: 2, dDown: 3, down: 4 };
@@ -379,7 +379,7 @@
           const settled = !losBlocked && !angleOff && dist >= WATCH_NEAR - STEP && dist <= WATCH_FAR;
           if (reached || settled) this.relocating = false;
         } else {                                        // planted — idle bob + an attentive scan
-          if (this.animation !== 'stop') this.setAnimation('stop');
+          if (this.animation !== 'idle') this.setAnimation('idle');   // f1 settled pose, not the f0 stride
           this.el.classList.add('observing');
           // if the troupe crowds our vantage while we're planted, quietly relocate to clearer
           // air (bestAxis now avoids clusters) — the observer keeps its own space.

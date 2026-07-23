@@ -418,8 +418,12 @@ body:has(.hero-screen) { overflow-x: hidden; }
   align-items: center;
   pointer-events: none;
 }
-.hit_area { height: 50px; width: 40px; display: flex; flex-wrap: wrap; }
-.panda_wrapper.stop .hit_area { margin-top: 10px; height: 40px; }
+// sized to the sprite's real bounds (~44–52px wide × ~60px tall at the 100px cell,
+// measured from the path data) so pandas collide near their visible edges instead of
+// clipping — the old 40×50 box sat well inside the drawing. 2×2 corners still map to
+// knock directions; the 20px overlap buffer in collisionCheck rides on top.
+.hit_area { height: 62px; width: 48px; display: flex; flex-wrap: wrap; }
+.panda_wrapper.stop .hit_area { margin-top: 8px; height: 52px; }
 .facing_upleft .hit_area, .facing_left .hit_area, .facing_downleft .hit_area {
   transform: scale(-1, 1);  // re-flip: parent is mirrored
 }
