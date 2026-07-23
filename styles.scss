@@ -392,12 +392,6 @@ body:has(.hero-screen) { overflow-x: hidden; }
   pointer-events: auto;     // the pandas themselves are tappable
 }
 .panda_wrapper svg { fill: #21201c; display: block; }
-// The hat panda (the self-insert) breaks the uniform 2s float on purpose: it holds
-// still and watches, then repositions in quick, clean snaps — a sharp ease-out instead
-// of a dreamy drift. Reads as an alert observer, not a hyperactive one; the contrast
-// with the floaty troupe is what makes it quietly stand out. (Only the position glides;
-// sprite frames step instantly as before.)
-.panda_wrapper.hat { transition: 0.5s cubic-bezier(0.22, 0.9, 0.24, 1); }
 .panda_wrapper.stop { transition: 0 !important; }
 .panda_inner_wrapper { height: 100%; width: 100%; transition: 0; }
 .facing_upleft, .facing_left, .facing_downleft { transform: scale(-1, 1); }
