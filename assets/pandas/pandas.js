@@ -564,6 +564,20 @@
   const MANAGE_START = 4200;   // let the entrance breathe before any line forms
   const MANAGE_MS = 2600;      // cadence of the nucleate / recruit check
 
+  // ---- Phase 5: line lifecycle — dissolve & reform so the scene keeps breathing ----
+  // Without this every panda eventually ends up in a permanent line, the roamer pool
+  // dries up, and the form→patch→reform loop dies. Two dissolve triggers (per the
+  // open decision in panda-choreography.md): a line disbands a few seconds after it
+  // takes part in a patch ("the experiment is done"), and every line has a max age so
+  // un-patched lines don't live forever. Dissolved members return to roaming, where
+  // manageLines re-recruits them into fresh lines — the reform half of the loop.
+  const LINE_MAX_LIFE = 42000;   // base max age for a line before it disbands on its own
+  const LINE_LIFE_JITTER = 12000;// ± spread so lines don't all expire in lockstep (→ 30–54s)
+  const POST_PATCH_LIFE = 8000;  // a patched line's two halves disband this soon after the split,
+                                 // long enough to watch the bent tail diverge and walk away first
+  const DISSOLVE_STAGGER = 240;  // members peel off one-by-one (a ripple), not all at once
+  const lifeSpan = () => LINE_MAX_LIFE + (Math.random() * 2 - 1) * LINE_LIFE_JITTER;
+
   const lines = [];
   const inBounds = (x, y) =>
     x > -40 && x < stage.clientWidth - 60 &&
@@ -577,6 +591,8 @@
       leader.inLine = this; leader.joining = false; leader.moveQueued = false;
       leader.setAnimation('walk');
       this.members = [leader];
+      this.dissolving = false;
+      this.armLife(lifeSpan());   // Phase 5: age out on its own if never patched
       this.step();
     }
     get leader() { return this.members[0]; }
@@ -622,6 +638,35 @@
       p.joining = false; p.inLine = this; p.moveQueued = false;
       p.setAnimation('walk');
       this.members.push(p);                             // next step() snaps it into formation
+    }
+    // Phase 5: (re)schedule when this line disbands. armLife clears any prior timer, so
+    // a patch can shorten a line's remaining life (POST_PATCH_LIFE) over its birth age.
+    armLife(ms) {
+      clearTimeout(this.lifeTimer);
+      this.lifeTimer = setTimeout(() => this.dissolve(), ms);
+    }
+    // disband: stop the snake, drop out of lines[], and release every member back to
+    // roaming (staggered, so they peel off in a ripple). manageLines then re-recruits
+    // them into fresh lines — the reform half of the loop.
+    dissolve() {
+      if (this.dissolving || !this.members.length) return;
+      if (frozen) { this.armLife(1000); return; }   // never disband a line mid-patch — wait out the freeze
+      this.dissolving = true;
+      clearTimeout(this.timer);                     // stop stepping the snake
+      clearTimeout(this.lifeTimer);
+      const idx = lines.indexOf(this);
+      if (idx >= 0) lines.splice(idx, 1);
+      const members = this.members;
+      this.members = [];                            // step()/manageLines/observe now treat it as gone
+      members.forEach((m, i) => {
+        if (m.inLine && m.inLine !== this) return;  // already moved to another line somehow
+        m.inLine = false; m.joining = false;
+        m.after(i * DISSOLVE_STAGGER, () => {
+          if (m.inLine || m.joining) return;        // got recruited during the peel-off — leave it
+          m.setAnimation('walk');
+          m.moveAbout();
+        });
+      });
     }
   }
 
@@ -727,9 +772,11 @@
     const L = Object.create(Line.prototype);
     L.members = members;
     L.timer = null;
+    L.dissolving = false;
     members.forEach(m => { m.inLine = L; m.joining = false; m.moveQueued = false; m.knocked = false; m.setAnimation('walk'); });
     const lead = members[0];
     lead.direction = dir; lead.turnIndex = DIRS.indexOf(dir); lead.setFacing();
+    L.armLife(lifeSpan());   // Phase 5: default age; runPatch shortens it to POST_PATCH_LIFE for the split halves
     L.step();
     return L;
   }
@@ -877,7 +924,13 @@
           // built frozen, so it won't step yet — nothing moves while the shading is up.
           const tailMembers = A.members.splice(k);        // [grabbed, ...downstream]
           tailMembers.forEach(p => spotted.add(p));
-          lines.push(makeLine(tailMembers, dB));
+          const tailLine = makeLine(tailMembers, dB);
+          lines.push(tailLine);
+          // Phase 5: the experiment is done — the line's two divergent halves (the clean
+          // front A and the peeled tail on B's heading) disband soon after they've walked
+          // apart, freeing their pandas to reform elsewhere. B (merely shortened, not split)
+          // keeps its own birth-armed lifetime.
+          [A, tailLine].forEach(l => l.members.length && l.armLife(POST_PATCH_LIFE));
           // hold the frozen, spotlit tableau, then release motion AND shading together
           // (cleanup unfreezes and un-dims in one step, so nobody moves while still shaded).
           setTimeout(cleanup, PATCH_SETTLE);
