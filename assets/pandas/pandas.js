@@ -1,13 +1,33 @@
-// Roaming pandas for the home-page hero. Base sprite + collision engine are a
-// faithful reproduction of "panda collision" by masahito (ma5a):
-// codepen.io/Ma5a/pen/WNEBqPO (MIT). Sprite path data reproduced verbatim under
-// that licence, with thanks. The straw hat (dǒulì) and its 3-D per-direction
-// drawings are ours, finalized in design/sketches/panda-behaviors-workshop.html.
-// Ten pandas wander the hero, one wearing the hat; they stay above the Writing
-// cue because the stage is clipped to the hero region. Respects reduced motion.
-// Phase 1 (entrance): the stage starts empty — the hat panda ambles in first,
-// alone, then the troupe walks on from the edges a couple at a time. See
-// design/panda-choreography.md for the full multi-phase plan.
+// Home-page hero troupe — a self-contained panda scene that enacts *activation
+// patching* (the causal method underneath the site's circuits). Base sprite +
+// collision engine are a faithful reproduction of "panda collision" by masahito
+// (ma5a): codepen.io/Ma5a/pen/WNEBqPO (MIT), sprite path data reproduced verbatim
+// with thanks. The straw hat (dǒulì) + its per-direction 3-D drawings are ours
+// (design/sketches/panda-behaviors-workshop.html). aria-hidden decoration, clipped
+// to the hero region (never below the Writing cue), rAF paused off-screen / on a
+// hidden tab. Reduced motion = a static tableau. Full spec + build log:
+// design/panda-choreography.md.
+//
+// What the troupe does (all five phases shipped, 2026-07-23):
+//  • Entrance — the stage starts empty; the hat panda ambles in first, alone, then
+//    the troupe walks on from the edges a couple at a time and starts wandering.
+//    Headcount is viewport-aware (~20 wide / 12 / 7). ma5a's tap-to-knock and the
+//    knock → fall → get-up collision are kept for free roamers.
+//  • Conga lines — roamers periodically organise into follow-the-leader snakes: each
+//    follower steps into the cell the one ahead vacated, so a heading change at the
+//    front ripples down the line. Lines grow to LINE_CAP (5); a conga panda is an
+//    unstoppable force (knocks roamers aside, passes through other conga pandas).
+//    Lines dissolve on a jittered max age (sooner after a patch); freed pandas roam
+//    and re-form — the scene keeps breathing.
+//  • Hat panda = the interpreter (the self-insert). Fastest panda and a collision
+//    ghost (never knocked). It oversees the lines from a distance, navigating *around*
+//    the other pandas to reach an uncrowded, clear-view vantage, then stands and faces
+//    the line, scanning it (a small gaze shift) while it watches. Never joins a line.
+//  • Activation patching (~every 20–30s) — freeze + spotlight two lines whose headings
+//    differ >45°; the hat panda grabs a panda off line B, spins, and flings it into
+//    line A's upper-middle, swapping out the resident (sent roaming). On resume A's
+//    tail peels onto B's heading as a new line — the visible bend is the patched
+//    activation propagating downstream. The split halves then dissolve and reform.
 (() => {
   'use strict';
   const stage = document.getElementById('panda-stage');
