@@ -1,0 +1,1036 @@
+<!--
+  panda-behaviors-workshop.html — working copy of the whimsy workshop artifact (round 6).
+  Base: faithful replica of "panda collision" by masahito (ma5a): codepen.io/Ma5a/pen/WNEBqPO
+  (public CodePen pens are MIT-licensed; sprite path data reproduced verbatim with attribution;
+  engine reimplemented, behavior-matched — panda-collision-replica.html is the untouched base).
+  Round 7: the hat in 3-D. Round 6's hat still read wrong because the panda is drawn in 3-D and
+  the hat was flat — one front-on cone pasted onto every heading. This round draws five separate
+  perspective hats (elliptical foreshortened brim, leaning cone axis, lit + shaded faces, pleats
+  that fan with the heading, a cast-shadow line separating hat from head), drawn in the panda's
+  own white/pink-ink palette, riding steady on the head (no per-frame shear). Plus a pixel studio
+  that paints and recolours each drawing's pixel map live. Induction walk still parked; hat first.
+  Published artifact: https://claude.ai/code/artifact/9cc421bb-f300-40da-b1e0-ae99bc444813
+-->
+<meta charset="utf-8">
+<title>Panda workshop — hat fitting</title>
+<style>
+  :root {
+    --gray-100: #fdfdfc; --gray-400: #e9e9e7; --gray-800: #bcbbb5;
+    --gray-1000: #82827c; --gray-1100: #63635e; --gray-1200: #21201c;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { color-scheme: light; }
+  body {
+    background: var(--gray-100); color: var(--gray-1200);
+    font: 400 15px/1.65 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 24px 16px 64px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  .copy { max-width: 700px; }
+  h1 { font: 500 15px var(--mono); }
+  h2 { font: 500 13px var(--mono); margin-top: 36px; }
+  .sub { color: var(--gray-1100); margin-top: 8px; max-width: 60ch; }
+  .sub + .sub { margin-top: 6px; }
+  .attr { font: 400 12px var(--mono); color: var(--gray-1000); margin-top: 10px; max-width: 66ch; }
+  a { color: inherit; }
+
+  /* ===== the fitting bench ===== */
+  .bench { margin-top: 8px; }
+  .bench_controls {
+    margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center;
+  }
+  .brow { margin-top: 18px; }
+  .blabel {
+    font: 500 11px var(--mono); color: var(--gray-1000);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+  .bcells { display: flex; gap: 8px; flex-wrap: wrap; }
+  .bcell {
+    position: relative; width: 192px; height: 192px;
+    background: rgb(255, 151, 186); border-radius: 6px; overflow: hidden;
+  }
+  .bcell svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .bcell svg.spr { fill: rgb(173, 1, 87); }
+  .bmeta {
+    position: absolute; left: 6px; bottom: 3px;
+    font: 400 10px var(--mono); color: rgba(0, 0, 0, 0.55); pointer-events: none;
+  }
+  .nudge { position: absolute; right: 4px; top: 4px; display: flex; gap: 2px; }
+  .nudge button {
+    font: 500 10px var(--mono); width: 20px; height: 20px; padding: 0;
+    color: var(--gray-1200); background: rgba(253, 253, 252, 0.8);
+    border: 1px solid var(--gray-400); border-radius: 4px; cursor: pointer;
+  }
+  .nudge button:active { transform: scale(0.94); }
+  .readout {
+    margin-top: 16px; font: 400 11px/1.7 var(--mono); color: var(--gray-1100);
+    background: #f9f9f8; border: 1px solid var(--gray-400); border-radius: 8px;
+    padding: 10px 12px; overflow-x: auto; white-space: pre;
+  }
+
+  /* ===== the stage (her world: pink) ===== */
+  .stage {
+    position: relative; margin-top: 20px;
+    height: 62vh; min-height: 420px; max-height: 1000px;
+    background-color: rgb(255, 151, 186);
+    border-radius: 8px; overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  /* ===== ma5a's panda CSS, reproduced ===== */
+  .panda_wrapper {
+    position: absolute;
+    width: 100px; height: 100px;
+    overflow: hidden;
+    transition: 2s;
+    cursor: pointer;
+  }
+  .panda_wrapper svg { fill: rgb(173, 1, 87); display: block; }
+  .panda_wrapper.stop { transition: 0 !important; }
+  .panda_inner_wrapper { height: 100%; width: 100%; transition: 0; }
+  .facing_upleft, .facing_left, .facing_downleft { transform: scale(-1, 1); }
+  .panda_sprite {
+    position: absolute;
+    height: 500px; width: calc(13 * 100px);
+    pointer-events: none;
+  }
+  .hit_wrapper {
+    height: 100%; display: flex;
+    justify-content: center; align-items: center;
+    pointer-events: none;
+  }
+  .hit_area { height: 50px; width: 40px; display: flex; flex-wrap: wrap; }
+  .panda_wrapper.stop .hit_area { margin-top: 10px; height: 40px; }
+  .facing_upleft .hit_area, .facing_left .hit_area, .facing_downleft .hit_area {
+    transform: scale(-1, 1); /* re-flip: parent is mirrored */
+  }
+  .hit_corner { height: 50%; width: 50%; opacity: 0.1; }
+
+  /* ===== hat + workshop controls (ours) ===== */
+  .panda_wrapper.hatless .wornhat { display: none; }
+  .hat_loose svg { display: block; }
+  .hat_loose {
+    position: absolute; pointer-events: none;
+    transition: transform 0.75s cubic-bezier(0.22, 0.9, 0.24, 1), opacity 0.15s;
+  }
+  .controls {
+    margin-top: 20px; display: flex; flex-wrap: wrap;
+    gap: 12px 28px; align-items: center;
+  }
+  .cgroup { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .clabel {
+    font: 500 11px var(--mono); color: var(--gray-1000);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .controls button, .bench_controls button {
+    font: 400 12px var(--mono); color: var(--gray-1200);
+    background: var(--gray-100); border: 1px solid var(--gray-400);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer;
+  }
+  .controls button:active, .bench_controls button:active { transform: scale(0.97); }
+  .controls button:focus-visible, .bench_controls button:focus-visible,
+  .nudge button:focus-visible { outline: 2px solid var(--gray-1100); outline-offset: 1px; }
+  .controls button:disabled { color: var(--gray-800); cursor: default; }
+  .seg { display: inline-flex; border: 1px solid var(--gray-400); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; }
+  .seg button + button { border-left: 1px solid var(--gray-400); }
+  .seg button.on { background: var(--gray-1200); color: var(--gray-100); }
+  .chk { font: 400 12px var(--mono); color: var(--gray-1100); display: inline-flex; gap: 6px; align-items: center; }
+  .status { font: 400 12px var(--mono); color: var(--gray-1100); flex-basis: 100%; }
+
+  .notes { margin-top: 32px; border-top: 1px solid var(--gray-400); padding-top: 20px; }
+  .notes p { font: 400 12.5px/1.9 var(--mono); color: var(--gray-1100); max-width: 66ch; }
+  .notes p + p { margin-top: 10px; }
+  .notes strong { font-weight: 500; color: var(--gray-1200); }
+
+  /* ===== the pixel studio (per-drawing paint + recolour) ===== */
+  .studio { margin-top: 8px; }
+  .studio_head {
+    display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+  }
+  .dtabs { display: inline-flex; border: 1px solid var(--gray-400); border-radius: 6px; overflow: hidden; }
+  .dtabs button {
+    font: 400 12px var(--mono); color: var(--gray-1200);
+    background: var(--gray-100); border: 0; padding: 5px 11px; cursor: pointer;
+  }
+  .dtabs button + button { border-left: 1px solid var(--gray-400); }
+  .dtabs button.on { background: var(--gray-1200); color: var(--gray-100); }
+  .dtabs button:focus-visible { outline: 2px solid var(--gray-1100); outline-offset: -2px; }
+  .studio_body { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 14px; align-items: flex-start; }
+  .palette { display: flex; flex-direction: column; gap: 7px; min-width: 172px; }
+  .swatch { display: flex; align-items: center; gap: 8px; }
+  .swatch > button {
+    width: 26px; height: 26px; border-radius: 6px; border: 2px solid var(--gray-400);
+    padding: 0; cursor: pointer; color: var(--gray-1100);
+    background-image: linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%),
+      linear-gradient(45deg, #ddd 25%, transparent 25%, transparent 75%, #ddd 75%);
+    background-size: 10px 10px; background-position: 0 0, 5px 5px;
+  }
+  .swatch > button.on { border-color: var(--gray-1200); box-shadow: 0 0 0 2px var(--gray-100); }
+  .swatch .sname { font: 400 11px var(--mono); color: var(--gray-1100); flex: 1; }
+  .swatch input[type="color"] {
+    width: 24px; height: 22px; padding: 0; border: 1px solid var(--gray-400);
+    border-radius: 4px; background: none; cursor: pointer;
+  }
+  .pstage {
+    position: relative; background: rgb(255, 151, 186);
+    border-radius: 8px; overflow: hidden; touch-action: none; cursor: crosshair;
+    align-self: flex-start;
+  }
+  .pstage svg { display: block; }
+  .pstage .pref path { fill: rgba(173, 1, 87, 0.20) !important; }
+  .pstage .pgrid line { stroke: rgba(0, 0, 0, 0.14); stroke-width: 0.03; }
+  .studio_hint { font: 400 11px var(--mono); color: var(--gray-1000); flex-basis: 100%; }
+</style>
+
+<div class="wrap">
+  <div class="copy">
+    <h1>panda workshop · round 7 — the hat, in 3-D</h1>
+    <p class="sub">Round 6's hat still looked wrong, and here's why: the panda is drawn in 3-D and the hat was drawn flat. The same front-on cone was pasted onto every heading, so in ¾ and profile it sat in a different dimension than the head. <strong>Round 7 draws five separate perspective hats.</strong> The brim is now an ellipse that foreshortens and tilts with the heading; the cone axis leans; one face is lit straw and the other falls into shadow; the ribs fan the way the head has turned; and a cast-shadow line under the brim <strong>separates the hat from the head</strong> so they stop reading as one shape. A subtle per-frame shear keeps the hat turning with the panda's own small turns through the walk.</p>
+    <p class="sub">Each bench row is one sprite direction; the last cell plays the walk cycle <span style="font-family:var(--mono)">[0,1,2,1]</span>, which is the real test. Left-facing directions are these same rows mirrored. And because the drawings won't be right first try, the <strong>pixel studio</strong> below lets you drag pixels and change colours on each of the five hats and watch it update everywhere live.</p>
+    <p class="attr">base: "panda collision" by masahito (ma5a) — codepen.io/Ma5a/pen/WNEBqPO · public CodePen pens are MIT-licensed; sprite data reproduced under that license, with thanks · hat, fitting bench + pixel studio are ours</p>
+  </div>
+
+  <div class="bench" id="bench">
+    <div class="bench_controls">
+      <label class="chk"><input type="checkbox" id="tglHat" checked> hat</label>
+      <label class="chk"><input type="checkbox" id="tglGrid"> pixel grid</label>
+      <button type="button" id="btnReset">reset fits</button>
+      <span class="chk">◀ ▶ ▲ ▼ on each cell nudge that frame's hat by 1 sprite unit</span>
+    </div>
+    <!-- rows injected -->
+    <pre class="readout" id="readout"></pre>
+  </div>
+
+  <h2 class="copy">pixel studio — draw the hat in 3-D</h2>
+  <p class="sub copy">Each of the five perspectives is its own editable drawing. Pick a colour, then <strong>drag on the canvas to paint pixels</strong>; change a swatch's colour to recolour every pixel of that shade in the current drawing. The faint panda underneath is the head at this seat, so you can line the brim up to it. Every edit flows straight into the bench cells and the live hero panda.</p>
+  <div class="studio" id="studio">
+    <div class="studio_head">
+      <div class="dtabs" id="dtabs"></div>
+      <label class="chk"><input type="checkbox" id="tglHead" checked> head reference</label>
+      <label class="chk"><input type="checkbox" id="tglStudioGrid" checked> grid</label>
+      <button type="button" id="btnClearHat">clear</button>
+      <button type="button" id="btnResetHat">reset this drawing</button>
+      <button type="button" id="btnExportHat">export</button>
+      <button type="button" id="btnImportHat">import</button>
+      <span class="studio_hint" id="studioHint">drag to paint · pick “erase” to clear pixels · edits auto-save in this browser — hit <strong>export</strong> to copy the pixel data and lock it into the code</span>
+    </div>
+    <div class="studio_body">
+      <div class="palette" id="palette"></div>
+      <div class="pstage" id="pstage"></div>
+    </div>
+    <pre class="readout" id="readoutPx"></pre>
+  </div>
+
+  <h2 class="copy">the troupe, wearing it</h2>
+  <p class="sub copy">Same replica engine underneath — collisions, tap-to-knock. Exactly one panda wears the hat; knock it over and the hat comes off, it gets up, walks back, and puts it on again. Fits tuned above apply here live.</p>
+
+  <div class="controls">
+    <div class="cgroup">
+      <span class="clabel">hat skit</span>
+      <div class="seg" data-for="hat">
+        <button type="button" data-v="drop" class="on">calm drop</button>
+        <button type="button" data-v="launch">big launch</button>
+      </div>
+      <button type="button" id="btnHat">knock the hat panda</button>
+    </div>
+    <div class="cgroup">
+      <span class="clabel">troupe</span>
+      <div class="seg" id="segTroupe">
+        <button type="button" data-v="full" class="on">full house</button>
+        <button type="button" data-v="calm">hero-calm (5)</button>
+      </div>
+    </div>
+    <div class="status" id="status">the troupe is wandering — collisions are the base layer, as before</div>
+    <div class="status" id="statusHat"></div>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="notes copy">
+    <p><strong>what round 7 changes:</strong> the hat is no longer one flat drawing pasted onto five headings — it's five perspective drawings. Each is rasterised from real 3-D geometry: an elliptical brim (<span style="font-family:var(--mono)">rx</span> wide, a shallow <span style="font-family:var(--mono)">ry</span>) that tilts with the view, a cone whose axis leans from a lifted apex to the brim centre, a lit face and a shaded face so the straw has volume, and pleats that fan from the apex to the rim — so the fan turns as the head turns. It keeps the dǒulì's wide shallow shape but is drawn in the panda's own palette — white straw, soft-pink shade, her pink-red ink for the outline, pleats and collar knot — so it belongs in the same world. It rides steady on the head (the bob comes from the seat, not from shearing the drawing, which had wobbled like a tilting triangle).</p>
+    <p><strong>the separating line:</strong> the old hat looked fused to the head because nothing sat between them. Now the brim's front arc is inked and a soft cast-shadow row sits just beneath it — a one-pixel gap of shadow that lands on the head, so the hat reads as worn on top rather than grown out of the skull.</p>
+    <p><strong>the pixel studio:</strong> the five drawings are plain pixel maps, and the studio edits them directly — pick a colour and drag to paint, or change a swatch's colour to recolour every pixel of that shade in the current drawing. The faint panda underneath is the head at that seat for alignment. Everything re-composites live into the bench cells, the walk previews and the hero panda, and the ascii readout carries the maps forward. This is the tweak loop: I draw the five, you push the pixels until they're right.</p>
+    <p><strong>how to judge:</strong> the walk preview per bench row is still the test — the hat should ride the head's bob like it's worn, not glued to the frame. Nudge a cell (◀ ▶ ▲ ▼) to move that frame's seat; paint in the studio to fix the drawing itself. Fall and stand-up cells stay hatless by design — the hat is on the ground by then.</p>
+    <p><strong>parked, not dropped:</strong> the induction walk (pair / train-of-three path copying) is still out so the hat can be judged alone; it returns once the five drawings are approved. Unchanged from round 4: sprite art, walk/fall/stand timing, movement, collision constants — all hers; cornered pandas still nap ~6–12 s instead of freezing (our one engine deviation).</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  // ---- sprite data + decoder from "panda collision" by ma5a (MIT, via CodePen) ----
+  const pandaSvg = {
+    up: 'd 601 9aAaAaAnBkNnUaNaN"/D 18 10bAaAnAnBuXaN"/F 22 10W7AaAaBaEaGiAW-6NiNnXaNbUaNaNaN"/D 30 10bAaEuUnU"/D 114 10bAaAnAnBuXaN"/F 117 10W7AaAaBaBaAaGkAn0NkNnKaNaNaUaNaU"/D 125 10eAaGnAnUnUnU"/D 66 12eBnAnAnNnUaN"/F 70 12W6AaAaAbEaGkAn2NuKaNaUaNaNaNaN"/D 76 12gEuNnNnN"/D 593 12eBnAnAuKaN"/F 596 12eAaAeUbAnEbKeAnAbJnAiAxNxAkAnUaXnNbNaNaU"/D 604 13bEuK"/D 166 14eEnAkKaN"/D 608 14aAnN"/F 169 15eAeAaAaBaAaAnAnBn0NkNnNnKbNgNaU"/D 222 15aAbBaGxKnKaN"/D 175 16gEnAnUnNnN"/D 308 16aAaAaAaBuAnAnEaAaAaEnAuNnNuNnUnNaUbw-7bN"/D 314 16gAaGkNuX"/D 268 17eAaAaAaAaAaGnBnNuUuUaUiNaNaU"/D 501 17bAaAuAnAnKaN"/D 548 17eAnAnAnAnKaN"/F 552 17jEW-6AkNaNaNbN"/D 557 17gExK"/D 209 18bAaEeAaBnAuAeAW8NnNnKgGnBn1NkGaAuNnNnXaUnw-6aN"/F 216 18jAaEgAxEaAaAW-8NkNbNaUnNkUaAeK"/D 260 18eAaBnAuAnEaBnAnBeAaEnAkNnXnNnNnXaNbXaNaN"/D 364 18eAaBuNkNaN"/D 509 18bAaBnAaEnAeAaAaBnAaEnAxXaNuNuNW-8AnAuUaUaNbNW6AeKnNnUaN"/D 159 19bAaBaAaAeAa0UaNaNeGnAnAnAiNn3NnNnNnXaN"/F 213 19aAnN"/D 214 19bBkNaN"/D 356 19eAnAnAnAnBbNW9NeAaAbAaAaBaBnBkBxUnNaNeUaNnUuNW-9AkAnAnEaAeAaBnAkUkNnXaNaNaw-6aNaN"/D 460 19eAaBuAnNnK"/F 502 19W6BaAaEkNW-6AuAnUaUaNaNaN"/F 312 20gAgAnAnBnAaAaEaAaNaGuAkAW-7NuNnKaAbNaKnNnNnKaNaNbN"/F 358 20W8AbAaAkAW-9AuUaNaNaN"/D 403 20eBnBnNnK"/F 407 20jAbAaAaAaGnAkAW-8NnNnUaUaUaNaN"/D 412 20gEnNnNuN"/D 451 20gAnAnAnBnI"/F 455 20jBaAaEbNaNaGuAnAn1NnXaUaNaNaN"/D 551 20W6AeAaAaAaEnNuNuNW-9AuAnKaNaNeN"/F 557 20gAaBnNnNkN"/D 17 21jAW6NjAaAaBaw6nJnBnAxNnUnNaNbNaNaKnKnNnNW-8AuAnAnGaBbAaAbAnAuAuNnNnw-7nIaUaN"/D 113 21eAa0NeAaAaBaBnEuKnNuNW-7AuAnBnBnBaAaAeBnAnAxNnw-6nNnKaKaUaU"/F 263 21W8BnBbBnNuEbNaNbAaBnNuAnEaBnAW-9NaKnNkUaNaBeUnNnAnUnKaNbN"/D 320 21ew9uAnNnKnNnNaUaNaN"/F 511 21aAnN"/D 596 21gAgNjAbBaEaBnBnJnBuAuNnNnXaNbNbNbNnNnNnNnNkNW-8AuAuKaNeN"/D 65 22aAa2NeAaBaw6uUnUnNuNW-6AkAnAnAnBuw-6aUaN"/F 462 22bAuN"/D 462 23bAaAnAuK"/F 464 23aAnN"/F 512 23aEuNaU"/F 21 24W8AaAaEaEnAnAuAW-7NnNuUnXaNaNbN"/D 417 24aAaBaAnBnAiAW-9NuNnKaNaBaAaAW8NeNaX"/F 549 24W9AbAbAaBxAnBnAW-6NuNuUnKaNbN"/F 596 24W8AeAaAaAaAaAuAuAuAnExNuNuNnNnNnKnUbNbN"/F 71 25W6AbAaBaBaAnAnAnAkAiNkNnNnNnKaNaNaNeN"/F 119 25W7AbAaEaBnAuAnAkAxNkNnNnUaUaUaNbN"/D 265 25bAuN"/F 359 25W9AbBaAnBkAnAaBuAW-7NaUnNkNnKaNaNeN"/D 403 25aAnN"/D 449 25bGaAa1NaNbNaAbJnNuNW-6AW-8NnNnNnX"/D 269 26bAaAnAuK"/D 361 26bAuN"/D 365 26bAaAnAuK"/F 161 27a3AgGnBuAkAW-6NkNnNnXnNaN"/D 262 27aAaBkUaN"/D 357 27bAaBnAuUnNaN"/F 497 27aAnN"/F 211 28eAa1GnBnNnAkAxNkNnNaNnX"/F 500 28W8AbAbAnGkAW-6NuNnNnUnNbNaN"/D 592 28aEaAaAaAbEnAkNnNnw-8"/D 158 29eGaAuNuX"/D 272 29bAaAaAnAnAuNnKaN"/D 546 29aBbAbEnAuNnNnI"/D 559 29gJnAxNnUaUaN"/F 418 30aGuAkAW-8NuKW9NjN"/F 403 31aAnN"/F 460 31W6AbAuAuAxAiNuNnUW8N"/D 65 32aAaAaAeAnAnAuNuI"/D 81 32aGnBxNnUeNaNaN"/D 129 32aEnAnAxNnNeNaNbN"/D 177 32aw6uAuNnNnUeNbU"/F 275 32aAnN"/F 274 33aAnN"/D 222 34aBnAkUeN"/',
+    dUp: 'd 17 9eAnAnBuKaN"/F 20 9jAgAnAnBaBgBaEnAnAn0NkNuNnIaNaNaUaNaN"/D 113 9eBnAnAuKaN"/D 29 10bAaAaBnBxUnUaNaN"/F 116 10W6AbAnBaBeAaBaEnAxAkNiNuNuNnUnNaUaUbNaNaN"/D 124 10gAaEnBxUnUaU"/F 166 10eAnBaAaAbNaAaAaAbAuBnAuAkAW-9NnIaUaUaNaNeN"/D 169 10eAaEnAuNnNnUaN"/D 213 10bAaEbEuNnUkKaN"/D 65 11eBnAnAuKaN"/F 68 12W7AnBaAaAgAaGnAuAW-9NxNuNnUaUaNaNaNaNaN"/D 75 12eAaGkNnNnUaN"/D 599 12bAaEaAaAnAnNnUnNuUaN"/D 159 13bBnBnNnUaN"/F 209 13eAeBaAbKbAbGnBnAuAkAxAkNuw-7aUaNaN"/F 216 13bAuN"/D 591 13bBnAnAnAnKaNaN"/D 220 14aAnN"/F 593 14jAbAaBaAaNaNaAaGW-6AW-9AnUnXaNaNaNaN"/D 205 15bBnEnNnKaN"/D 548 15eAnAuAnUaN"/F 550 16gAbBaAbJnNnNnNuNW-9UaNbNbN"/D 177 17bAaEnAnBnAnAn1AuAuAnAnKnNnNnXaNbBaAW9NeNbNaUbN"/D 223 17bAaGnAnAuAW-7AkAnAuAnUnUnNbAeNgNeNbNaUaNaN"/D 556 17eAaBkNnU"/D 501 19eAaAiNaN"/D 263 20bAaEiAnKaNbN"/D 444 20bAaBnAnAnNnKaN"/F 449 20eAnEgEbKaBeAbAaGnBnAuUuNnUkAW-7NuNnXaNaNaUbN"/D 452 20eAaBnAxKaN"/D 16 21bAeAa1AaAaJnw6nAxNaNaNuInNkNW-8BnNnXaUaN"/D 113 21aAbAjAeNgAeAaAaEnAW-6NuNuNxNkAkAnEuNnXaNaNaNaNaN"/D 268 21gAaGnJnBnAnAnUnUuNaNaNaNnUnNaUaN"/D 302 21gAbNgAaAaAaAaBaAaEnBnAxNuNnNnw-6nAnAuNnUnK"/F 499 21W8EeJxNbNaUuAnBuNuNW-7NaNaNaNaN"/D 507 21eAaAnAkK"/D 545 21W9AbAaAaAaBaEnAuNnNnNnNuNuNW-7UaNaN"/D 63 22bAgAW9NbAaAaBaw6nAnGnAnAkNnXaUeUnNnNnNiNW-6AnAnBaBaAaAbAnAkNnNnw-6nNnUaUaNaN"/F 456 22aBuNaN"/D 600 22W8AaBnAn4AuAuXaNW9N"/D 398 23bBnAnAuUaNaN"/D 405 23eAaExNnUaN"/F 222 24bAaw6nBnAnAnAn0NnNnUnKaNbNaNeNW7N"/F 261 24jAaBaAnAnAnAbBaEiAnBW-6NkUnXaEbKnUbNbXeN"/F 359 24eAbAew6aBnAnXnNnNuNuNxNaNbN"/D 362 24eAaAuNuN"/F 400 24gBaAgUaNaBeAuAuGnAnAuAW-6NuUnIaNaNaN"/D 411 24gGjAaEnAxNaKnBnBnAnAnAuAuAW-7NuNnNnKaBbAW6NbNaNaXbNbNkU"/D 455 24bEuK"/D 254 25gGuAuBaEuKnUaXaN"/F 307 25aw6aAaAuAnBeNaNnNbAgNaEnAnNuAuBW-8NuNnXaBbKnNaNaNaNnNbNaN"/D 507 25bBnAuUaN"/F 543 25W7AbAbAaAaAaAnBnAkAxNuNnNuNnIaN"/F 115 26eAgAbAbAbBuAuAuBiNnNuNuUnKaNeN"/F 165 26a2EaExAnAnEkAxNuNuUnUnUaNaNbNbN"/D 225 26eJnAnAuUaI"/D 299 26gAaAaAnAnAnAaEuUnUnNnKaN"/F 494 26aAnN"/D 495 26W7AbAbAgAaBaAbEnAkNnUuNnNuNW-9AnIaN"/F 594 26a1JkAnEiNkNnNuXbNbN"/F 16 27W8AeAaJbAnAnAW-6NkNnNnNnNnKaU"/F 65 27W6AjAaAaAaBkBnBW-6NnNuNnNnUnUaNaN"/F 352 27eAaAuAbNgAaAbAnEnBnNxAnAxNnUnIaNaNaN"/D 355 27jAbAbAaAaw7nAkNnKaKaNuNnNuNkN"/D 367 27gAaGuAuNnI"/F 415 27aAnN"/o 356 28bAuN"/D 348 29bAnJaBuNnUnNnUaNbN"/D 354 29bAuN"/F 416 29aEnBnAnAuNaNaNaUaU"/D 464 29aAbAaEnAiNaUaK"/o 258 30bAuN"/D 351 30bBuU"/D 445 30bAW7NeBaAbEnAW-7NuNuNnNnNnU"/D 14 31aAaAaAaAaBnAxNnKaK"/D 111 31aBbAbBxNnX"/D 257 31bAuN"/D 304 31bAuN"/D 357 31bEkUaN"/F 495 31W9AbAaAbExAxNxNuNnKaN"/D 542 31aAbAaAaAnAnAuNnI"/D 602 31eAaJnAkNnIaN"/D 126 32bGnBnAuAuNnKaUbNbN"/D 174 32gAaJnAxNnNnKaNaN"/D 260 32bAaBnAkKaN"/D 590 32bAaAeBnAkNnUnU"/D 308 33bAaAnAkUaN"/D 555 33bEnAkNuNaNeN"/D 251 35aAaBuK"/D 299 35aBaAkUaN"/D 263 36gBnAxUaN"/D 313 36bAaBuAuNnUbN"/D 356 36gBnAkNnNaN"/F 410 36bAuN"/',
+    side: 'd 28 10eAaBnNuNnN"/D 124 10eAaEnNnNuU"/D 170 10bAaEnNuNnNaN"/D 19 11gEnAkNnUaN"/F 23 11W6AbAaEaGnAnAkAW-6NxNnw-6aNaAeNaK"/D 115 11gEnAkNnUaN"/F 119 11jAbAaBaBnAbBnAnAkAW-7NuNuXaKaAeNaK"/D 67 12bAaEnAkNnUaNaN"/D 76 12eAaBuNnNnN"/F 166 12gAbAbAaAbJnAuAkAn0NuIaNbEaAbKnNuNaUaNbN"/D 214 12eAaBuNkNaN"/F 70 13W7AaAaAaBaAuAbNaEuAkAW-8NxNnUaUaNeNaK"/D 160 13bAaBnAkKaN"/F 209 14W7AbAuEeUbAaEnAnAnAuAuUuBaAxAuAnAnNnUnXnNbUaKbNaN"/D 25 15bGkKaN"/D 121 15bGkKaN"/D 171 15bAaAnAnNnU"/D 264 15eBaBbAbAaJnExNnNnw6nGnAuNnw-6nXnNnNnNnUaUaNbAaJaNbAaAaKnNuNnKaUaN"/D 216 16bAaBkK"/F 218 16aAnN"/D 603 16bAaEnNnNnU"/D 72 17eEnAuX"/D 127 17bAuN"/D 162 17bAaEuNnK"/D 177 17bAaEnBnAnBuNiAkAuAnAW-6NnNnKaNgAa0NeNbNaX"/D 203 17eBnBuNnUaN"/D 303 17gAaAeAaAbAaEnBuAuNuNuNuNxKbKaN"/D 594 17bBnAnAnKaN"/F 597 17W6AaAaAaAaGnAnAxAkNkNnNnXaNaNaNaN"/D 30 18bAuN"/F 548 18W8EbAaBaBnAkAn0NnIaAaNaX"/D 556 18bAaBkK"/D 79 19bAuN"/D 169 19bAuN"/D 223 19gAaBnBuAW-6AkEnAnAkAxXaNbNgNeNbNaNaNaNaN"/D 403 19eAaBkNuNaN"/D 458 19eAaBnAnUnNnN"/D 545 19eEnAnNnK"/D 208 20bAaBnAuNnUaN"/D 449 20bBnBnAnXaN"/F 452 20W7AaBaAaGnAnAuAxAxNuIaUaUaNaN"/D 31 21aAbAaAaAaBnAuUnNuNxAkAnAnAnAnAuAkNnXaNaNaNbNeAW6NeN"/D 113 21bAbAW7NeNbGxAaGnAuNnNnNuNxNnKnU"/o 169 21aBuNaN"/D 214 21bAuN"/F 261 21bAbAaEnNnNuAnX"/F 401 21eAbAnAaAbUbJnBnAnAnAuAW-6NnUnNbNaXuNaNaNbN"/D 603 21bEuK"/D 80 22aBxNeN"/D 350 22gAbAbAaAaEaGaGnAnAnAuAxNnUaNbNaNaw-6nKnNnNkAnAnKaN"/D 366 22eAaEuNnNuNaN"/D 411 22eAaBuAnAnBaJnAnAuAnAxNuNnNnNjNbNaNaNaUaIaN"/D 596 22bEuK"/D 66 23eAW8AnAnAnBnBaAaEnBnAnAxNnNnXaNaNaKnKuU"/F 113 23aEaAgAbAaAaAbNaXnNgAaJnBuAuAkXnNiAuNnw-7"/o 213 23bBuU"/F 315 23aAaBaJnBnBnAnKnUnNnNnNbNbUaU"/F 359 23W6AbAaAaAaJuAnAnEnAkAuNaNaXnXnKnNnNaN"/D 405 23eBuNnN"/D 498 23bEuAnAnKaNaN"/D 507 23eAaEuNnNnU"/D 549 23aEuUaN"/D 555 23bEnNnU"/F 27 24gAbAaGnBnAnAuAuKnNiAnAnAnXbNaNaNaNaNeN"/F 77 24gAaw6nAnAnAnAuAuNaKnNnUaUaNaNaN"/F 254 24eAaAaAaGaw6nAnAiUnNxUnXaUaNaNaBbNaNuNaN"/F 301 24eAbAbAxBnBaAaAkAnAaAkAnKnXaKaBeKuNaN"/F 351 24eAaAaBnBaNaw6nAnKxBaAeAuAnAnUnNkNnXnUbNaNaBbNaUuNaN"/D 458 24bBuU"/F 500 24W7AaAaAbBnBnNuAnAaBnEaAkKnNuNaUnNnAnBnNnNnKaNaNbU"/D 600 24bAuN"/D 607 24aAaBaEuNnNW-6NgNaNaN"/F 66 25bEaEnAnAuw-6aU"/F 170 25jAeEuAnGnAuAiNnNnNxNnKgNaNbNeN"/F 219 25W6AaGnBnBuAuAxNnNnNkAnAnNnUeNeNaNaKeN"/D 248 25bAaAnAnBnNnKaN"/D 346 25bAaAnAnAuKaN"/D 396 25eGnAuNnKaN"/F 413 25bAaAbAnBaExAuInUaNaN"/D 452 25bBnAuUaN"/D 560 25aJnAnAaEnBnAuNnKaXaUnNeNaN"/D 252 26eAnAuU"/F 299 26aAnN"/D 300 26bEkUaN"/F 349 26aAnN"/D 350 26bBnAuUaN"/D 402 26aAaEkKaN"/D 462 26bAaAaAaAaGnAuNnUaUnAW-6NbNaNaU"/D 552 26bAuN"/D 594 26aAeAeAkAnBnAuNnIaN"/F 266 27aAaAgAnBnAnBnAuAnXaw-6"/D 297 27aEnAnKaN"/D 304 27gAbAaAaAaBaGkNuNnNuNnNnNnUaU"/F 308 27bAuN"/D 406 27aAnN"/D 456 27bAuN"/D 545 27aAa0AkAuBaBnAaExNnNnInX"/D 226 28bAaEuAkNaUaU"/D 255 28aBnU"/o 257 28bBuU"/o 355 28aBnU"/D 417 28bAaGuKnU"/D 511 28aEbAaJnAkUnAnAuNnKaUnNaNbAaUaN"/F 512 28aAaBuK"/F 556 28aBnGnAxNaUnUbNeN"/F 601 28W6AaAaBkAnAnAnAxNuNuNaNaUaNeN"/D 176 29eAaAaBnAnAuNuXaN"/D 353 29aBnU"/o 406 29aAnN"/D 33 30aw6nAkNnUbNaNaU"/D 116 30jAaGnAnAxNnNnXbN"/F 464 30aBnBaAW-6AnBnUnNnNnNaNeNW6N"/D 500 30aAaBnAbAaEiNnNnXaAaUaN"/D 21 31jAaEnBnAnBxNnUnKaNaNaN"/D 81 31aGnBnAkNnUbNaNaNaN"/D 129 31aAaJnAkNnUnNbNbU"/D 449 31aAgNgAkAnAaAaAaBnAkNkUnI"/F 559 31aAnN"/D 368 32gAaAaEuAiNnKaNaN"/D 606 32eJnAkUnUaNaN"/D 161 33gAaAaAaBnAnAkUnUnK"/D 211 33eAaAaAaAaBnAkNuNnNnKaN"/D 254 33bAaBkNnNaN"/D 302 33eEkNnNaN"/F 305 33aAbAaAbAaAiAiKeK"/D 351 33gEkNnU"/D 414 33gAaEuAW-6KaNbN"/F 411 34aAnN"/D 595 34bAbAaBnAuNnNnK"/F 410 35aExNaNbN"/D 459 35jAaBnAxNuUaN"/D 250 36eAaBnAuNnK"/D 299 36eGkNnUaN"/D 347 36eAaBnAuNnK"/',
+    dDown: 'd 28 8bAaGnNnUuNaN"/F 119 8bAbAaAaAaAaEaBnAnAnAiAiNkUnKaUeNaXeN"/D 124 8bAaGnNnNnNnNaN"/D 17 9eEnAnAuNnUaNaN"/F 21 9W6AbBaBaBaBnAnAuAn2NnXaUbNaNaUaN"/D 113 9bAaEnAkNnUaNaN"/D 169 10eAaEnUuNnN"/D 550 10aAaBnAnAuKaNaN"/D 602 10eAaBuNuU"/D 65 11eGnAuNnKaN"/F 69 11W7BaAaAaBaAaBnAnAxAW-8NkNnXaNeNaKaN"/D 76 11bAaEnNnNnU"/F 163 11W7AbBnNuEaAaNaUeAaEnBnAuAkAW-6NuNnNuKaNaUaNaNaN"/F 552 11W6AaAaAaGaGnAxAiNkNnNnNnKaNaNbNaNaU"/D 560 11aAaAaEnAnKnNnNaN"/F 598 11gAbAbAuBaAaKbAaAaEnAnAuAxAW-7NuNnIaUaNbNbN"/D 159 12eAnAnBuKaN"/D 218 12bAaBuNnU"/D 401 12aAaAnAnBnNnUaNaN"/D 410 12bAaEnNnNnU"/F 452 12jEaAaAbNaBaBuAnAuAxAiNkKaUaUaNaUbN"/D 458 12bAaAaBnAuNnNnUaN"/D 592 12eAnAnBuKaN"/D 169 13bAaBnAnNnK"/D 209 13bAnBnAuUaNaN"/F 212 13W6AaAuBaAaKbBnEnAnAiInUnAnUbN"/F 404 13W6AaAaBnNuBeNaAaBnAkAkNiAnAnNnKaUaUaNbN"/D 448 13bBnAnAnKaN"/D 27 14bAaBkK"/D 124 14aAaBnAnNnUaN"/D 177 14aAaw6nAnAnAn0AuAuAnAnNnUnNnNnKaNaAbAaAbAW6NeNbNaUaKaN"/D 360 14aAaBnNuNaN"/D 604 14bEnNnU"/D 19 15bAaAnAuK"/D 115 15bEnAnNnUaN"/D 162 15bEnAnNnUaN"/D 211 15aBaJjNaNaKaNaNbAaGnAaAaJnAnAuNnIxAxAuAnAuNnw-6aUbUaN"/D 217 15bEnNnU"/D 501 15bEnAuAnEaEaAaAeAaAaEnAnAW-6NuNnUaNeNnUnNnNnKaUaNaUaNaN"/F 504 15jAbAaAaBaEaBnAnAnAkAaAaAnAkUnNnNkNnNnKnKaNbNaUaN"/D 597 15aAaBnAuKaN"/D 68 16bEnAuKaN"/D 75 16bAaBnAnNnK"/D 166 16bAuN"/F 209 16aBuNaN"/D 313 16bAaAaAaAaBuNiNnUaNaN"/F 356 16jAuBuAbNbUaAbExAnNkBnAxNnNaNaUaBbUuNaNbN"/D 365 16bAaEnEW-7AxAnAnAnBkNnNnUnUaNbAaAgNeNbNgKnNbN"/D 403 16aEuUaN"/D 409 16bAaAkU"/D 512 16bAaGnNnUnU"/D 258 17gAaJnBnAnAkUnIaUaN"/D 270 17eAaw6nAnAkNnw-6aNaN"/D 351 17bBnBnNnUaN"/D 359 17bBuU"/D 457 17aAaEuNnUaN"/D 551 17bEnAnNnUaN"/D 558 17aAaBuK"/D 602 17bAuN"/D 24 18bAuN"/D 120 18bAuN"/o 166 18bBuU"/F 207 18aBnU"/D 215 18bAuN"/D 406 18bAuN"/D 449 18bEnAuUaU"/D 30 19bAaAaBaGuNnUkNW-7AuAnAnAuAkXaNaNaNa2NbN"/D 72 19bAuN"/D 126 19aAaAaBaEnNnNkNxAuAnEnAaAaEnAnAkNnInw-6aUbAjNjNaN"/D 304 19bAaAaBuAnAnAnNnXaNaN"/D 353 19bBuU"/D 357 19bAuN"/F 264 20gJaAeNaEnBnAnAuAW-8NuNnNnUnIaBaBeNaNaUaUaN"/D 413 20aAaAbBaEaBaGuAkNnNnXaNaNaNnNuNkAkAnAnAuAuAnUnKaNaNaNjAeNeN"/D 461 20eAaGnAuAuNnUuAxAuBnAeAaAaEnAnAkNnNnXuNnKaUaNbAjNgNbNaN"/D 545 20bAaAaAeAjNgAaJnGnAnAuNnUaNbNaNnUnUiAaEnAkNnNnKnNnNnK"/D 555 20bAuN"/D 608 20bAaAaGuNnNnNxAiAuAnAnAnAbAbAaEnAnAuNnNnIuNnKaNaNaNbAW7NgNbN"/D 79 21aAaAaw6nKnNnNW-8AnAnAnBaAaAaGnAnAkNnKnXnXaUaNbAW8NgN"/F 308 21W9AbAaBaBnAuAuAW-8NkNnNnNaNaNaNbU"/o 356 21eAnAuU"/D 452 21bAuN"/D 512 22aEuUaN"/F 22 23W7AeBaBnBnAnAnAuAxNnNnNkNkUaNbNaNaNbN"/F 121 23gAeAaAaAnBnBuAnAnAW-6NaKnNnNaKaNbN"/F 217 23gJaAbNaBnAuAnAiUnUnNkAnAnKaNaNbNgN"/F 360 23W8AaAkAnJnAkAnNuNiNnNaUaNaNaNgN"/F 410 23eAbAaAnAnAnEnAxNnNuNxNbNbNaNaNeN"/D 504 23bBnAuUaN"/F 545 23aAaAaEaAaAeNaKnNjBaBaAnAuAuAxNnNnNnNnNnNuKaN"/F 604 23gAaAaGnAnAuAuAiUnNuNuNaNaNaNbNjN"/F 71 24W8AaAaGnAnAuAnAiKnNnNnUaNaNaN"/F 166 24a1BnAuAnGnAiUnNiAnKaNaNbNbN"/D 321 24aAaGnAuAkAnAn0NuNnNnUaNaAaAeAW8NbNbNaK"/F 457 24bBaAbNbNaBnBnAnAnAW-6NnNnNkNaUbNgN"/D 366 25gAaBaGnAkNuNnIaN"/F 496 25aAaAaBaAkAnNnXaN"/D 176 26bAbGuAiXaNbN"/D 465 26aAaAaGnAxNuNaNaNaUaN"/D 508 26bAuN"/D 513 26aEaGnAkNnUaNnNnNeNaN"/D 129 27aw8nAxNnUaNaNbUaU"/D 544 27bAaAaAaAaAaBnAkNnNnUnX"/D 32 28aJnAnAuNnNaNaNaNaU"/D 211 28eAaBaBnBnAuNnNnNnKaNaN"/D 401 29gAbAaJnAuAuNnUnw-6"/D 609 29aEnBnAkNnUbNbNaN"/D 15 30eAeAaAaBnBnAnAkNnUnw-6"/D 80 30aEnAnAkUaNbNaN"/D 161 30jAaEnBnAxUnXaN"/D 353 31jAbJnAxNnNnI"/',
+    down: 'd 16 9bAaAnAnBuNnUaNaN"/F 22 9gAbAaBaAaEaBnAnAuAn0NuNnNnUaUaNaUaNaNeN"/D 28 9bAaAaBnAnNnUnU"/D 113 9bBnAnBuKaNaN"/F 117 9jAbAaBaBaBaEuAuAn0NkNnKaUaNaUaNaNbN"/D 124 9bAaGnNnUnU"/D 65 11bBnAnBuKaNaN"/F 69 11jAaAaAaAaBaAaBnAnAuAn0NkNnUaUaNaUaNaNbN"/D 75 11bAaEnNnNnU"/D 159 11bAaBnAnAnNnKaN"/D 170 11eAaEnNnNnNnN"/F 163 12W8AaAaAaAaAaEnAnAuAn1NnNnNnNnNaUbNaNaNaN"/D 219 13aAaAaBuNnNnNaN"/D 170 14aAaAaBuNnK"/D 209 14bAaAuAuAnUaNaN"/F 213 14jAaAaAaAaBnAnAnAiNbNuAnNkAnAnAnNnKaUaNbAnBbNaUuNbNaN"/D 19 15bBnAuUaN"/D 26 15bAaAnAuK"/D 114 15bEnAuKaN"/D 122 15bAaBkK"/D 162 15aGuNnNaNaN"/D 353 15bBnAuUaN"/D 363 15aAaBuNnNaN"/D 402 15bBuAnUaN"/F 405 15gAaAaAnAnAaAbUnNbBaBkAW-9NuKaNaNbNaN"/D 410 15bAaBuNnU"/D 602 15bAaBkNnNaN"/D 67 16aAaBnAuKaN"/D 74 16bAaBuNnU"/F 355 16W6AbAuBbUaAaBnAiNuAxNnUaNaBbUuNaN"/D 450 16aAaAnAuUaN"/D 458 16bAaBuNnU"/D 592 16bEnAuKaN"/F 596 16jAaAbAaBaBnBnAnAW-8NxXaUaNaUbN"/D 166 17bAuN"/D 176 17aAaJnAnAnAnNW-9AkAuAkNnNnUnKaNaNbAaAaAaAa1NbNaNaK"/D 210 17bBnAuUaN"/D 217 17bAaBuNnU"/F 452 17W6AaAuBaAaKaAaBnAuAW-8NuKaNbAnBbKnNaN"/D 496 17bBnBnAnKaU"/F 500 17jEaAbUaBaEnAnAnAuAW-7NuNnUaKaUaNbN"/D 505 17bAaEuNnK"/F 548 17jAaAaAaAaAaGnAkAW-8NkKaUaNaKbN"/D 555 17bAaBnAnNnNnNaN"/D 23 18bAuN"/D 118 18bAuN"/D 313 18eAaAaBaEnAxNnUnKaU"/D 354 18bBuU"/D 361 18bBuU"/D 366 18bAaEnAnAnAnNn1AuAnNnUnKaNbBaAa1NaUaN"/D 403 18aEuUaN"/D 410 18aAaBuNnNaN"/D 544 18bEnAnNnUaN"/D 71 19bAuN"/o 166 19bBuU"/D 214 19bAuN"/D 222 19bAaGnAnBuNW-9AuAuAuXaNaNaNaNeAaAjNaNaNaN"/D 258 19bAbw6nAnAxNnIaUbN"/D 266 19gAaBaGnAxNnUnXaN"/D 358 19bAuN"/D 451 19aEuUaN"/D 457 19bEnNnU"/D 30 20aAaAaAaJnAuKnNuNW-6AuAnBnEaAaAaGnAnAkNnNnw-6nw-6aUaUeAa0NbN"/D 126 20aBaAaAaBaEnBnJnAnAxUnUaUaNbKnNnUnNW-8AuAnAnBuNnKaUaNaNeAa0NbN"/D 305 20bAaBaGnAxNnIaNaN"/D 406 20bAuN"/D 602 20aAaBnAnNnUaN"/D 78 21aAaBaBaGnBnGnAkNnKaNaNaNaKnNnNn0AnAnAnBbAbAaGnAxNnw-6nNnKaUaUeAa0NbN"/o 214 21bAuN"/o 357 21bAuN"/D 454 21bAuN"/D 594 21bEnAnNnUaN"/F 264 22aBaBaAgNaKaw7nBnAnAuAW-9NuNnNnNnw-6aBaAgNaNaKbN"/F 310 22bAaBaAgNaUaw6nAuAuAkAiNkNnXaAgNaXaN"/D 400 22bAW9NeAaBnAnAkUiAnAkNuKaN"/D 460 22bAaEuAnAnAuNnUaNW-6AnAnBbAaBaBnAxNnXnIaNaNbAW8NbN"/D 320 23bAaGnAnBnAnAuAuAn0NuNnNnNnUaNbEaAeAjNeNbNbNaw-6"/D 498 23aEuUaN"/D 503 23bAaBuNnU"/D 547 23aEuUaN"/D 553 23bAaBuNnU"/D 605 23aAaAaGnAnNnNW-8AnEnAaBbBnAuNnKnUnNnXaNeAW8NaNaU"/F 22 24W6AbAaEaAuAuBnAnAiUnNnNnKaUaNbN"/F 115 24W8AaBaAaEuAnBW-6NnNnNuNkNaUaNaNbN"/F 354 24a1AbAaAuAuAnEaAW-7NnKuNkUaNbN"/D 509 24bEnAaAaEnBnAkNnKaNxNxAaAaEnAuNuNnNnIaNaAbAW7NbNaNaN"/D 558 24aAaGnBnGnBkIaXnNeNaU"/D 598 24bAuN"/F 67 25a0AaAaEnAnAnAnBW-6KnNuNuUaNaNaN"/F 165 25W9AaAaBaBnNkAnEaAW-8UuNkAnNnXbNbNeN"/F 405 25jBeNaNaAaEnNkAnAnEiNnUnNnNuAnAnKaNbAeNaN"/F 451 25W6AnBaAbNaNaNbAnAnAnAnAnBiNnUnNuUaNaN"/F 212 26W9AbAuAnAnEaAuAiKnNnNuAnAnNnUbNbNbN"/D 500 26bAuN"/D 550 26bAuN"/D 366 27bAaBaBnBxNnNnKaNbN"/D 462 27aBaBnBnAkNnUaNaNaNaN"/F 510 27aAnN"/D 544 27bAW8AiAaBaGnBkNnNnUnKnKaN"/D 221 28eGnAnAuNnKaNaN"/D 351 28eAbGnAuAuNnIaN"/D 400 28bAaAaGnAuNnNnNnUaNaN"/D 412 28eAaEnAnAkNnKaNaN"/F 554 28aGnEkKnUnNjN"/F 597 28W8AaAaBnNuBnAnAW-6UnNaKaN"/F 499 29gAgAnBiUnNnN"/D 30 30bJnAnAkNnUaNaUbN"/D 110 30eAbAaAaBnBxNnKnK"/D 173 30eAbGnAkNnNnKaN"/D 209 30bAaAaGnAuNnNnNnUaNaN"/F 558 31aBnU"/D 604 31bAaGnAuNnKaU"/D 160 32eAbBaBnBkNnNnNnKaN"/' };
+
+  const decodeRef = { a: ' h 1', b: ' h 2', e: ' h 3', g: ' h 4', j: ' h 5', A: ' v 1', B: ' v 2', E: ' v 3', G: ' v 4', J: ' v 5', n: 'h -1', u: ' h -2', k: ' h -3', x: ' h -4', i: ' h -5', N: ' v -1', U: ' v -2', K: ' v -3', X: ' v -4', I: ' v -5', w: ' v ', W: ' h ', D: '<path d="M', o: '<path fill="pink" d="M', F: '<path fill="#fff" d="M', '/': '/>', d: '<path d="M', f: '<path fill="#fff" d="M' };
+  const decode = s => s.split('').map(c => decodeRef[c] === undefined ? c : decodeRef[c]).join('');
+
+  // ---- faithful constants ----
+  const CELL = 100, FRAME_MS = 140, IMPACT = 80, STEP = 50;
+  const ANIM = {
+    walk: [0, 1, 2, 1], stop: [0],
+    fall: [3, 4, 5, 6, 5, 7], fallen: [7], standUp: [7, 8, 9, 10, 11, 12],
+  };
+  const ROW = { up: 0, dUp: 1, side: 2, dDown: 3, down: 4 };
+  const DIR_SPRITE = {
+    up: 'up', upright: 'dUp', right: 'side', downright: 'dDown',
+    down: 'down', downleft: 'dDown', left: 'side', upleft: 'dUp',
+  };
+  const DIRS = Object.keys(DIR_SPRITE);
+  const MOVE_SPEEDS = [850, 900, 950, 1000, 1100];
+  const TURN_OPTIONS = [1, 1, -1, -1, 0];
+
+  const stage = document.getElementById('stage');
+  let hatPandaRef = null;   // set once the troupe's hero panda exists (below)
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rand = n => Math.ceil(Math.random() * n);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  // ---- round 7: the dǒulì, redrawn in 3-D per perspective ----
+  // Round 6 fitted a flat, front-on cone onto every direction — so in ¾ and
+  // profile the hat sat in a different dimension than the panda. Round 7 draws
+  // five separate perspective hats: the brim is an ellipse that foreshortens
+  // and tilts with the heading, the cone axis leans, one face catches light and
+  // the other falls into straw-shadow, the ribs fan the way the head has turned,
+  // and a cast-shadow line under the brim separates the hat from the head so
+  // they no longer read as one shape. Every drawing is a plain pixel map — the
+  // pixel studio below paints and recolours those pixels directly.
+  // Coloured to the panda's own palette — her pink-red ink line-work, white
+  // straw, a soft-pink shaded face — so the hat lives in the same world as the
+  // line-art panda instead of clashing with it. Shape kept from the dǒulì
+  // reference: a wide, shallow pleated fan-disc, a collar knot under the finial.
+  const INK = '#7c5322';         // deep straw brown — outline + pleats
+  const WHT = '#e6c583';         // lit straw (pale gold highlight)
+  const SHD = '#c08a3e';         // shaded straw (golden tan mid-tone)
+  const RED = '#c0392b';         // collar knot — cinnabar red band under the finial
+  const GLD = '#d4a017';         // finial knob — brass gold at the apex
+  const SEP = 'rgba(74,48,20,0.35)'; // cast shadow — the hat/head separator
+  const HAT_W = 28, HAT_H = 14;
+  const rect = (x, y, f) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`;
+
+  // Rasterise one 3-D straw hat from ellipse-brim + leaning-cone geometry.
+  const genHat = v => {
+    const P = {};
+    const set = (x, y, c) => {
+      x = Math.round(x); y = Math.round(y);
+      if (x < 0 || y < 0 || x >= HAT_W || y >= HAT_H) return;
+      P[x + ',' + y] = c;
+    };
+    const { ax, ay, cx, cy, rx, ry, tilt, baseY, coneRx, band, lit, ribs } = v;
+    // brim — a shallow ellipse; top surface lit, front lip in shadow, the outer
+    // (front) arc inked, a soft cast-shadow row just beneath its centre.
+    for (let x = Math.round(cx - rx); x <= Math.round(cx + rx); x++) {
+      const t = (x - cx) / rx; if (Math.abs(t) > 1.0001) continue;
+      const dy = ry * Math.sqrt(Math.max(0, 1 - t * t));
+      const mid = cy + tilt * t;                          // brim tilts with view
+      const top = Math.round(mid - dy), bot = Math.round(mid + dy);
+      for (let y = top; y <= bot; y++) set(x, y, y < mid ? WHT : SHD);
+      set(x, bot, INK);                                   // crisp front edge
+      if (Math.abs(t) < 0.7) set(x, bot + 1, SEP);        // separator shadow
+    }
+    set(Math.round(cx - rx), Math.round(cy), INK);        // brim tips
+    set(Math.round(cx + rx), Math.round(cy), INK);
+    // cone — axis leans from apex to brim centre; one face lit, one shaded.
+    const span = (baseY - ay) || 1;
+    for (let y = ay; y <= baseY; y++) {
+      const f = (y - ay) / span;
+      const m = ax + (cx - ax) * f, hw = coneRx * f;
+      const L = Math.round(m - hw), R = Math.round(m + hw);
+      for (let x = L; x <= R; x++) set(x, y, ((x < m) === (lit === 'L')) ? WHT : SHD);
+      set(L, y, INK); set(R, y, INK);                     // slant edges
+    }
+    // pleats — solid ink lines fanning from the apex out to the brim rim;
+    // the whole fan turns with the cone, and the endpoints lightly notch the rim.
+    for (let i = 0; i < ribs; i++) {
+      const u = ribs === 1 ? 0.5 : i / (ribs - 1);
+      const ex = cx - rx * 0.94 + rx * 1.88 * u;          // endpoint near the rim
+      const t = Math.max(-1, Math.min(1, (ex - cx) / rx));
+      const ey = (cy + tilt * t) - ry * Math.sqrt(Math.max(0, 1 - t * t)) * 0.25;
+      const steps = Math.max(Math.abs(ex - ax), Math.abs(ey - ay), 1);
+      for (let s = 1; s <= steps; s++) {
+        const f = s / steps;
+        set(ax + (ex - ax) * f, ay + (ey - ay) * f, INK);
+      }
+    }
+    // collar — a narrow ink ring just under the finial, seen from every side.
+    if (band) {
+      const y = ay + 1, f = (y - ay) / span, m = ax + (cx - ax) * f, hw = coneRx * f;
+      for (let x = Math.round(m - hw); x <= Math.round(m + hw); x++) set(x, y, band);
+    }
+    set(Math.round(ax), ay, GLD);                         // finial knob
+    return P;
+  };
+
+  // the five perspectives — apex/brim geometry, brim tilt, cone lean, band, lit
+  // face. dDown/side turn to the right (the sheet's ¾-front/profile heading);
+  // dUp/up show the back, so the band drops and the lit face swaps.
+  const HAT_VIEWS = {
+    down:  { ax: 14, ay: 0, cx: 14, cy: 6, rx: 13, ry: 2, tilt: 0,  baseY: 4, coneRx: 5, band: RED, lit: 'L', ribs: 7 },
+    dDown: { ax: 15, ay: 0, cx: 13, cy: 6, rx: 12, ry: 2, tilt: -1, baseY: 4, coneRx: 5, band: RED, lit: 'L', ribs: 7 },
+    side:  { ax: 15, ay: 0, cx: 14, cy: 6, rx: 12, ry: 1, tilt: 1,  baseY: 4, coneRx: 5, band: RED, lit: 'L', ribs: 4 },
+    dUp:   { ax: 15, ay: 0, cx: 13, cy: 6, rx: 12, ry: 2, tilt: -1, baseY: 4, coneRx: 5, band: RED, lit: 'R', ribs: 7 },
+    up:    { ax: 14, ay: 0, cx: 14, cy: 6, rx: 13, ry: 2, tilt: 0,  baseY: 4, coneRx: 5, band: RED, lit: 'R', ribs: 7 },
+  };
+  // ---- FINALIZED HAT — hand-tweaked drawings exported from the studio ----
+  // genHat/HAT_VIEWS above generated the base 3-D shapes; these baked pixel maps
+  // are the locked-in result. "reset this drawing" regenerates the base shape.
+  const HAT_PIXELS_SAVED = {"down":{"1,6":"#7c5322","2,5":"#e6c583","2,6":"#7c5322","2,7":"#7c5322","3,5":"#7c5322","3,6":"#c08a3e","3,7":"#7c5322","4,5":"#7c5322","4,6":"#c08a3e","4,7":"#7c5322","5,5":"#e6c583","5,6":"#c08a3e","5,7":"#7c5322","5,8":"rgba(74,48,20,0.35)","6,4":"#7c5322","6,5":"#e6c583","6,6":"#7c5322","6,7":"#c08a3e","6,8":"#7c5322","6,9":"rgba(74,48,20,0.35)","7,4":"#e6c583","7,5":"#7c5322","7,6":"#c08a3e","7,7":"#c08a3e","7,8":"#7c5322","7,9":"rgba(74,48,20,0.35)","8,4":"#7c5322","8,5":"#e6c583","8,6":"#c08a3e","8,7":"#c08a3e","8,8":"#7c5322","8,9":"rgba(74,48,20,0.35)","9,4":"#7c5322","9,5":"#e6c583","9,6":"#c08a3e","9,7":"#c08a3e","9,8":"#7c5322","9,9":"rgba(74,48,20,0.35)","10,4":"#e6c583","10,5":"#7c5322","10,6":"#c08a3e","10,7":"#c08a3e","10,8":"#7c5322","10,9":"rgba(74,48,20,0.35)","11,4":"#7c5322","11,5":"#e6c583","11,6":"#c08a3e","11,7":"#c08a3e","11,8":"#7c5322","11,9":"rgba(74,48,20,0.35)","12,4":"#e6c583","12,5":"#e6c583","12,6":"#c08a3e","12,7":"#c08a3e","12,8":"#7c5322","12,9":"rgba(74,48,20,0.35)","13,4":"#e6c583","13,5":"#e6c583","13,6":"#c08a3e","13,7":"#c08a3e","13,8":"#7c5322","13,9":"rgba(74,48,20,0.35)","14,4":"#7c5322","14,5":"#7c5322","14,6":"#c08a3e","14,7":"#c08a3e","14,8":"#7c5322","14,9":"rgba(74,48,20,0.35)","15,4":"#c08a3e","15,5":"#e6c583","15,6":"#c08a3e","15,7":"#c08a3e","15,8":"#7c5322","15,9":"rgba(74,48,20,0.35)","16,4":"#c08a3e","16,5":"#e6c583","16,6":"#c08a3e","16,7":"#c08a3e","16,8":"#7c5322","16,9":"rgba(74,48,20,0.35)","17,4":"#7c5322","17,5":"#e6c583","17,6":"#c08a3e","17,7":"#c08a3e","17,8":"#7c5322","17,9":"rgba(74,48,20,0.35)","18,4":"#c08a3e","18,5":"#7c5322","18,6":"#c08a3e","18,7":"#c08a3e","18,8":"#7c5322","18,9":"rgba(74,48,20,0.35)","19,4":"#7c5322","19,5":"#e6c583","19,6":"#c08a3e","19,7":"#c08a3e","19,8":"#7c5322","19,9":"rgba(74,48,20,0.35)","20,4":"#7c5322","20,5":"#e6c583","20,6":"#c08a3e","20,7":"#c08a3e","20,8":"#7c5322","20,9":"rgba(74,48,20,0.35)","21,4":"#e6c583","21,5":"#7c5322","21,6":"#c08a3e","21,7":"#c08a3e","21,8":"#7c5322","21,9":"rgba(74,48,20,0.35)","22,4":"#7c5322","22,5":"#e6c583","22,6":"#7c5322","22,7":"#c08a3e","22,8":"#7c5322","22,9":"rgba(74,48,20,0.35)","23,5":"#e6c583","23,6":"#c08a3e","23,7":"#7c5322","23,8":"rgba(74,48,20,0.35)","24,5":"#7c5322","24,6":"#c08a3e","24,7":"#7c5322","25,5":"#7c5322","25,6":"#c08a3e","25,7":"#7c5322","26,5":"#e6c583","26,6":"#7c5322","26,7":"#7c5322","27,6":"#7c5322","14,0":"#d4a017","13,1":"#c0392b","14,1":"#c0392b","15,1":"#c0392b","12,2":"#7c5322","13,2":"#7c5322","14,2":"#7c5322","15,2":"#7c5322","16,2":"#c08a3e","17,2":"#7c5322","10,3":"#7c5322","11,3":"#e6c583","12,3":"#7c5322","13,3":"#e6c583","14,3":"#7c5322","15,3":"#c08a3e","16,3":"#7c5322","17,3":"#c08a3e","18,3":"#7c5322","13,0":"#7c5322","12,1":"#7c5322","11,1":"#7c5322","10,2":"#7c5322","9,2":"#7c5322","8,3":"#7c5322","7,3":"#7c5322","5,4":"#7c5322","11,2":"#7c5322","9,3":"#7c5322","16,1":"#7c5322","19,3":"#7c5322","15,0":"#7c5322","17,1":"#7c5322","18,2":"#7c5322","19,2":"#7c5322","20,3":"#7c5322","21,3":"#7c5322","23,4":"#7c5322"},"dDown":{"1,7":"#7c5322","2,6":"#e6c583","2,7":"#7c5322","2,8":"#7c5322","3,6":"#7c5322","3,7":"#c08a3e","3,8":"#7c5322","4,5":"#e6c583","4,6":"#7c5322","4,7":"#c08a3e","4,8":"#7c5322","5,5":"#7c5322","5,6":"#e6c583","5,7":"#c08a3e","5,8":"#7c5322","5,9":"rgba(74,48,20,0.35)","6,5":"#7c5322","6,6":"#7c5322","6,7":"#c08a3e","6,8":"#7c5322","6,9":"rgba(74,48,20,0.35)","7,5":"#7c5322","7,6":"#e6c583","7,7":"#c08a3e","7,8":"#7c5322","7,9":"rgba(74,48,20,0.35)","8,5":"#7c5322","8,6":"#e6c583","8,7":"#c08a3e","8,8":"#7c5322","8,9":"rgba(74,48,20,0.35)","9,4":"#7c5322","9,5":"#e6c583","9,6":"#e6c583","9,7":"#c08a3e","9,8":"#7c5322","9,9":"rgba(74,48,20,0.35)","10,4":"#e6c583","10,5":"#7c5322","10,6":"#e6c583","10,7":"#c08a3e","10,8":"#7c5322","10,9":"rgba(74,48,20,0.35)","11,4":"#7c5322","11,5":"#e6c583","11,6":"#e6c583","11,7":"#c08a3e","11,8":"#7c5322","11,9":"rgba(74,48,20,0.35)","12,4":"#e6c583","12,5":"#e6c583","12,6":"#e6c583","12,7":"#c08a3e","12,8":"#7c5322","12,9":"rgba(74,48,20,0.35)","13,4":"#c08a3e","13,5":"#7c5322","13,6":"#c08a3e","13,7":"#c08a3e","13,8":"#7c5322","13,9":"rgba(74,48,20,0.35)","14,4":"#7c5322","14,5":"#e6c583","14,6":"#c08a3e","14,7":"#c08a3e","14,8":"#7c5322","14,9":"rgba(74,48,20,0.35)","15,4":"#c08a3e","15,5":"#e6c583","15,6":"#c08a3e","15,7":"#c08a3e","15,8":"#7c5322","15,9":"rgba(74,48,20,0.35)","16,4":"#7c5322","16,5":"#e6c583","16,6":"#c08a3e","16,7":"#c08a3e","16,8":"#7c5322","16,9":"rgba(74,48,20,0.35)","17,4":"#c08a3e","17,5":"#7c5322","17,6":"#c08a3e","17,7":"#c08a3e","17,8":"#7c5322","17,9":"rgba(74,48,20,0.35)","18,4":"#7c5322","18,5":"#e6c583","18,6":"#c08a3e","18,7":"#7c5322","18,8":"rgba(74,48,20,0.35)","19,4":"#7c5322","19,5":"#e6c583","19,6":"#c08a3e","19,7":"#7c5322","19,8":"rgba(74,48,20,0.35)","20,4":"#e6c583","20,5":"#7c5322","20,6":"#c08a3e","20,7":"#7c5322","20,8":"rgba(74,48,20,0.35)","21,4":"#e6c583","21,5":"#e6c583","21,6":"#c08a3e","21,7":"#7c5322","21,8":"rgba(74,48,20,0.35)","22,4":"#7c5322","22,5":"#e6c583","22,6":"#c08a3e","22,7":"#7c5322","23,4":"#7c5322","23,5":"#e6c583","23,6":"#7c5322","24,4":"#e6c583","24,5":"#7c5322","24,6":"#7c5322","25,5":"#7c5322","1,6":"#7c5322","25,6":"#7c5322","15,0":"#d4a017","13,1":"#c0392b","14,1":"#c0392b","15,1":"#c0392b","16,1":"#c0392b","12,2":"#7c5322","13,2":"#7c5322","14,2":"#7c5322","15,2":"#c08a3e","16,2":"#7c5322","17,2":"#7c5322","10,3":"#7c5322","11,3":"#7c5322","12,3":"#7c5322","13,3":"#e6c583","14,3":"#7c5322","15,3":"#c08a3e","16,3":"#7c5322","17,3":"#7c5322","8,4":"#7c5322","11,2":"#7c5322","9,3":"#7c5322","7,4":"#7c5322","18,3":"#7c5322","17,1":"#7c5322","18,2":"#7c5322","19,2":"#7c5322","20,3":"#7c5322","21,3":"#7c5322"},"side":{"2,5":"#7c5322","3,5":"#7c5322","4,5":"#e6c583","4,6":"#7c5322","5,5":"#e6c583","5,6":"#7c5322","6,5":"#e6c583","6,6":"#7c5322","6,7":"rgba(74,48,20,0.35)","7,5":"#e6c583","7,6":"#7c5322","7,7":"rgba(74,48,20,0.35)","8,5":"#e6c583","8,6":"#7c5322","8,7":"rgba(74,48,20,0.35)","9,5":"#e6c583","9,6":"#7c5322","9,7":"rgba(74,48,20,0.35)","10,5":"#e6c583","10,6":"#c08a3e","10,7":"#7c5322","10,8":"rgba(74,48,20,0.35)","11,5":"#7c5322","11,6":"#c08a3e","11,7":"#7c5322","11,8":"rgba(74,48,20,0.35)","12,5":"#e6c583","12,6":"#c08a3e","12,7":"#7c5322","12,8":"rgba(74,48,20,0.35)","13,5":"#e6c583","13,6":"#c08a3e","13,7":"#7c5322","13,8":"rgba(74,48,20,0.35)","14,5":"#e6c583","14,6":"#c08a3e","14,7":"#7c5322","14,8":"rgba(74,48,20,0.35)","15,5":"#e6c583","15,6":"#e6c583","15,7":"#7c5322","15,8":"rgba(74,48,20,0.35)","16,5":"#e6c583","16,6":"#e6c583","16,7":"#7c5322","16,8":"rgba(74,48,20,0.35)","17,5":"#7c5322","17,6":"#e6c583","17,7":"#7c5322","17,8":"rgba(74,48,20,0.35)","18,5":"#e6c583","18,6":"#7c5322","18,7":"#7c5322","18,8":"rgba(74,48,20,0.35)","19,6":"#e6c583","19,7":"#7c5322","19,8":"rgba(74,48,20,0.35)","20,6":"#e6c583","20,7":"#7c5322","20,8":"rgba(74,48,20,0.35)","21,6":"#e6c583","21,7":"#7c5322","21,8":"rgba(74,48,20,0.35)","22,6":"#e6c583","22,7":"#7c5322","22,8":"rgba(74,48,20,0.35)","23,6":"#e6c583","23,7":"#7c5322","24,6":"#7c5322","24,7":"#7c5322","25,7":"#7c5322","26,7":"#7c5322","2,6":"#7c5322","26,6":"#7c5322","15,0":"#d4a017","14,1":"#c0392b","15,1":"#c0392b","16,1":"#c0392b","12,2":"#7c5322","13,2":"#7c5322","14,2":"#e6c583","15,2":"#c08a3e","16,2":"#7c5322","17,2":"#7c5322","11,3":"#7c5322","12,3":"#7c5322","13,3":"#e6c583","14,3":"#e6c583","15,3":"#c08a3e","16,3":"#7c5322","17,3":"#c08a3e","18,3":"#7c5322","9,4":"#7c5322","10,4":"#e6c583","11,4":"#e6c583","12,4":"#7c5322","13,4":"#e6c583","14,4":"#c08a3e","15,4":"#c08a3e","16,4":"#c08a3e","17,4":"#7c5322","18,4":"#c08a3e","19,4":"#7c5322","14,0":"#7c5322","13,1":"#7c5322","12,1":"#7c5322","11,2":"#7c5322","10,2":"#7c5322","9,2":"#7c5322","8,3":"#7c5322","7,3":"#7c5322","6,4":"#7c5322","5,4":"#7c5322","4,4":"#7c5322","17,1":"#7c5322","18,2":"#7c5322","19,3":"#7c5322","20,3":"#7c5322","21,4":"#7c5322","22,5":"#7c5322","23,5":"#7c5322"},"dUp":{"1,7":"#7c5322","2,6":"#e6c583","2,7":"#7c5322","2,8":"#7c5322","3,6":"#7c5322","3,7":"#c08a3e","3,8":"#7c5322","4,5":"#e6c583","4,6":"#7c5322","4,7":"#c08a3e","4,8":"#7c5322","5,5":"#7c5322","5,6":"#e6c583","5,7":"#c08a3e","5,8":"#7c5322","5,9":"rgba(74,48,20,0.35)","6,5":"#7c5322","6,6":"#7c5322","6,7":"#c08a3e","6,8":"#7c5322","6,9":"rgba(74,48,20,0.35)","7,5":"#7c5322","7,6":"#e6c583","7,7":"#c08a3e","7,8":"#7c5322","7,9":"rgba(74,48,20,0.35)","8,5":"#7c5322","8,6":"#e6c583","8,7":"#c08a3e","8,8":"#7c5322","8,9":"rgba(74,48,20,0.35)","9,4":"#7c5322","9,5":"#e6c583","9,6":"#e6c583","9,7":"#c08a3e","9,8":"#7c5322","9,9":"rgba(74,48,20,0.35)","10,4":"#c08a3e","10,5":"#7c5322","10,6":"#e6c583","10,7":"#c08a3e","10,8":"#7c5322","10,9":"rgba(74,48,20,0.35)","11,4":"#7c5322","11,5":"#e6c583","11,6":"#e6c583","11,7":"#c08a3e","11,8":"#7c5322","11,9":"rgba(74,48,20,0.35)","12,4":"#c08a3e","12,5":"#e6c583","12,6":"#e6c583","12,7":"#c08a3e","12,8":"#7c5322","12,9":"rgba(74,48,20,0.35)","13,4":"#e6c583","13,5":"#7c5322","13,6":"#c08a3e","13,7":"#c08a3e","13,8":"#7c5322","13,9":"rgba(74,48,20,0.35)","14,4":"#7c5322","14,5":"#e6c583","14,6":"#c08a3e","14,7":"#c08a3e","14,8":"#7c5322","14,9":"rgba(74,48,20,0.35)","15,4":"#e6c583","15,5":"#e6c583","15,6":"#c08a3e","15,7":"#c08a3e","15,8":"#7c5322","15,9":"rgba(74,48,20,0.35)","16,4":"#7c5322","16,5":"#e6c583","16,6":"#c08a3e","16,7":"#c08a3e","16,8":"#7c5322","16,9":"rgba(74,48,20,0.35)","17,4":"#e6c583","17,5":"#7c5322","17,6":"#c08a3e","17,7":"#c08a3e","17,8":"#7c5322","17,9":"rgba(74,48,20,0.35)","18,4":"#7c5322","18,5":"#e6c583","18,6":"#c08a3e","18,7":"#7c5322","18,8":"rgba(74,48,20,0.35)","19,4":"#7c5322","19,5":"#e6c583","19,6":"#c08a3e","19,7":"#7c5322","19,8":"rgba(74,48,20,0.35)","20,4":"#e6c583","20,5":"#7c5322","20,6":"#c08a3e","20,7":"#7c5322","20,8":"rgba(74,48,20,0.35)","21,4":"#e6c583","21,5":"#e6c583","21,6":"#c08a3e","21,7":"#7c5322","21,8":"rgba(74,48,20,0.35)","22,4":"#7c5322","22,5":"#e6c583","22,6":"#c08a3e","22,7":"#7c5322","23,4":"#7c5322","23,5":"#e6c583","23,6":"#7c5322","24,4":"#e6c583","24,5":"#7c5322","24,6":"#7c5322","25,5":"#7c5322","1,6":"#7c5322","25,6":"#7c5322","15,0":"#d4a017","13,1":"#c0392b","14,1":"#c0392b","15,1":"#c0392b","16,1":"#c0392b","12,2":"#7c5322","13,2":"#7c5322","14,2":"#7c5322","15,2":"#e6c583","16,2":"#7c5322","17,2":"#7c5322","10,3":"#7c5322","11,3":"#7c5322","12,3":"#7c5322","13,3":"#c08a3e","14,3":"#7c5322","15,3":"#e6c583","16,3":"#7c5322","17,3":"#7c5322","8,4":"#7c5322","11,2":"#7c5322","9,3":"#7c5322","7,4":"#7c5322","18,3":"#7c5322","17,1":"#7c5322","18,2":"#7c5322","19,2":"#7c5322","20,3":"#7c5322","21,3":"#7c5322"},"up":{"1,6":"#7c5322","2,5":"#e6c583","2,6":"#7c5322","2,7":"#7c5322","3,5":"#7c5322","3,6":"#c08a3e","3,7":"#7c5322","4,5":"#7c5322","4,6":"#c08a3e","4,7":"#7c5322","5,5":"#e6c583","5,6":"#c08a3e","5,7":"#7c5322","5,8":"rgba(74,48,20,0.35)","6,4":"#7c5322","6,5":"#e6c583","6,6":"#7c5322","6,7":"#c08a3e","6,8":"#7c5322","6,9":"rgba(74,48,20,0.35)","7,4":"#e6c583","7,5":"#7c5322","7,6":"#c08a3e","7,7":"#c08a3e","7,8":"#7c5322","7,9":"rgba(74,48,20,0.35)","8,4":"#7c5322","8,5":"#e6c583","8,6":"#c08a3e","8,7":"#c08a3e","8,8":"#7c5322","8,9":"rgba(74,48,20,0.35)","9,4":"#7c5322","9,5":"#e6c583","9,6":"#c08a3e","9,7":"#c08a3e","9,8":"#7c5322","9,9":"rgba(74,48,20,0.35)","10,4":"#c08a3e","10,5":"#7c5322","10,6":"#c08a3e","10,7":"#c08a3e","10,8":"#7c5322","10,9":"rgba(74,48,20,0.35)","11,4":"#7c5322","11,5":"#e6c583","11,6":"#c08a3e","11,7":"#c08a3e","11,8":"#7c5322","11,9":"rgba(74,48,20,0.35)","12,4":"#c08a3e","12,5":"#e6c583","12,6":"#c08a3e","12,7":"#c08a3e","12,8":"#7c5322","12,9":"rgba(74,48,20,0.35)","13,4":"#c08a3e","13,5":"#e6c583","13,6":"#c08a3e","13,7":"#c08a3e","13,8":"#7c5322","13,9":"rgba(74,48,20,0.35)","14,4":"#7c5322","14,5":"#7c5322","14,6":"#c08a3e","14,7":"#c08a3e","14,8":"#7c5322","14,9":"rgba(74,48,20,0.35)","15,4":"#e6c583","15,5":"#e6c583","15,6":"#c08a3e","15,7":"#c08a3e","15,8":"#7c5322","15,9":"rgba(74,48,20,0.35)","16,4":"#e6c583","16,5":"#e6c583","16,6":"#c08a3e","16,7":"#c08a3e","16,8":"#7c5322","16,9":"rgba(74,48,20,0.35)","17,4":"#7c5322","17,5":"#e6c583","17,6":"#c08a3e","17,7":"#c08a3e","17,8":"#7c5322","17,9":"rgba(74,48,20,0.35)","18,4":"#e6c583","18,5":"#7c5322","18,6":"#c08a3e","18,7":"#c08a3e","18,8":"#7c5322","18,9":"rgba(74,48,20,0.35)","19,4":"#7c5322","19,5":"#e6c583","19,6":"#c08a3e","19,7":"#c08a3e","19,8":"#7c5322","19,9":"rgba(74,48,20,0.35)","20,4":"#7c5322","20,5":"#e6c583","20,6":"#c08a3e","20,7":"#c08a3e","20,8":"#7c5322","20,9":"rgba(74,48,20,0.35)","21,4":"#e6c583","21,5":"#7c5322","21,6":"#c08a3e","21,7":"#c08a3e","21,8":"#7c5322","21,9":"rgba(74,48,20,0.35)","22,4":"#7c5322","22,5":"#e6c583","22,6":"#7c5322","22,7":"#c08a3e","22,8":"#7c5322","22,9":"rgba(74,48,20,0.35)","23,5":"#e6c583","23,6":"#c08a3e","23,7":"#7c5322","23,8":"rgba(74,48,20,0.35)","24,5":"#7c5322","24,6":"#c08a3e","24,7":"#7c5322","25,5":"#7c5322","25,6":"#c08a3e","25,7":"#7c5322","26,5":"#e6c583","26,6":"#7c5322","26,7":"#7c5322","27,6":"#7c5322","14,0":"#d4a017","13,1":"#c0392b","14,1":"#c0392b","15,1":"#c0392b","12,2":"#7c5322","13,2":"#7c5322","14,2":"#7c5322","15,2":"#7c5322","16,2":"#e6c583","17,2":"#7c5322","10,3":"#7c5322","11,3":"#c08a3e","12,3":"#7c5322","13,3":"#c08a3e","14,3":"#7c5322","15,3":"#e6c583","16,3":"#7c5322","17,3":"#e6c583","18,3":"#7c5322","13,0":"#7c5322","12,1":"#7c5322","11,1":"#7c5322","10,2":"#7c5322","9,2":"#7c5322","8,3":"#7c5322","7,3":"#7c5322","5,4":"#7c5322","11,2":"#7c5322","9,3":"#7c5322","16,1":"#7c5322","19,3":"#7c5322","15,0":"#7c5322","17,1":"#7c5322","18,2":"#7c5322","19,2":"#7c5322","20,3":"#7c5322","21,3":"#7c5322","23,4":"#7c5322"}};
+  const HAT_PIXELS = JSON.parse(JSON.stringify(HAT_PIXELS_SAVED));
+  const HAT_STORE = 'panda-hat-v2';   // localStorage key; persistence wired below
+  // The hat sits steady on the head. The per-frame head bob comes entirely from
+  // the seat (HAT_FIT) moving the whole hat as a unit — no shearing of the
+  // drawing, which had read as jank (a triangle wobbling atop the head).
+  const hatArt = dir => {
+    const px = HAT_PIXELS[dir];
+    let out = '';
+    for (const k in px) {
+      const i = k.indexOf(',');
+      out += rect(+k.slice(0, i), +k.slice(i + 1), px[k]);
+    }
+    return out;
+  };
+  // per-frame seats: brim centre over the measured head centre, brim just above
+  // the head top; f1 is the mid-stride dip. Tuned on the bench; the taller 3-D
+  // cone seats a couple units higher than the round-6 flat hat did.
+  const HAT_FIT_DEFAULT = {
+    down:  [{ x: 9, y: 6 }, { x: 8, y: 7 }, { x: 8, y: 6 }],
+    dDown: [{ x: 9, y: 5 }, { x: 9, y: 7 }, { x: 9, y: 5 }],
+    side:  [{ x: 11, y: 7 }, { x: 11, y: 9 }, { x: 11, y: 7 }],
+    dUp:   [{ x: 10, y: 6 }, { x: 10, y: 7 }, { x: 10, y: 6 }],
+    up:    [{ x: 10, y: 4 }, { x: 10, y: 6 }, { x: 10, y: 4 }],
+  };
+  const HAT_FIT = JSON.parse(JSON.stringify(HAT_FIT_DEFAULT));
+  // ---- persistence: studio drawings + bench seats are in-memory only, so save
+  // them to localStorage on every edit and reload them over the defaults. The
+  // studio's `export` button copies this exact { pixels, fit } object, which is
+  // what gets baked into the code (and assets/pandas/pandas.js) to lock a hat in.
+  const hatState = () => ({ pixels: HAT_PIXELS, fit: HAT_FIT });
+  const saveHat = () => {
+    try { localStorage.setItem(HAT_STORE, JSON.stringify(hatState())); } catch (e) { /* private mode */ }
+  };
+  const applyHatState = obj => {
+    if (obj && obj.pixels) Object.keys(HAT_PIXELS).forEach(d => { if (obj.pixels[d]) HAT_PIXELS[d] = obj.pixels[d]; });
+    if (obj && obj.fit) Object.keys(HAT_FIT).forEach(d => { if (obj.fit[d]) HAT_FIT[d] = obj.fit[d]; });
+  };
+  try { applyHatState(JSON.parse(localStorage.getItem(HAT_STORE) || 'null')); }
+  catch (e) { /* ignore a corrupt store */ }
+  // standalone copy for the knocked-off hat on the ground (rebuilt from pixels)
+  const looseHatSvg = () =>
+    `<svg viewBox="0 0 ${HAT_W} ${HAT_H}" width="60" height="30" aria-hidden="true">${hatArt('down', 1)}</svg>`;
+  const HAT_CFG = {
+    drop:   { follow: false, toss: 0,   spin: 34,  hurry: null, pause: 750 },
+    launch: { follow: true,  toss: 150, spin: 260, hurry: 470,  pause: 450 },
+  };
+
+  const variants = { hat: 'drop' };
+  const statusEl = document.getElementById('status');
+  const statusHatEl = document.getElementById('statusHat');
+  const btnHat = document.getElementById('btnHat');
+  const say = t => { statusEl.textContent = t; };
+  const sayHat = t => { statusHatEl.textContent = t; };
+
+  // nearest of the 8 compass headings toward (dx, dy); '' when already there
+  const heading = (dx, dy, t = 26) => {
+    let d = '';
+    if (dy < -t) d = 'up'; else if (dy > t) d = 'down';
+    if (dx < -t) d += 'left'; else if (dx > t) d += 'right';
+    return d;
+  };
+
+  const hatG = (dir, f) => {
+    const s = HAT_FIT[dir][f];
+    return `<g class="wornhat" transform="translate(${f * 48 + s.x}, ${s.y})">${hatArt(dir, f)}</g>`;
+  };
+  // the worn hat is composited into the walk/stop cells (0,1,2) of each row's
+  // sprite svg; fall & stand-up cells stay hatless — it's on the ground by then
+  const hatGroup = dir => [0, 1, 2].map(f => hatG(dir, f)).join('');
+  const spriteBlock = hasHat => Object.keys(ROW).map(dir =>
+    `<svg x="0px" y="0px" width="100%" height="20%" viewBox="0 0 624 48">${decode(pandaSvg[dir])}${hasHat ? hatGroup(dir) : ''}</svg>`
+  ).join('');
+
+  // ===================== the fitting bench =====================
+  const bench = document.getElementById('bench');
+  const readout = document.getElementById('readout');
+  const tglHat = document.getElementById('tglHat');
+  const tglGrid = document.getElementById('tglGrid');
+  const BENCH_DIRS = [
+    ['down', 'down — front'], ['dDown', 'dDown — ¾ front'], ['side', 'side — profile'],
+    ['dUp', 'dUp — ¾ back'], ['up', 'up — back'],
+  ];
+  let gridSvg = '';
+  for (let i = 0; i <= 48; i += 2) {
+    const heavy = i % 8 === 0;
+    const c = heavy ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.12)';
+    gridSvg += `<line x1="${i}" y1="0" x2="${i}" y2="48" stroke="${c}" stroke-width="0.1"/>`
+      + `<line x1="0" y1="${i}" x2="48" y2="${i}" stroke="${c}" stroke-width="0.1"/>`;
+  }
+  const cells = [];      // {dir, f, spr, meta}
+  const previews = [];   // {dir, spr, step}
+  const decoded = {};
+  Object.keys(ROW).forEach(dir => { decoded[dir] = decode(pandaSvg[dir]); });
+
+  function renderCell(c) {
+    c.spr.setAttribute('viewBox', `${c.f * 48} 0 48 48`);
+    c.spr.innerHTML = decoded[c.dir] + (tglHat.checked ? hatG(c.dir, c.f) : '');
+    const s = HAT_FIT[c.dir][c.f];
+    c.meta.textContent = `f${c.f} · x ${s.x} · y ${s.y}`;
+  }
+  function renderPreview(p) {
+    const f = ANIM.walk[p.step];
+    p.spr.setAttribute('viewBox', `${f * 48} 0 48 48`);
+    p.spr.innerHTML = decoded[p.dir] + (tglHat.checked ? hatG(p.dir, f) : '');
+  }
+  function renderReadout() {
+    readout.textContent = 'const HAT_FIT = {\n' + Object.keys(HAT_FIT).map(d =>
+      `  ${d.padEnd(5)}: [` + HAT_FIT[d].map(s => `{ x: ${s.x}, y: ${s.y} }`).join(', ') + '],'
+    ).join('\n') + '\n};';
+  }
+  function refreshAll(dir, f) {
+    cells.filter(c => c.dir === dir && c.f === f).forEach(renderCell);
+    renderReadout();
+    saveHat();                                  // bench seat nudges persist too
+    if (hatPanda) hatPanda.refreshSprite();
+  }
+
+  const NUDGES = [['◀', -1, 0], ['▶', 1, 0], ['▲', 0, -1], ['▼', 0, 1]];
+  for (const [dir, label] of BENCH_DIRS) {
+    const row = document.createElement('div');
+    row.className = 'brow';
+    const cellsEl = document.createElement('div');
+    cellsEl.className = 'bcells';
+    row.innerHTML = `<div class="blabel">${label}</div>`;
+    row.appendChild(cellsEl);
+    for (const f of [0, 1, 2]) {
+      const cell = document.createElement('div');
+      cell.className = 'bcell';
+      const spr = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      spr.setAttribute('class', 'spr');
+      const grid = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      grid.setAttribute('viewBox', '0 0 48 48');
+      grid.innerHTML = gridSvg;
+      grid.style.display = 'none';
+      const meta = document.createElement('div');
+      meta.className = 'bmeta';
+      const nudge = document.createElement('div');
+      nudge.className = 'nudge';
+      for (const [glyph, dx, dy] of NUDGES) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = glyph;
+        b.setAttribute('aria-label', `${dir} f${f}: move hat ${dx ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down')}`);
+        b.addEventListener('click', () => {
+          HAT_FIT[dir][f].x += dx; HAT_FIT[dir][f].y += dy;
+          refreshAll(dir, f);
+        });
+        nudge.appendChild(b);
+      }
+      cell.append(spr, grid, meta, nudge);
+      cellsEl.appendChild(cell);
+      const c = { dir, f, spr, meta, grid };
+      cells.push(c);
+      renderCell(c);
+    }
+    // walk preview
+    const cell = document.createElement('div');
+    cell.className = 'bcell';
+    const spr = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    spr.setAttribute('class', 'spr');
+    const meta = document.createElement('div');
+    meta.className = 'bmeta';
+    meta.textContent = reduced ? 'walk preview (reduced motion: static)' : 'walk preview';
+    cell.append(spr, meta);
+    cellsEl.appendChild(cell);
+    const p = { dir, spr, step: 0 };
+    previews.push(p);
+    renderPreview(p);
+    bench.insertBefore(row, readout);
+  }
+  renderReadout();
+  if (!reduced) {
+    setInterval(() => {
+      previews.forEach(p => { p.step = (p.step + 1) % ANIM.walk.length; renderPreview(p); });
+    }, FRAME_MS);
+  }
+  tglHat.addEventListener('change', () => {
+    cells.forEach(renderCell); previews.forEach(renderPreview);
+    if (hatPanda) hatPanda.refreshSprite();
+  });
+  tglGrid.addEventListener('change', () => {
+    cells.forEach(c => { c.grid.style.display = tglGrid.checked ? '' : 'none'; });
+  });
+  document.getElementById('btnReset').addEventListener('click', () => {
+    Object.keys(HAT_FIT).forEach(d => {
+      HAT_FIT[d] = JSON.parse(JSON.stringify(HAT_FIT_DEFAULT[d]));
+    });
+    cells.forEach(renderCell); renderReadout();
+    saveHat();
+    if (hatPanda) hatPanda.refreshSprite();
+  });
+
+  // ===================== the pixel studio =====================
+  // Each perspective hat is a plain pixel map (HAT_PIXELS[dir]); here we paint
+  // those pixels and recolour them, and re-composite every edit into the bench
+  // cells, the walk previews and the live hero panda.
+  const PAL = [
+    { key: 'ink',   name: 'ink line',      color: INK },
+    { key: 'lit',   name: 'straw · lit',   color: WHT },
+    { key: 'shade', name: 'straw · shade', color: SHD },
+    { key: 'sep',   name: 'shadow line',   color: SEP },
+    { key: 'erase', name: 'erase',         color: null },
+  ];
+  const PX_GLYPH = { ink: '#', lit: 'O', shade: 'o', sep: '.' };
+  const PX_SCALE = 18;
+  const dtabsEl = document.getElementById('dtabs');
+  const paletteEl = document.getElementById('palette');
+  const pstageEl = document.getElementById('pstage');
+  const readoutPxEl = document.getElementById('readoutPx');
+  const tglHead = document.getElementById('tglHead');
+  const tglStudioGrid = document.getElementById('tglStudioGrid');
+  let studioDir = 'down';
+  let paintColor = INK;
+  const swatchBtns = [];
+
+  function glyphFor(c) {                       // colour → ascii, tracking recolours
+    for (const p of PAL) if (p.color && p.color === c) return PX_GLYPH[p.key];
+    return c ? '?' : ' ';
+  }
+  function drawStudio() {
+    const dir = studioDir, seat = HAT_FIT[dir][1];
+    let ref = '';
+    if (tglHead.checked) {
+      // the frame-1 sprite, shifted into hat-local space so the head sits where
+      // the worn hat seats — a faint alignment guide, not part of the drawing.
+      ref = `<svg viewBox="0 0 ${HAT_W} ${HAT_H}" width="${HAT_W}" height="${HAT_H}" x="0" y="0">`
+        + `<g class="pref" transform="translate(${-(48 + seat.x)}, ${-seat.y})">${decoded[dir]}</g></svg>`;
+    }
+    let hat = '';
+    const px = HAT_PIXELS[dir];
+    for (const k in px) { const i = k.indexOf(','); hat += rect(+k.slice(0, i), +k.slice(i + 1), px[k]); }
+    let grid = '';
+    if (tglStudioGrid.checked) {
+      for (let x = 0; x <= HAT_W; x++) grid += `<line x1="${x}" y1="0" x2="${x}" y2="${HAT_H}"/>`;
+      for (let y = 0; y <= HAT_H; y++) grid += `<line x1="0" y1="${y}" x2="${HAT_W}" y2="${y}"/>`;
+    }
+    pstageEl.innerHTML =
+      `<svg viewBox="0 0 ${HAT_W} ${HAT_H}" width="${HAT_W * PX_SCALE}" height="${HAT_H * PX_SCALE}">`
+      + ref + hat + `<g class="pgrid">${grid}</g></svg>`;
+  }
+  function renderReadoutPx() {
+    let out = '// hat pixels — # ink · O straw-lit · o straw-shade · . shadow\n';
+    Object.keys(HAT_VIEWS).forEach(dir => {
+      out += '\n' + dir + '\n';
+      for (let y = 0; y < HAT_H; y++) {
+        let row = '';
+        for (let x = 0; x < HAT_W; x++) { const c = HAT_PIXELS[dir][x + ',' + y]; row += c ? glyphFor(c) : ' '; }
+        out += row.replace(/\s+$/, '') + '\n';
+      }
+    });
+    readoutPxEl.textContent = out;
+  }
+  function syncHat(dir) {                       // one edit → everywhere it shows
+    cells.filter(c => c.dir === dir).forEach(renderCell);
+    previews.filter(p => p.dir === dir).forEach(renderPreview);
+    if (dir === studioDir) drawStudio();
+    renderReadout(); renderReadoutPx();
+    saveHat();                                  // survive reload (this browser)
+    if (hatPandaRef) hatPandaRef.refreshSprite();
+  }
+
+  // direction tabs
+  BENCH_DIRS.forEach(([dir, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = (label.split('—')[1] || dir).trim();
+    b.dataset.dir = dir;
+    if (dir === studioDir) b.className = 'on';
+    b.addEventListener('click', () => {
+      studioDir = dir;
+      [...dtabsEl.children].forEach(c => c.classList.toggle('on', c.dataset.dir === dir));
+      drawStudio();
+    });
+    dtabsEl.appendChild(b);
+  });
+
+  // palette: a paint swatch + (for editable colours) a recolour input
+  PAL.forEach(p => {
+    const wrap = document.createElement('div'); wrap.className = 'swatch';
+    const btn = document.createElement('button'); btn.type = 'button';
+    if (p.color) { btn.style.background = p.color; btn.style.backgroundImage = 'none'; }
+    else { btn.textContent = '⌫'; btn.style.font = '600 13px var(--mono)'; }
+    if (p.color === paintColor) btn.classList.add('on');
+    btn.setAttribute('aria-label', p.name);
+    btn.addEventListener('click', () => {
+      paintColor = p.color;
+      swatchBtns.forEach(x => x.classList.remove('on')); btn.classList.add('on');
+    });
+    swatchBtns.push(btn);
+    const name = document.createElement('span'); name.className = 'sname'; name.textContent = p.name;
+    wrap.append(btn, name);
+    if (p.color && p.key !== 'sep') {           // sep is rgba; can't back a colour input
+      const inp = document.createElement('input');
+      inp.type = 'color'; inp.value = p.color;
+      inp.title = 'recolour every ' + p.name + ' pixel in this drawing';
+      inp.addEventListener('input', () => {
+        const from = p.color, to = inp.value, px = HAT_PIXELS[studioDir];
+        for (const k in px) if (px[k] === from) px[k] = to;
+        if (paintColor === from) paintColor = to;
+        p.color = to; btn.style.background = to;
+        syncHat(studioDir);
+      });
+      wrap.appendChild(inp);
+    }
+    paletteEl.appendChild(wrap);
+  });
+
+  // paint: drag across cells sets (or, with erase, deletes) the pixel
+  function paintAt(e) {
+    const r = pstageEl.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * HAT_W);
+    const y = Math.floor((e.clientY - r.top) / r.height * HAT_H);
+    if (x < 0 || y < 0 || x >= HAT_W || y >= HAT_H) return;
+    const key = x + ',' + y, px = HAT_PIXELS[studioDir];
+    if (paintColor === null) { if (!(key in px)) return; delete px[key]; }
+    else { if (px[key] === paintColor) return; px[key] = paintColor; }
+    syncHat(studioDir);
+  }
+  let painting = false;
+  pstageEl.addEventListener('pointerdown', e => {
+    painting = true; pstageEl.setPointerCapture(e.pointerId); paintAt(e); e.preventDefault();
+  });
+  pstageEl.addEventListener('pointermove', e => { if (painting) paintAt(e); });
+  const stopPaint = () => { painting = false; };
+  pstageEl.addEventListener('pointerup', stopPaint);
+  pstageEl.addEventListener('pointercancel', stopPaint);
+
+  tglHead.addEventListener('change', drawStudio);
+  tglStudioGrid.addEventListener('change', drawStudio);
+  document.getElementById('btnClearHat').addEventListener('click', () => {
+    HAT_PIXELS[studioDir] = {}; syncHat(studioDir);
+  });
+  document.getElementById('btnResetHat').addEventListener('click', () => {
+    HAT_PIXELS[studioDir] = genHat(HAT_VIEWS[studioDir]);   // back to the base shape
+    syncHat(studioDir);
+  });
+  // export/import: the studio is in-memory + localStorage only, so this is how a
+  // finalized hat leaves the browser and gets baked into the code (and pandas.js)
+  const hintEl = document.getElementById('studioHint');
+  const flashHint = msg => {
+    const prev = hintEl.innerHTML;
+    hintEl.textContent = msg;
+    setTimeout(() => { hintEl.innerHTML = prev; }, 3200);
+  };
+  document.getElementById('btnExportHat').addEventListener('click', async () => {
+    const json = JSON.stringify(hatState());   // { pixels, fit } — drawings + seats
+    try {
+      await navigator.clipboard.writeText(json);
+      flashHint('copied — paste it to Claude to lock this exact hat into the code + website');
+    } catch (e) {
+      window.prompt('copy this hat data (pixels + seats):', json);   // clipboard blocked
+    }
+  });
+  document.getElementById('btnImportHat').addEventListener('click', () => {
+    const t = window.prompt('paste hat JSON to load it');
+    if (!t) return;
+    let obj;
+    try { obj = JSON.parse(t); } catch (e) { flashHint('that was not valid JSON'); return; }
+    applyHatState(obj);
+    Object.keys(HAT_PIXELS).forEach(syncHat);
+    flashHint('imported');
+  });
+  drawStudio(); renderReadoutPx();
+
+  // ===================== the troupe =====================
+  class Panda {
+    constructor(x, y, hasHat = false) {
+      this.el = document.createElement('div');
+      this.el.className = 'panda_wrapper';
+      this.el.innerHTML = `
+        <div class="panda_inner_wrapper">
+          <div class="panda_sprite">${spriteBlock(hasHat)}</div>
+          <div class="hit_wrapper"><div class="hit_area">
+            ${['upleft', 'upright', 'downleft', 'downright'].map(d =>
+              `<div class="hit_corner" data-pos="${d}"></div>`).join('')}
+          </div></div>
+        </div>`;
+      this.inner = this.el.querySelector('.panda_inner_wrapper');
+      this.sprite = this.el.querySelector('.panda_sprite');
+      this.corners = [...this.el.querySelectorAll('.hit_corner')];
+      this.corners.forEach(c => { c.panda = this; });
+      this.el.style.marginLeft = x + 'px';
+      this.el.style.marginTop = y + 'px';
+      this.el.style.zIndex = y;
+      this.x = x; this.y = y;
+      this.prev = [x, y];
+      this.frame = 0;
+      this.animation = reduced ? 'stop' : 'walk';
+      this.turnIndex = Math.floor(Math.random() * 7);
+      this.direction = pick(DIRS);
+      this.defaultFallDirection = pick(DIRS);
+      this.moveSpeed = pick(MOVE_SPEEDS);
+      this.hit = false; this.knocked = false; this.stopped = false;
+      this.hasHat = hasHat; this.hatLost = false; this.hatRest = null; this.retrieving = false;
+      this.moveQueued = false;
+      this.timers = [];
+      this.el.addEventListener('click', () => this.tap());
+      stage.appendChild(this.el);
+      this.setFacing();
+      this.drawFrame();
+      if (!reduced) { this.animate(); this.moveAbout(); }
+    }
+    after(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
+    setAnimation(name) { this.frame = 0; this.animation = name; }
+    setFacing() {
+      this.inner.className = `panda_inner_wrapper facing_${this.direction}`;
+    }
+    refreshSprite() { // bench nudges re-composite the worn hat live
+      this.sprite.innerHTML = spriteBlock(this.hasHat && tglHat.checked);
+      if (this.hatLost) this.el.classList.add('hatless');
+    }
+    drawFrame() {
+      const frames = ANIM[this.animation];
+      this.sprite.style.marginLeft = `-${frames[this.frame] * CELL}px`;
+      this.sprite.style.marginTop = `-${CELL * ROW[DIR_SPRITE[this.direction]]}px`;
+      this.frame = this.frame === frames.length - 1 ? 0 : this.frame + 1;
+    }
+    animate() {
+      this.drawFrame();
+      this.after(FRAME_MS, () => this.animate());
+    }
+    applyPos(x, y) { // boundary clamp, exactly hers: lower -40, upper 60
+      const lower = -40, upper = 60;
+      if (x > lower && x < stage.clientWidth - upper) {
+        this.el.style.marginLeft = x + 'px'; this.x = x; this.prev[0] = x;
+      }
+      if (y > lower && y < stage.clientHeight - upper) {
+        this.el.style.marginTop = y + 'px'; this.y = y; this.prev[1] = y;
+        this.el.style.zIndex = y;
+      }
+    }
+    moveAbout() {
+      if (this.hit || this.retrieving) return;
+      this.turnIndex += pick(TURN_OPTIONS);
+      if (this.turnIndex < 0) this.turnIndex = 7;
+      if (this.turnIndex > 7) this.turnIndex = 0;
+      this.direction = DIRS[this.turnIndex];
+      this.setFacing();
+      let x = this.x, y = this.y;
+      const dir = this.direction;
+      if (dir !== 'up' && dir !== 'down') x += dir.includes('left') ? -STEP : STEP;
+      if (dir !== 'left' && dir !== 'right') y += dir.includes('up') ? -STEP : STEP;
+      if (x === this.prev[0] && y === this.prev[1]) {
+        this.setAnimation('stop'); this.stopped = true;
+        // her pen leaves cornered pandas stopped forever; at low density that
+        // freezes the troupe, so ours nap a while and wander back out
+        this.after(6000 + rand(6) * 1000, () => this.wake());
+      }
+      this.applyPos(x, y);
+      if (!this.stopped) this.scheduleMove();
+    }
+    wake() {
+      if (!this.stopped || this.knocked || this.retrieving) return;
+      this.stopped = false;
+      this.turnIndex = (this.turnIndex + 4) % 8;   // turn around, walk back in
+      this.direction = DIRS[this.turnIndex];
+      this.setFacing();
+      this.setAnimation('walk');
+      this.moveAbout();
+    }
+    scheduleMove() {
+      if (this.moveQueued) return;
+      this.moveQueued = true;
+      this.after(this.moveSpeed, () => { this.moveQueued = false; this.moveAbout(); });
+    }
+    slide() {
+      let x = this.x, y = this.y;
+      if (this.hit.includes('left')) x += IMPACT;
+      if (this.hit.includes('right')) x -= IMPACT;
+      if (this.hit.includes('up')) y += IMPACT;
+      if (this.hit.includes('down')) y -= IMPACT;
+      this.applyPos(x, y);
+    }
+    knock() {
+      if (this.knocked) return;
+      this.knocked = true; this.stopped = true;
+      this.el.classList.add('stop');
+      this.setFacing();
+      this.slide();
+      if (this.hasHat && !this.hatLost) this.dropHat();
+      this.setAnimation('fall');
+      const a = FRAME_MS * 6;                       // fall plays through
+      const b = 1000 * (rand(4) + 1);               // lies there 2-5s
+      const c = FRAME_MS * 6;                       // stand-up plays through
+      this.after(a, () => this.setAnimation('fallen'));
+      this.after(a + b, () => this.setAnimation('standUp'));
+      this.after(a + b + c, () => {
+        this.hit = false; this.knocked = false; this.stopped = false;
+        this.el.classList.remove('stop');
+        if (this.hasHat && this.hatLost) { this.retrieveHat(); return; }
+        this.setAnimation('walk');
+        this.moveAbout();
+      });
+    }
+    dropHat() {
+      const v = HAT_CFG[variants.hat];
+      this.hatLost = true;
+      this.el.classList.add('hatless');
+      const seat = HAT_FIT[DIR_SPRITE[this.direction]][0];
+      const hx = this.x + Math.round(seat.x * 100 / 48), hy = this.y + Math.round(seat.y * 100 / 48);
+      let dx, dy;
+      if (v.follow && typeof this.hit === 'string') {
+        // the hat flies the way the panda was shoved, and further
+        dx = (this.hit.includes('left') ? v.toss : 0) - (this.hit.includes('right') ? v.toss : 0) + rand(40) - 20;
+        dy = (this.hit.includes('up') ? v.toss : 0) - (this.hit.includes('down') ? v.toss : 0) + rand(40) - 20;
+      } else {
+        dx = rand(70) - 35; dy = 24 + rand(26);
+      }
+      const rx = Math.max(6, Math.min(stage.clientWidth - 54, hx + dx));
+      const ry = Math.max(6, Math.min(stage.clientHeight - 24, hy + dy));
+      const loose = document.createElement('div');
+      loose.className = 'hat_loose';
+      loose.innerHTML = looseHatSvg();
+      loose.style.left = hx + 'px'; loose.style.top = hy + 'px';
+      loose.style.zIndex = Math.round(ry);
+      stage.appendChild(loose);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        loose.style.transform = `translate(${rx - hx}px, ${ry - hy}px) rotate(${v.spin}deg)`;
+      }));
+      this.hatRest = { x: rx, y: ry, el: loose };
+      sayHat(variants.hat === 'launch' ? 'the hat went flying' : 'the hat came off');
+    }
+    retrieveHat() {
+      const v = HAT_CFG[variants.hat];
+      this.retrieving = true;
+      this.setAnimation('walk');
+      sayHat('up again — going back for the hat');
+      let steps = 0;
+      const stride = () => {
+        if (this.knocked || !this.hatRest) return;   // a fresh knock re-enters here after stand-up
+        const d = heading(this.hatRest.x - 32 - this.x, this.hatRest.y - 50 - this.y);
+        if (!d || ++steps > 30) { this.pickUpHat(); return; }
+        this.direction = d; this.turnIndex = DIRS.indexOf(d);
+        this.setFacing();
+        this.applyPos(
+          this.x + (d.includes('left') ? -STEP : d.includes('right') ? STEP : 0),
+          this.y + (d.includes('up') ? -STEP : d.includes('down') ? STEP : 0));
+        this.after(v.hurry || this.moveSpeed, stride);
+      };
+      stride();
+    }
+    pickUpHat() {
+      this.setAnimation('stop');
+      this.after(HAT_CFG[variants.hat].pause, () => {
+        if (this.knocked || !this.hatRest) return;
+        const loose = this.hatRest.el;
+        loose.style.opacity = '0';
+        setTimeout(() => loose.remove(), 200);
+        this.hatRest = null; this.hatLost = false; this.retrieving = false;
+        this.el.classList.remove('hatless');
+        this.setAnimation('walk');
+        this.moveAbout();
+        sayHat('hat recovered — back to wandering');
+      });
+    }
+    tap() { // our one addition
+      if (this.knocked || reduced) return;
+      this.hit = this.defaultFallDirection;
+      this.direction = this.defaultFallDirection;
+      this.knock();
+    }
+  }
+
+  // ---- collision: hers, at 20 Hz ----
+  const overlap = (a, b) => Math.abs(a - b) < 20;
+  const allCorners = () => [...stage.querySelectorAll('.hit_corner')];
+  function collisionCheck() {
+    if (document.hidden) return;
+    const corners = allCorners();
+    const hits = new Map(); // panda -> {pos: true}
+    for (let i = 0; i < corners.length; i++) {
+      const a = corners[i], ar = a.getBoundingClientRect();
+      for (let j = i + 1; j < corners.length; j++) {
+        const b = corners[j];
+        if (a.panda === b.panda) continue;
+        const br = b.getBoundingClientRect();
+        if (overlap(ar.x, br.x) && overlap(ar.x + ar.width, br.x + br.width) &&
+            overlap(ar.y, br.y) && overlap(ar.y + ar.height, br.y + br.height)) {
+          if (!hits.has(a.panda)) hits.set(a.panda, {});
+          if (!hits.has(b.panda)) hits.set(b.panda, {});
+          hits.get(a.panda)[a.dataset.pos] = true;
+          hits.get(b.panda)[b.dataset.pos] = true;
+        }
+      }
+    }
+    hits.forEach((h, p) => {
+      const set = d => { p.direction = d; p.hit = d; };
+      if (h.upleft) set('upleft');
+      if (h.downleft) set('downleft');
+      if (h.upright) set('upright');
+      if (h.downright) set('downright');
+      if (h.upleft && h.downleft) set('left');
+      if (h.upright && h.downright) set('right');
+      if (h.upleft && h.upright) set('up');
+      if (h.downleft && h.downright) set('down');
+      if (h.upleft && h.upright && h.downleft && h.downright) set(p.defaultFallDirection);
+      if (!p.knocked) p.knock();
+    });
+  }
+
+  // ---- spawn (count scales with area on small screens; hers is fixed 20) ----
+  // workshop nicety: hat panda spawns center with a clear bubble, so the worn
+  // hat is actually visible for a while before the first knock
+  const pandas = [];
+  const calm = new URLSearchParams(location.search).get('troupe') === 'calm';
+  const area = stage.clientWidth * stage.clientHeight;
+  const count = calm ? 5 : Math.max(5, Math.min(20, Math.round(area / 55000)));
+  const cx = Math.round(stage.clientWidth / 2) - 50, cy = Math.round(stage.clientHeight / 2) - 50;
+  pandas.push(new Panda(cx, cy, true));
+  for (let i = 1; i < count; i++) {
+    let x, y, tries = 0;
+    do {
+      x = rand(Math.max(1, stage.clientWidth - 100));
+      y = rand(Math.max(1, stage.clientHeight - 100));
+    } while (Math.abs(x - cx) < 140 && Math.abs(y - cy) < 140 && ++tries < 20);
+    pandas.push(new Panda(x, y));
+  }
+  const hatPanda = pandas[0];
+  hatPandaRef = hatPanda;   // studio/bench edits re-composite onto the hero panda
+
+  // ---- workshop controls ----
+  const troupeSeg = document.getElementById('segTroupe');
+  troupeSeg.querySelectorAll('button').forEach(b =>
+    b.classList.toggle('on', (b.dataset.v === 'calm') === calm));
+  troupeSeg.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const url = new URL(location.href);
+    if (b.dataset.v === 'calm') url.searchParams.set('troupe', 'calm');
+    else url.searchParams.delete('troupe');
+    location.href = url.toString();
+  });
+  document.querySelectorAll('.seg[data-for]').forEach(seg => {
+    seg.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      variants[seg.dataset.for] = b.dataset.v;
+    });
+  });
+  btnHat.addEventListener('click', () => {
+    if (hatPanda.knocked) { sayHat('the hat panda is already down'); return; }
+    hatPanda.tap();
+  });
+
+  if (reduced) {
+    say('prefers-reduced-motion: the troupe stands still, the bench previews are static');
+    document.querySelectorAll('.controls button').forEach(b => { b.disabled = true; });
+  } else {
+    setInterval(collisionCheck, 50);
+  }
+})();
+</script>
