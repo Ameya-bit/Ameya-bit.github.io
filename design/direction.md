@@ -90,6 +90,8 @@ Replace the current text sidebar with the tick-rail minimap. Measured spec from 
 ### Layer 3 — Whimsy (pick at most two, ma5a's fencing rules binding)
 **→ Full candidate designs, variants, live sketches, and the per-surface allocation proposal now live in [whimsy.md](whimsy.md) (2026-07-10).**
 
+**2026-07-22 amendment — two registers, one author.** The "whimsy speaks the research language" rule is amended: **homepage whimsy speaks the author's *identity*** (the panda troupe — Ameya's cross-platform avatar mark, durable across research pivots); **per-post whimsy speaks that post's *topic***. The site-wide Niche mascot is retired (Ask Niche stays post-local on the induction post). Fencing amendment: ma5a's real rule is *geographic* fencing, not user-causation — one ambient autonomous **system** is permitted inside the hero fence (idle-static rules stand everywhere else; article pages remain still air).
+
 Candidates, all drawn from Ameya's own repos so the decoration demonstrates the research:
 1. **Induction-head cursor trail** (from QuotesByNiche's B5H0): a trail that *replays your past trajectory* — `[A][B]…[A]→[B]`, copying what followed last time — rather than merely lagging. Desktop only, ink-colored, ephemeral.
 2. **Photon random-walk** (from mc-radiative-transfer): scattering particles as a homepage-hero-only ambient effect.
@@ -111,8 +113,9 @@ The 644px/16px system wants Emil's rhythm: 1–3 sentence paragraphs, h2 every 4
 ## Open decisions
 1. **Accent color** — exactly one, needed before Layer 2 (minimap active tick; Rauno owns orange). Should feel personal.
 2. **Font pairing** — Inter is in; decide whether to adopt the serif-italic word-emphasis flourish (Emil uses Tiempos italic inside Inter) and which serif if so.
-3. **Whimsy pick** — max two of the three candidates above.
+3. **Whimsy pick** — resolved 2026-07-22: panda troupe on the hero (identity-native; whimsy.md candidate 6) + Ask Niche post-local. Character/behavior verdicts pending in whimsy.md.
 4. **Layer 4 yes/no** — view transitions after seeing Layers 2–3.
 
 ## Session log
 - **2026-07-10**: Inspiration research (galleries + site dissections of emilkowal.ski / devouringdetails.com / ma5a.com, exact measurements via shipped CSS). Layer 1 built, workshopped (homepage got the wide hero back after the pure-Emil version felt too stripped; TOC un-flattened after breaking in a real browser), and approved as the base.
+- **2026-07-22**: Whimsy direction amended — Niche mascot retired; identity-native **panda troupe** adopted for the hero (whimsy.md candidate 6); ambient autonomous motion permitted inside the hero fence as one system. Workshop ran four rounds (flat SVG → procedural 2-bit sprites ×2 → pivot); landed on a faithful replica of ma5a's "panda collision" pen (MIT via CodePen, attributed) as the build base — her sprite art + constants, engine reimplemented. Replica: `design/sketches/panda-collision-replica.html` + live artifact. Next pass (pending Ameya's verdicts in whimsy.md): recolor to sand, dǒulì hat, calmer hero-fenced behavior, then `assets/pandas/` + hero include. Note: her engine animates margins with CSS transitions — conflicts with the transform-only motion rule; resolve when porting.

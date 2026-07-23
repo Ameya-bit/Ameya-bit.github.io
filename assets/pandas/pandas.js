@@ -16,7 +16,7 @@
   const rand = n => Math.ceil(Math.random() * n);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const variant = 'drop';                 // the calm hat-drop skit (no big launch)
-  const PANDA_COUNT = 10;                  // ten pandas total, one of them hatted
+  let PANDA_COUNT = 10;                    // set viewport-aware in spawn() (~20 wide / 12 mid / 7 narrow)
 
   // ---- the hero card is an obstacle: pandas walk around it, never behind ----
   // FORBID is the fenced .hero-inner rectangle in stage-local pixels; a panda's
@@ -178,6 +178,8 @@
       this.hasHat = hasHat; this.hatLost = false; this.hatRest = null; this.retrieving = false;
       this.observer = hasHat;      // Phase 3: the hat panda watches lines instead of wandering
       this.watchLine = null;
+      this.patching = false;       // Phase 4: hat panda is mid-intervention (runPatch drives it)
+      this.flying = false;         // Phase 4: this panda is mid-fling (collision ghost)
       this.moveQueued = false;
       this.entering = entering;    // Phase 1: walking in from off-stage, not yet wandering
       this.inLine = false;         // Phase 2: its Line once part of a conga
@@ -204,8 +206,18 @@
       this.sprite.style.marginTop = `-${CELL * ROW[DIR_SPRITE[this.direction]]}px`;
       this.frame = this.frame === frames.length - 1 ? 0 : this.frame + 1;
     }
+    // hold a standing pose (frame column 0) facing the current direction, without
+    // advancing the cycle — used while the troupe is frozen for a patch, so pandas
+    // stand still instead of walking in place.
+    freezeFrame() {
+      this.sprite.style.marginLeft = '0px';
+      this.sprite.style.marginTop = `-${CELL * ROW[DIR_SPRITE[this.direction]]}px`;
+    }
     animate() {
-      this.drawFrame();
+      // Phase 4: while frozen, everyone but the patch actors (the hat panda and the
+      // panda in mid-throw) holds a still pose.
+      if (!frozen || this.patching || this.flying) this.drawFrame();
+      else this.freezeFrame();
       this.after(FRAME_MS, () => this.animate());
     }
     applyPos(x, y) { // boundary clamp (hers: lower -40, upper 60) + the hero fence
@@ -242,6 +254,7 @@
     }
     moveAbout() {
       if (this.hit || this.retrieving || this.inLine || this.joining) return;
+      if (frozen) { this.after(300, () => this.moveAbout()); return; }   // Phase 4: hold during a patch
       this.wanderStep();
       this.scheduleMove();
     }
@@ -290,11 +303,13 @@
       this.joining = line;
       let steps = 0;
       const stride = () => {
+        if (frozen) { this.after(300, stride); return; }   // Phase 4: hold — without spending the step budget
         if (this.joining !== line || !line.members.length || line.full || ++steps > 30) {
           this.joining = false;
           if (!this.inLine) this.moveAbout();          // recruitment fell through — resume roaming
           return;
         }
+
         const [tx, ty] = line.tailSlot();
         const dx = tx - this.x, dy = ty - this.y;
         if (dx * dx + dy * dy <= (STEP * 1.3) ** 2) { line.admit(this); return; }
@@ -316,6 +331,7 @@
       if (reduced) return;
       this.relocating = true; this.focusTicks = 0; this.vAxis = 0; this.td = WATCH_NEAR;
       const tick = () => {
+        if (this.patching) return;   // Phase 4: runPatch is driving the hat panda; it restarts observe() when done
         if (this.knocked) { this.after(this.moveSpeed, tick); return; }
         // choose / rotate the line being overseen — after its lock, move to another
         const live = lines.filter(l => l.members.length >= 2);   // a real conga (2+ walking together), not a lone seed leader
@@ -481,7 +497,7 @@
   const overlap = (a, b) => Math.abs(a - b) < 20;
   const allCorners = () => [...stage.querySelectorAll('.hit_corner')];
   function collisionCheck() {
-    if (document.hidden) return;
+    if (document.hidden || frozen) return;   // Phase 4: nobody moves during a patch — no new collisions to resolve
     const corners = allCorners();
     const hits = new Map(); // panda -> {pos: true}
     for (let i = 0; i < corners.length; i++) {
@@ -492,7 +508,8 @@
         // entering pandas (walk-in) and the observer (hat panda) are pure ghosts. A
         // conga panda (in line or joining) is an unstoppable force: it knocks a free
         // roamer aside without being knocked, and two conga pandas pass through each other.
-        if (pa === pb || pa.entering || pb.entering || pa.observer || pb.observer) continue;
+        if (pa === pb || pa.entering || pb.entering || pa.observer || pb.observer ||
+            pa.flying || pb.flying) continue;   // Phase 4: a panda in mid-fling is a ghost
         const solidA = pa.inLine || pa.joining;
         const solidB = pb.inLine || pb.joining;
         if (solidA && solidB) continue;
@@ -529,13 +546,18 @@
 
   const pandas = [];
 
+  // Phase 4: while an intervention runs, the whole troupe holds still (the pause)
+  // and only the hat panda + the two spotlit lines move. Every recurring loop
+  // (wander, line step, observe, line management) checks this and idles.
+  let frozen = false;
+
   // ===================== conga lines (Phase 2) =====================
   // A line is a follow-the-leader chain: the leader wanders and every follower
   // steps into the cell the panda ahead just vacated (a snake). Because each
   // follower copies its predecessor's move, a heading change at the front ripples
   // down the line — the exact mechanic Phase 4 (activation patching) leans on.
-  const LINE_CAP = 3;          // pandas per line — open decision, default 3 (tunable to 4)
-  const MAX_LINES = 2;         // lines that can coexist (Phase 4 needs two)
+  const LINE_CAP = 5;          // pandas per line — raised 3→5 so a patch bend has downstream runway (Phase 4)
+  const MAX_LINES = 2;         // lines that nucleate; a patch split can push the live count to 3 transiently
   const LINE_STEP_MS = 950;    // a line advances one stride on this clock
   const LINE_TURN_P = 0.35;    // chance the leader eases into a turn each stride
   const JOIN_RADIUS = 340;     // a free panda within this of a tail can be recruited
@@ -581,6 +603,7 @@
     }
     step() {
       if (!this.members.length) return;                // dissolved (Phase 5)
+      if (frozen) { this.timer = setTimeout(() => this.step(), 300); return; }  // Phase 4: hold during a patch
       const old = this.members.map(m => [m.x, m.y]);
       const [lx, ly] = this.leaderNext();
       if (lx !== old[0][0] || ly !== old[0][1]) {       // skip the stride entirely if the leader is boxed
@@ -605,6 +628,7 @@
   // periodically seed a leader and recruit nearby roamers to a tail, one line at a
   // time. Dissolution / growth-past-cap are Phase 5; here lines form and persist.
   function manageLines() {
+    if (frozen) { setTimeout(manageLines, 500); return; }   // Phase 4: no new recruiting mid-patch
     for (let i = lines.length - 1; i >= 0; i--) if (!lines[i].members.length) lines.splice(i, 1);
 
     for (const line of lines) {                          // recruit for any non-full line
@@ -657,11 +681,240 @@
     return bi >= 0 ? bi : fi;
   };
 
-  // ---- spawn: ten pandas walk on from the edges, the hat panda leading ----
+  // ===================== activation patching (Phase 4) =====================
+  // Freeze the troupe, spotlight two lines, then the hat panda grabs a panda off
+  // line B, spins, and flings it into line A's upper-middle. On resume the tail
+  // from the insertion point peels onto B's heading and walks off as its own line
+  // while the front holds A's heading — the "bend" is the snake engine propagating
+  // the injected heading down the chain, and splitting it into a second line keeps
+  // that bend on screen instead of letting the tail re-trace the old leader.
+  const PATCH_STEP      = 360;    // the hat panda's brisk cadence while intervening
+  const PATCH_MIN_LEN   = 3;      // a line must be at least this long to take part (target and source)
+  const PATCH_INSERT_K  = 2;      // insert here: this many pandas stay clean ahead, the rest bend
+  const PATCH_MIN_ANGLE = 45;     // the two lines' headings must differ by at least this (a real contrast)
+  const FLING_MS        = 680;    // the cross-gap throw — rAF parabolic arc
+  const SPIN_MS         = 850;    // the wind-up spin (~2 turns through the 8 facings)
+  const SPIN_STEP_MS    = 55;     // how fast the spin flips from one facing to the next
+  const GRAB_LIFT       = 24;     // how far the grabbed panda is hoisted above the hat panda
+  const PUSH_DIST       = 95;     // how far the swapped-out (displaced) panda is shoved clear of the line
+  const PATCH_SETTLE    = 2600;   // after the swap, hold the frozen + spotlit tableau, then release motion AND shading together
+  const PATCH_MAX_MS    = 30000;  // watchdog: force-resume if a sequence ever wedges (e.g. tab backgrounded mid-throw)
+  const PATCH_GAP_MIN   = 20000, PATCH_GAP_MAX = 30000;   // ~once per 20–30s
+  const PATCH_KICK      = 12000;  // first attempt — let two lines form and fill first
+
+  const dirVec = d => [d.includes('left') ? -1 : d.includes('right') ? 1 : 0,
+                       d.includes('up')   ? -1 : d.includes('down')  ? 1 : 0];
+  const angleBetween = (d1, d2) => {
+    const a = dirVec(d1), b = dirVec(d2);
+    const na = Math.hypot(a[0], a[1]) || 1, nb = Math.hypot(b[0], b[1]) || 1;
+    const c = Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1]) / (na * nb)));
+    return Math.acos(c) * 180 / Math.PI;
+  };
+  // shove a displaced panda clear of the line: perpendicular to the line heading `d`,
+  // on whichever side stays on stage. Returns the target cell.
+  const pushAside = (p, d) => {
+    const [ax, ay] = dirVec(d);
+    for (const [ux, uy] of [[-ay, ax], [ay, -ax]]) {
+      const n = Math.hypot(ux, uy) || 1;
+      const nx = p.x + (ux / n) * PUSH_DIST, ny = p.y + (uy / n) * PUSH_DIST;
+      if (inBounds(nx, ny)) return [Math.round(nx), Math.round(ny)];
+    }
+    return [p.x, p.y];
+  };
+
+  // build a Line from an existing set of members (used by the split), leader facing `dir`
+  function makeLine(members, dir) {
+    const L = Object.create(Line.prototype);
+    L.members = members;
+    L.timer = null;
+    members.forEach(m => { m.inLine = L; m.joining = false; m.moveQueued = false; m.knocked = false; m.setAnimation('walk'); });
+    const lead = members[0];
+    lead.direction = dir; lead.turnIndex = DIRS.indexOf(dir); lead.setFacing();
+    L.step();
+    return L;
+  }
+
+  // stride the hat panda to (tx,ty) at the brisk patch cadence, routing round the
+  // fence, then call cb. (stepToward already handles facing + the card detour.)
+  function walkHatTo(H, tx, ty, cb, alive) {
+    H.el.classList.remove('observing');
+    H.setAnimation('walk');
+    let steps = 0;
+    const stride = () => {
+      if (alive && !alive()) return;   // patch was force-ended (watchdog) — stop driving H
+      const dx = tx - H.x, dy = ty - H.y;
+      if (dx * dx + dy * dy <= (STEP * 1.4) ** 2 || ++steps > 40) { cb(); return; }
+      H.stepToward(tx, ty);
+      H.after(PATCH_STEP, stride);
+    };
+    stride();
+  }
+
+  // 3-D spin using the sprite art we already have: turn the actors through all 8
+  // facings in rotational order (up → upright → right → …), which reads as spinning
+  // in place — far truer to the pixel art than rotating the flat png. Actors hold a
+  // standing pose; each tick flips to the next facing.
+  function spin3d(actors, totalMs, cb, alive) {
+    const ticks = Math.max(8, Math.round(totalMs / SPIN_STEP_MS));
+    actors.forEach(p => p.setAnimation('stop'));
+    let i = 0;
+    const tick = () => {
+      if (alive && !alive()) return;   // patch was force-ended (watchdog) — stop the spin
+      if (i++ >= ticks) { cb(); return; }
+      actors.forEach(p => {
+        p.turnIndex = (p.turnIndex + 1) % 8;
+        p.direction = DIRS[p.turnIndex];
+        p.setFacing();
+        p.freezeFrame();
+      });
+      setTimeout(tick, SPIN_STEP_MS);
+    };
+    tick();
+  }
+
+  // throw a panda from (x0,y0) to (x1,y1) along a real parabolic arc (rAF-driven, so
+  // it never teleports), tumbling through facings in flight, landing faced `faceDir`.
+  function throwArc(p, x0, y0, x1, y1, dur, faceDir, cb) {
+    const dist = Math.hypot(x1 - x0, y1 - y0);
+    const peak = Math.min(150, 45 + dist * 0.3);    // arc height (0 at both ends)
+    const base = p.turnIndex;
+    let start = null, done = false;
+    const finish = () => {
+      if (done) return; done = true;
+      p.flying = false;
+      p.el.classList.remove('flinging', 'flying');
+      p.direction = faceDir; p.turnIndex = DIRS.indexOf(faceDir); p.setFacing();
+      p.x = x1; p.y = y1; p.prev = [x1, y1];
+      p.el.style.marginLeft = x1 + 'px'; p.el.style.marginTop = y1 + 'px';
+      p.el.style.zIndex = Math.round(y1);
+      cb();
+    };
+    const frame = t => {
+      if (start === null) start = t;
+      const k = Math.min(1, (t - start) / dur);
+      const x = x0 + (x1 - x0) * k;
+      const y = y0 + (y1 - y0) * k - peak * 4 * k * (1 - k);   // parabola, peak at k=0.5
+      p.el.style.marginLeft = x + 'px';
+      p.el.style.marginTop = y + 'px';
+      p.turnIndex = (base + Math.round(k * 16)) % 8;            // ~2 tumbles across the flight
+      p.direction = DIRS[p.turnIndex]; p.setFacing(); p.freezeFrame();
+      if (k < 1) requestAnimationFrame(frame); else finish();
+    };
+    requestAnimationFrame(frame);
+    setTimeout(finish, dur + 200);   // fallback: rAF is paused when the tab is hidden — never wedge the sequence
+  }
+
+  // the whole intervention, start to finish; calls done() when the scene is live again.
+  function runPatch(H, A, B, done) {
+    frozen = true;
+    H.patching = true;
+    stage.classList.add('intervening');
+    const spotted = new Set([...A.members, ...B.members, H]);   // everyone we dim-exempt (grows with the throw)
+    spotted.forEach(p => p.el.classList.add('spot'));
+    const dB = B.leader.direction;          // line B's heading = the value being patched in
+    const dA = A.leader.direction;
+    const grabbed = B.tail;                  // grab from B's tail so B's front chain stays intact
+
+    // Single terminal path — the scene is live again after this, whatever route got
+    // us here. A watchdog calls it too, so a wedged step (e.g. rAF paused because the
+    // tab was hidden mid-throw) can never leave the whole troupe frozen for good.
+    let finished = false;
+    const cleanup = () => {
+      if (finished) return; finished = true;
+      clearTimeout(guard);
+      frozen = false;
+      grabbed.flying = false;
+      grabbed.el.classList.remove('flinging', 'flying');
+      // if the watchdog fired mid-flight (grab → land), grabbed is in no line and has
+      // no movement loop — send it back to roaming so it can never be orphaned.
+      if (!grabbed.inLine) { grabbed.joining = false; grabbed.setAnimation('walk'); grabbed.moveAbout(); }
+      stage.classList.remove('intervening');
+      spotted.forEach(p => p.el.classList.remove('spot'));
+      H.patching = false;
+      H.observe();                                       // back to watching
+      done();
+    };
+    const guard = setTimeout(cleanup, PATCH_MAX_MS);
+    const alive = () => !finished;
+
+    walkHatTo(H, grabbed.x, grabbed.y, () => {
+      if (finished) return;
+      if (B.tail === grabbed) B.members.pop();     // lift it out of line B
+      grabbed.inLine = false; grabbed.joining = false;
+      grabbed.flying = true;                       // ghost from the moment it's lifted (through spin + throw)
+      // GRAB: hoist the panda onto the hat panda (held just above it, so both read).
+      // .flinging drops the wrapper's 2s glide so placement + the arc are direct.
+      grabbed.el.classList.add('spot', 'flinging', 'flying'); spotted.add(grabbed);
+      grabbed.x = H.x; grabbed.y = H.y - GRAB_LIFT; grabbed.prev = [grabbed.x, grabbed.y];
+      grabbed.el.style.marginLeft = grabbed.x + 'px';
+      grabbed.el.style.marginTop = grabbed.y + 'px';
+      grabbed.el.style.zIndex = 9999;
+      // SPIN: the hat panda and the panda it's holding turn through all 8 facings
+      spin3d([H, grabbed], SPIN_MS, () => {
+        if (finished) return;
+        const k = Math.min(PATCH_INSERT_K, A.members.length);
+        const resident = A.members[k];                 // the panda whose slot gets patched — swapped out
+        const sx = resident ? resident.x : A.tail.x;    // land exactly on that slot
+        const sy = resident ? resident.y : A.tail.y;
+        // THROW: arc across the gap onto the slot
+        throwArc(grabbed, grabbed.x, grabbed.y, sx, sy, FLING_MS, dB, () => {
+          if (finished) return;
+          // SWAP: the thrown panda takes the slot, still facing its own heading dB. The
+          // resident is shoved clear of the line and sent roaming — the patched value
+          // replaces the original activation, which is discarded.
+          A.members.splice(k, resident ? 1 : 0, grabbed); grabbed.inLine = A;
+          if (resident) {
+            resident.inLine = false; resident.joining = false; resident.setAnimation('walk');
+            spotted.add(resident);
+            const [ex, ey] = pushAside(resident, dA);
+            const ed = heading(ex - resident.x, ey - resident.y);
+            if (ed) { resident.direction = ed; resident.turnIndex = DIRS.indexOf(ed); resident.setFacing(); }
+            resident.setPos(ex, ey);                     // shoved clear (glides via the 2s wrapper transition)
+            resident.moveAbout();                        // frozen-guarded → resumes roaming when the scene does
+          }
+          H.setAnimation('stop');
+          // SPLIT: peel the tail (thrown panda + downstream) onto dB as its own line. It's
+          // built frozen, so it won't step yet — nothing moves while the shading is up.
+          const tailMembers = A.members.splice(k);        // [grabbed, ...downstream]
+          tailMembers.forEach(p => spotted.add(p));
+          lines.push(makeLine(tailMembers, dB));
+          // hold the frozen, spotlit tableau, then release motion AND shading together
+          // (cleanup unfreezes and un-dims in one step, so nobody moves while still shaded).
+          setTimeout(cleanup, PATCH_SETTLE);
+        });
+      }, alive);
+    }, alive);
+  }
+
+  // rare trigger: two lines each ≥ PATCH_MIN_LEN, headings meaningfully apart. The
+  // target A is the longest (most runway); the source B is the most divergent of the rest.
+  function managePatch() {
+    if (reduced) return;
+    const retry = ms => setTimeout(managePatch, ms);
+    if (frozen || document.hidden) return retry(3000);   // don't start an intervention we can't animate
+    const H = pandas.find(p => p.hasHat);
+    if (!H || H.knocked || H.entering) return retry(4000);
+    const live = lines.filter(l => l.members.length >= PATCH_MIN_LEN);   // a line long enough to take part
+    if (live.length < 2) return retry(4000);
+    const A = live.slice().sort((a, b) => b.members.length - a.members.length)[0];
+    let B = null, widest = 0;
+    for (const l of live) {
+      if (l === A) continue;
+      const ang = angleBetween(A.leader.direction, l.leader.direction);
+      if (ang > widest) { widest = ang; B = l; }
+    }
+    if (!B || widest < PATCH_MIN_ANGLE) return retry(4000);
+    runPatch(H, A, B, () => retry(PATCH_GAP_MIN + Math.random() * (PATCH_GAP_MAX - PATCH_GAP_MIN)));
+  }
+
+  // ---- spawn: the troupe walks on from the edges, the hat panda leading ----
   function spawn() {
     const W = stage.clientWidth, H = stage.clientHeight;
     if (!W || !H) { requestAnimationFrame(spawn); return; }   // wait for layout
     computeForbid();                                          // fence the hero card
+    // viewport-aware headcount: cap 5 lines want plenty of roamers, and wide heroes
+    // have the whitespace for a crowd; a phone does not (they'd pile on the headline).
+    PANDA_COUNT = W >= 1200 ? 20 : W >= 800 ? 12 : 7;
 
     const place = () => {                                     // a clear spot off the fence
       let x, y, tries = 0;
@@ -717,6 +970,7 @@
 
     setInterval(collisionCheck, 50);
     setTimeout(manageLines, MANAGE_START);                   // Phase 2: start forming conga lines
+    setTimeout(managePatch, PATCH_KICK);                     // Phase 4: begin looking for a patch to run
     // the fence moves with layout; recompute on resize (debounced by rAF)
     let rAF = 0;
     window.addEventListener('resize', () => {

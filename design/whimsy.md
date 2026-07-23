@@ -2,6 +2,8 @@
 
 *2026-07-10. Workshop doc for the whimsy layer (Layer 2 minimap TOC deferred by decision — the current text TOC stays for now). Status: **"Ask Niche" is the lead; engine drafted & tested; UI mocked. Nothing shipped to the site yet.** Parent spec: [direction.md](direction.md); ma5a fencing rules there are binding.*
 
+> **2026-07-22 amendment (Ameya):** the site-wide Niche mascot is **retired** — it only ever related to the induction-head post, and the research is moving fast (next: replicating Anthropic's J-space paper). Homepage whimsy goes **identity-native** instead: the **panda troupe (candidate 6, new lead)**. Ask Niche survives as a *post-local* figure on the induction post. Candidates 5 and 3A are cut. Amended allocation model and fencing rules below.
+
 **Live sketches (round 2 — the Ask Niche panel is working on the page itself):** https://claude.ai/code/artifact/c283ec6b-f6e2-4a6c-8ddb-b710692ba3db
 *(Round-1 artifact with the cursor-trail demo was deleted; the trail spec survives in this file's git history.)*
 
@@ -13,15 +15,76 @@ One element per surface:
 
 | Surface | Whimsy budget | Current candidate |
 |---|---|---|
-| Homepage / hero | One big signature | **"B5H0 reads the headline" (candidate 5) — proposed lead, awaiting Ameya's verdict**; photon walk (2A) demoted to alternate |
-| Each post/project page | One element, **native to that post's topic** | **"Ask Niche" (candidate 4)**; photon walk for a future radiative-transfer post |
-| 404 + other utility pages | One quiet resident | Niche quotes (3A) |
+| Homepage / hero | One signature **system** (a troupe counts as one element) | **Panda troupe (candidate 6) — LEAD 2026-07-22**; "B5H0 reads the headline" (5) cut; photon walk (2A) stays parked for a physics post |
+| Each post/project page | One element, **native to that post's topic** | **"Ask Niche" (candidate 4)** stays on the induction post — demoted from site mascot to that post's topic-made-live |
+| 404 + other utility pages | One quiet resident | open (3A cut with the mascot retirement) |
 
-Per-post whimsy = the post's subject made live (interactive-figure energy, not decoration); optional per post. One mascot/voice spans everything: **Niche the model, B5H0 its famous head.**
+Per-post whimsy = the post's subject made live (interactive-figure energy, not decoration); optional per post. **Two registers, one author (2026-07-22):** the homepage speaks Ameya's *identity* (the panda — his existing avatar across Instagram/WhatsApp/X); each post speaks its own *topic*. No cross-surface mascot anymore — a mascot tied to one project goes stale the moment the research moves on.
 
 ---
 
-## Candidate 4 — "Ask Niche" (LEAD)
+## Candidate 6 — Panda troupe on the hero (LEAD, 2026-07-22)
+
+> **2026-07-23 — concept crystallized.** The troupe is no longer "roamers + a hat"; it now enacts **activation patching** (the method underneath every circuit the site dissects), with the hat panda as the interpreter/self-insert. Full choreography spec, metaphor mapping, 5 build phases, and open decisions live in **[panda-choreography.md](panda-choreography.md)**. This section below is retained as the base-engine + hat-fitting history that the choreography builds on.
+
+### Status (2026-07-22, round 6): hat fitting bench — per-frame fits on dissected walk cells
+
+**Live artifact:** https://claude.ai/code/artifact/9cc421bb-f300-40da-b1e0-ae99bc444813
+**Working copy in-repo:** `design/sketches/panda-collision-replica.html` (self-contained, identical to the artifact — open locally or republish). *To update the artifact from a fresh session, pass its URL as the `url` parameter of the Artifact tool, else a new URL gets minted.*
+
+**Build history (all 2026-07-22):**
+- **Round 1** — flat SVG pandas roaming a hero replica. Rejected by Ameya: "a flat jpg moving across the screen," no expressivity.
+- **Rounds 2–3** — procedurally generated 2-bit pixel sprites (pixel rasterizer + outline pass; round 3 added a 5-tone palette, 6-frame walk, pupils, parameterized expressions). Scrapped: the from-scratch art wasn't landing.
+- **Round 4** — pivot per Ameya: replicate ma5a's *"panda collision"* pen exactly first, build on top later. Done. Sprite art is her verbatim path data (injected programmatically from the extracted pen source — zero transcription errors; decode verified: 90–134 balanced paths per direction row). Engine reimplemented, constant-for-constant faithful. Deliberate diffs only: area-scaled panda count on small screens, tap-to-knock, reduced-motion = standing still.
+- **Round 5** — two behavior drafts on top of the replica: the hat panda (dǒulì composited into the walk cells; knock-off-and-retrieve skit, calm-drop/big-launch variants) and the induction walk (pair / train-of-three path copying). Ameya verdict: **the hat still doesn't fit.**
+- **Round 6 (current)** — hat fitting bench. Approach change per Ameya: dissect the walk animation into its individual frames and draw the hat onto each one; induction walk **parked** (returns once the hat is approved). The 15 walk cells (5 direction rows × frames 0/1/2) were rasterized offline from her path data (axis-aligned h/v outlines, even-odd scanline fill) and the head contour measured per cell — findings: the head is ~15 units wide but the round-5 brim was 28 (nearly the whole panda), the head top dips 2 units in every mid-stride frame (f1), and the head center drifts ±1 unit between stride extremes; round 5 had one eyeballed seat per direction plus a guessed bob. The dǒulì is redrawn at 20 units (5 perspective drawings: band on front/¾-front, apex leaning into the heading on profile, plain cone on the back rows; 1-unit ink outline, white straw, radial ribs) and seated per frame from the measurements (brim underside = head-top + 1, centered on the measured head center). The artifact now leads with the bench: all 15 frames at 4× with the hat drawn on each, ◀▶▲▼ nudge controls per cell (1 sprite unit), pixel-grid + hat toggles, a per-row walk-cycle preview playing `[0,1,2,1]` with the per-frame hats, and a live `HAT_FIT` readout to carry into the next round; nudges also re-composite the hat panda in the simulation below live. Fall/stand-up cells stay hatless by design.
+
+**How the pen actually works (corrects the earlier PNG-sprite assumption — her *homepage bunnies* are a PNG sheet; the *pen's panda* is pure SVG):**
+- Pixel art stored as SVG paths compressed with a custom alphabet — each letter decodes to a path command (`a`=`h 1`, `N`=`v -1`, `D`/`F`/`o` open ink/white/pink paths). Five strings → five direction rows (up, diag-up, side, diag-down, down), viewBox 624×48 each = **13 frames of 48px cells**; displayed as a 1300×500 block behind a 100×100 overflow-hidden window, stepped by negative margins.
+- Animations = frame-index lists at 140 ms/frame: walk `[0,1,2,1]` · fall `[3,4,5,6,5,7]` · fallen `[7]` · standUp `[7..12]` · stop `[0]`.
+- 8 walking headings from 5 rows — left-facing is `scale(-1,1)` on the inner wrapper (hit area re-flipped).
+- Movement: compass-walk (heading turns ±1 step, options `[1,1,-1,-1,0]`), 50px strides every 850–1100 ms, **glided by `transition: 2s` on margins** (this is what makes it feel soft), bounds clamp (−40 / stage−60), `z-index = y` depth sorting.
+- Collision: 4 invisible hit-corners per panda (40×50 hit area), pairwise rect-overlap within a 20px buffer every 50 ms; corner pattern → knock direction (single corner = diagonal, two = cardinal, all four = the panda's own random default). Knock: 80px slide away, fall animation, lie 2–5 s, stand up, resume. The knock-down/get-up cycle is the pen's soul.
+- Her values: 20 pandas, pink `rgb(255,151,186)` bg, ink `rgb(173,1,87)`, white + pink accent fills (inner ears).
+- License: public CodePen pens are MIT (CodePen ToS); attribution embedded in the artifact and the in-repo copy. *(Fetch note: codepen.io Cloudflare-blocks curl; `https://cdpn.io/Ma5a/fullpage/WNEBqPO` with a browser UA returns the pen inside an escaped iframe `srcdoc`.)*
+
+**Next pass (agreed direction, not started):**
+1. **Recolor to the site palette** — ink `rgb(173,1,87)` → `--gray-1200`; white fills stay `--gray-100`; decide what the pink accent paths (`o`-prefixed: inner ears) become on sand (candidate: `--gray-800`); stage pink → `--gray-100` (the hero itself).
+2. **Dǒulì hat** — open question: edit the path data per frame (13 × 5 cells) vs. a positioned overlay layer per direction row. Overlay is likely cheaper; hat must track the head through walk/fall/stand-up frames.
+3. **Calmer, site-fenced behavior** — fewer pandas (3–5 by hero area), possibly rarer collisions/knocks, hero-only geographic fence, pause off-screen/hidden-tab. Note a rules tension to resolve: her engine animates *margins* (layout) with CSS transitions; direction.md's motion spec says transform/opacity only — either port movement to transforms (keeping the 2s-glide feel) or consciously exempt the replica engine.
+4. **Ship integration** — `assets/pandas/` + Quarto include on the homepage hero, same pattern as Ask Niche.
+
+**Verdicts wanted from Ameya before next pass:** does the replica feel like the real pen? · keep the knock-down/get-up behavior on the site (it needs ≥2 pandas colliding — or tap-to-knock)? · pink-accent → which sand tone? · hat approach (path-edit vs overlay)? · panda count on the hero?
+*(Round 1 — flat SVG pandas roaming a hero replica — rejected 2026-07-22: no expressivity, "a flat jpg moving across the screen." Round 2 goes 2-bit pixel-sprite style after dissecting ma5a's actual bunny implementation: a 6-frame pixel sprite sheet animated by CSS `steps()` + JS scheduling. Ours generates the frames procedurally in code — a tiny pixel rasterizer + outline pass — so hats and expressions are parameters, not redraws. Workshop is strictly in the artifact until a design wins; mobile-friendly pens for: walk cycle, somersault roll, dǒulì hat, idle/blink/sleep, bamboo munch, edge-peek.)*
+
+**Concept:** a small troupe of ink-and-sand pandas lives in the hero's empty space — ambling to waypoints, pausing, napping, greeting each other on collision. Ma5a-bunny aliveness, geographically fenced to the hero. Deliberately *not* research-native: the panda is Ameya's existing mark (avatar on Instagram/WhatsApp/X), so it survives every research pivot. Timelessness is the point.
+
+**Why panda over research-native whimsy:**
+- **Durability** — Niche was post-specific; the panda bets on the author, the one constant on a personal site.
+- **Avatar continuity** — visitors arriving from X/Instagram see the mark they already associate with Ameya. That's what a signature is.
+- **Natively grayscale** — the only animal that renders in the zero-chroma sand palette with no rule changes.
+
+**Rule amendments this forces (conscious, adopted 2026-07-22):**
+1. direction.md's "whimsy must speak the research language" → **homepage whimsy speaks the author's identity; per-post whimsy speaks the post's topic.**
+2. "One autonomous animation per screen max; idle = fully static within ~1s" → **the hero fence permits one ambient autonomous *system*** (ma5a's actual rule is geographic — `scrollY < innerHeight` — not user-causation; her bunnies are autonomous). Everywhere else the old rules stand. Article pages: zero pandas, still air.
+
+**Character design constraints:**
+- ⚠ **Copyright:** the personal avatar is Po from Kung Fu Panda (DreamWorks IP). The site panda must be an **original design** — no Po facial features, proportions, or costume. A generic conical straw hat (dǒulì) is a traditional object, not DreamWorks's, and is what keeps the visual link to the avatar. Drawn in our own style: recommended.
+- Ink-and-sand only: `--gray-1200` patches, `--gray-100` fur, hat in the gray-800/900 straw range.
+- Build base: ma5a's panda pen (codepen.io/Ma5a/pen/WNEBqPO — public pens are MIT-licensed under CodePen ToS), replicated faithfully in round 4 (see Status above); her sprite art + constants, our engine. Site version diverges from here (palette, hat, behavior).
+
+**Fencing (amended audit):**
+- Geographic: hero only. Never below the Writing header, never on posts or utility pages.
+- The hero text block is an **exclusion zone** — pandas path around it, never under the headline glyphs. Pandas are `aria-hidden` decoration.
+- Perf: transform-only, rAF loop paused via IntersectionObserver when the hero is offscreen and on `visibilitychange`.
+- `prefers-reduced-motion`: troupe present but static/asleep — species-appropriate degradation.
+- Click a panda → hop (user-caused, ephemeral — allowed above content). Open question whether to keep.
+
+**Standing open questions (beyond the round-4 verdicts above):** hat on all / one / none ("one" reads as *the* panda = Ameya) · mobile show/hide on the shipped hero · adopt the panda as favicon to close the loop with the social avatars.
+
+---
+
+## Candidate 4 — "Ask Niche" (SHIPPED; post-local as of 2026-07-22)
 
 *The name: the model is named Niche after Nietzsche. Rhymes, even though it doesn't really.*
 
@@ -59,7 +122,9 @@ Per-post whimsy = the post's subject made live (interactive-figure energy, not d
 
 ---
 
-## Candidate 5 — Hero: "B5H0 reads the headline" (PROPOSED LEAD, 2026-07-10)
+## Candidate 5 — Hero: "B5H0 reads the headline" (CUT 2026-07-22)
+
+*Cut with the Niche retirement: it tied the site's front door to a project already outgrown. The hero slot goes to the panda troupe (candidate 6). Spec kept below for the record.*
 
 **Concept:** the hero headline — *"Currently, I train small models and take them apart to see what they learned."* — is itself the specimen. Hover a word and the sentence shows what B5H0 (the induction head the site is about) attends to while reading that word: earlier characters light up with intensity proportional to real attention weights from the actual checkpoint. The headline *claims* "I take them apart"; the whimsy lets the visitor do the taking-apart, on the exact sentence they're reading. The claim demonstrates itself.
 
@@ -115,7 +180,7 @@ Cursor path quantized to cells; re-entering a visited cell replays what followed
 
 One photon at a time: exponential free paths, scatter, absorb/escape, fading 1px ink polyline. **Ameya: actually interesting for the hero, but doesn't fit the current work.** Parked while the hero stays open; natural resident for a future mc-radiative-transfer post. Demo still live in the artifact.
 
-## Candidate 3 — Niche quotes (alive, part of the Niche fiction)
+## Candidate 3 — Niche quotes (CUT 2026-07-22 with the mascot retirement)
 
 - **3A — 404 oracle**: 404 = Niche's room; one bad Nietzsche quote (real samples generated offline from `niche_model.pt`, curated ~30, static JSON), "ask again" instant swap. Static text, ~0 bytes JS.
 - **3B — colophon whisper** (optional): last line of the homepage; drop it if it reads as a footer creeping back.
@@ -123,12 +188,11 @@ One photon at a time: exponential free paths, scatter, absorb/escape, fading 1px
 
 ---
 
-## Build order (revised)
+## Build order (revised 2026-07-22)
 
-1. **4 — Ask Niche**: ✅ shipped to the induction-head post (2026-07-10 iv).
-2. **5 — Hero "B5H0 reads the headline"**: pending Ameya's verdict on the open questions, then: (a) bake script + verify headline round-trips the vocab, (b) pick the best demo words from real weights, (c) span-ify + hover JS + CSS, (d) Playwright verify at 1440/1024/768 + confirm hidden on coarse pointers.
-3. **3A — 404 oracle**: cheap; quote curation run against the checkpoint.
-4. **2A on a radiative-transfer post**: when that post exists.
+1. **4 — Ask Niche**: ✅ shipped to the induction-head post (2026-07-10 iv). Stays, post-local.
+2. **6 — Panda troupe**: ✅ round 4 replica base done (see Status) → Ameya's round-4 verdicts → next pass on the replica (recolor to sand · hat · calmer fenced behavior · resolve margins-vs-transform tension) → build `assets/pandas/` + Quarto hero include → Playwright verify at 1440/1024/768 + reduced-motion + fence (zero pandas below hero / on posts) → favicon decision.
+3. **2A on a radiative-transfer post**: when that post exists.
 
 ## Session log
 - **2026-07-10 (i)**: Candidates 1–3 fleshed out; live sketches v1; allocation model proposed.
@@ -136,3 +200,8 @@ One photon at a time: exponential free paths, scatter, absorb/escape, fading 1px
 - **2026-07-10 (iii)**: Ameya decisions: attention stripes, mobile hidden, fp16 lazy-load, squircle→panel UI (stripes/output/input). Panel UI workshopped in Emil language and mocked live in the round-2 artifact (selection chip, download state, streaming, induction-rule stripe sim). Round-1 artifact deleted; new URL above.
 - **2026-07-10 (iv)**: **SHIPPED to the induction-head post.** Ameya feedback applied: header slimmed to `N̈ Niche` (params line removed); stripes now settle on the **average attention across all generation steps** at completion (accumulated by absolute token index, stable across window rebuilds) instead of freezing on the last char. Production widget: `assets/niche/ask-niche.{js,css}` + engine + 9.8 MB bundle, `project.resources` added to `_quarto.yml`, loaded via raw-HTML block at the end of `posts/induction-head/index.qmd` (one-line italic invitation above it). Verified headless (Playwright): FAB → panel, real download + generation in-browser, live→averaged captions, selection chip prefill, hidden at 390px, no console errors (only Quarto's pre-existing `listings.json` 404). Not yet committed/deployed — local render only.
 - **2026-07-10 (v)**: Hero whimsy planned — candidate 5 "B5H0 reads the headline" proposed as lead (baked offline attention, hover-to-dissect the hero sentence, zero ambient motion); photon walk demoted to hero-alternate; live micro-training run considered and rejected. Awaiting Ameya's verdicts on rendering variant, hint copy, hover granularity, head-picker.
+- **2026-07-22 (i)**: Direction amended (Ameya). Niche retired as site-wide mascot — post-specific, and the research is moving to the J-space replication; candidates 5 and 3A cut, Ask Niche demoted to post-local. Homepage whimsy goes identity-native: **panda troupe (candidate 6, lead)**, after Ameya's cross-platform panda avatar. Ambient-alive autonomous motion approved inside the hero fence (geographic fencing is ma5a's actual rule); a troupe = one system = one element. KFP copyright flagged (the avatar is Po) → original panda design, generic straw hat keeps the avatar link.
+- **2026-07-22 (ii)**: Panda workshop rounds. R1 flat SVG roamers in a hero replica — rejected (no expressivity). R2 pivot to 2-bit pixel sprites after dissecting ma5a's homepage bunny (PNG sheet + `steps()`): procedural pixel rasterizer, 7 pens. R3 detail pass: 5-tone palette, 6-frame walk, pupils, parameterized expressions, 9 pens. Ameya: still not landing → **scratch, replicate ma5a's "panda collision" pen exactly, build on that later.**
+- **2026-07-22 (iii)**: Pen fetched (cdpn.io referer workaround), dissected, and replicated — her verbatim sprite path data + custom decoder + all behavior constants; engine reimplemented; decode verified. Artifact replaced with the replica; working copy saved to `design/sketches/panda-collision-replica.html`. Full spec, next-pass plan, and pending verdicts recorded in candidate 6's Status block.
+- **2026-07-22 (iv)**: Round 5 — behavior drafts (hat panda skit + induction walk) on the workshop artifact; working copy `design/sketches/panda-behaviors-workshop.html`. Ameya: the hat still doesn't fit.
+- **2026-07-22 (v)**: Round 6 — hat fitting bench (see Status). Walk cells rasterized offline and head contours measured; dǒulì redrawn 28→20 units; per-frame fits with live nudge controls, walk previews, and a `HAT_FIT` readout; induction walk parked. Artifact republished (same URL); working copy updated. **Awaiting Ameya: judge the walk previews, nudge any cells that are off, and paste back the readout table.**

@@ -425,6 +425,16 @@ body:has(.hero-screen) { overflow-x: hidden; }
 }
 .hit_corner { height: 50%; width: 50%; opacity: 0; }   // invisible hitboxes
 .panda_wrapper.hatless .wornhat { display: none; }
+// Phase 4: activation patching — spotlight the two lines under intervention, dim
+// the rest (mirrors how patching is drawn in papers: clean vs corrupted, side by
+// side). `.spot` on the participating pandas + the hat panda keeps them lit.
+.panda-stage.intervening .panda_wrapper { opacity: 0.15; transition: opacity 0.45s ease; }
+.panda-stage.intervening .panda_wrapper.spot { opacity: 1; }
+// the flung panda rides above everything; its position is driven frame-by-frame by
+// a rAF parabolic arc (throwArc), so the wrapper's 2s amble transition is disabled
+// while it's in hand / in flight.
+.panda_wrapper.flying { z-index: 9999; }
+.panda_wrapper.flinging { transition: none; }
 .hat_loose {
   position: absolute;
   pointer-events: none;

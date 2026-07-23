@@ -6,6 +6,7 @@ project:
     - "!design/"
   resources:
     - "assets/niche/"
+    - "assets/pandas/"
 
 website:
   title: "Ameya Panchal"
