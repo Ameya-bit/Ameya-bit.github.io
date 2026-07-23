@@ -69,7 +69,7 @@ Build and workshop one at a time. Each phase's bar: **does it read without a cap
 - **As built** (`observe()` + `bestAxis`/`AXES`/`crossesFence`/`detourCorner`/`stepToward` in `pandas.js`; idle CSS in `styles.scss`):
   - Hat panda is the **fastest** (`HAT_MOVE_MS = 540`) and a **collision ghost** — never knocks, is never knocked or tapped (the old knock→hat-drop skit is retired for it).
   - **Standoff hysteresis** (not perpendicular): base `WATCH_BASE = 150`; **plants at 3× = `WATCH_NEAR` (450)**; relocates when a line drifts past **5× = `WATCH_FAR` (750)**.
-  - **Oversees all lines:** locks onto one line a random **15–30s** (`FOCUS_MIN`/`FOCUS_MAX`), then moves to another — not camping one team.
+  - **Oversees all lines:** locks onto one line a random **15–30s** (`FOCUS_MIN`/`FOCUS_MAX`), then moves to another — not camping one team. It only engages a line once it's a **real conga (2+ members)** — `manageLines()` seeds a line with a lone leader first, so until a follower joins the observer just ambles; it never "watches" a single panda.
   - **Line of sight:** relocates when the hero card sits between it and the line (`crossesFence`); when relocating it **routes around** the card via corner waypoints (`detourCorner`, `CLEAR = 120`) and only accepts vantages that are on-stage **and** have a clear view.
   - **Faces dead-on:** stands on one of the **8 exact sprite axes** (`AXES`) from the line so the facing lands straight; re-aligns (a small sidestep at current distance) once the bearing slips past **22.5°** off an axis (`AXIS_COS`) — the half-angle between axes, raised from 15° to tame the over-frequent sidesteps.
   - **Idle:** a breathing bob (`.panda_wrapper.observing .panda_sprite`, `@keyframes panda-watch`, 2.6s / 3px) while planted, so it isn't frozen.
@@ -111,6 +111,6 @@ The original plan was to prototype the steady-state loop in the workshop artifac
 
 - **Phase 1** — entrance — ✓ shipped, commit `a3dd257`.
 - **Phase 2** — conga lines + asymmetric collision — ✓ shipped, commit `4ba8512`.
-- **Phase 3** — observer — ✓ shipped. Re-alignment tamed (`AXIS_COS` 15°→22.5°); finer sprite angles + frame-based idle **parked as art work** (body editor built to author them — see the Phase 3 heading).
+- **Phase 3** — observer — ✓ shipped (commits `e021ecc` + `4fc1e67`). Re-alignment tamed (`AXIS_COS` 15°→22.5°); observer waits for a real conga (2+) before watching; finer sprite angles + frame-based idle **parked as art work** (body editor built to author them — see the Phase 3 heading).
 - **Phase 4** — activation patching — **next, not started.**
 - **Phase 5** — split & lifecycle — not started.
