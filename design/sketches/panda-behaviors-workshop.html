@@ -286,6 +286,10 @@
   const MOVE_SPEEDS = [850, 900, 950, 1000, 1100];
   const TURN_OPTIONS = [1, 1, -1, -1, 0];
 
+  // expose the sprite source + decoder so the body editor (separate script, below)
+  // shares one copy of ma5a's data instead of duplicating the 5 encoded strings
+  window.__pandaWS = { pandaSvg, decode, ROW, ANIM, DIR_SPRITE };
+
   const stage = document.getElementById('stage');
   let hatPandaRef = null;   // set once the troupe's hero panda exists (below)
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1032,5 +1036,310 @@
   } else {
     setInterval(collisionCheck, 50);
   }
+})();
+</script>
+
+<!-- ===================== body editor — new sprite angles + idle cels ===================== -->
+<style>
+  .bodyed { margin-top: 8px; }
+  .bctrls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 14px; }
+  .bctrls label.fld { font: 400 10.5px var(--mono); color: var(--gray-1000); display: inline-flex;
+    flex-direction: column; gap: 3px; letter-spacing: 0.03em; }
+  .bctrls select, .bctrls input[type="text"] {
+    font: 400 12px var(--mono); color: var(--gray-1200); background: var(--gray-100);
+    border: 1px solid var(--gray-400); border-radius: 6px; padding: 5px 8px; }
+  .bctrls input[type="text"] { min-width: 210px; }
+  .bctrls button {
+    font: 400 12px var(--mono); color: var(--gray-1200); background: var(--gray-100);
+    border: 1px solid var(--gray-400); border-radius: 6px; padding: 6px 11px; cursor: pointer; }
+  .bctrls button.primary { background: var(--gray-1200); color: var(--gray-100); border-color: var(--gray-1200); }
+  .bctrls button:focus-visible { outline: 2px solid var(--gray-1100); outline-offset: 1px; }
+  .bctrls .chk { font: 400 11px var(--mono); color: var(--gray-1100); display: inline-flex; gap: 5px; align-items: center; }
+  .bodystage { position: relative; background: #efe9dd; border-radius: 8px; overflow: hidden;
+    touch-action: none; cursor: crosshair; align-self: flex-start; box-shadow: inset 0 0 0 1px var(--gray-400); }
+  .bodystage svg { display: block; }
+  .bodyed_side { display: flex; flex-direction: column; gap: 6px; min-width: 140px; }
+  .bodyprev svg { display: block; border-radius: 8px; }
+  .bplabel { font: 400 10.5px var(--mono); color: var(--gray-1000); letter-spacing: 0.03em; }
+  .cels { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+  .celchip { position: relative; border: 1px solid var(--gray-400); border-radius: 8px; padding: 6px 6px 4px;
+    background: #efe9dd; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .celchip.on { border-color: var(--gray-1200); box-shadow: 0 0 0 1px var(--gray-1200); }
+  .celchip svg { display: block; background: #efe9dd; border-radius: 3px; }
+  .celchip .cl { font: 400 9.5px var(--mono); color: var(--gray-1100); max-width: 76px; text-align: center; word-break: break-all; }
+  .celx { position: absolute; top: -7px; right: -7px; width: 17px; height: 17px; border-radius: 50%;
+    border: 1px solid var(--gray-400); background: var(--gray-100); color: var(--gray-1200);
+    font: 600 11px/15px var(--mono); cursor: pointer; padding: 0; text-align: center; }
+  .bodyhint { font: 400 11.5px var(--mono); color: var(--gray-1000); flex-basis: 100%; }
+</style>
+
+<h2 class="copy">body editor — new sprite angles &amp; idle cels</h2>
+<p class="sub copy">The hat studio edits hats; this edits the <strong>panda body</strong>. It rasterises any existing sprite cel into an editable pixel grid, so you <strong>trace and nudge</strong> instead of drawing blank — the way to author the four intermediate ¾-angles for the 16-direction turn (each mirrors to its left-facing twin, so four drawings give eight new headings) and the idle cels (breathe · blink · glance) that replace the CSS bob. Paint, name each cel, then <strong>export</strong> to bake into <span style="font-family:var(--mono)">pandas.js</span> as <span style="font-family:var(--mono)">PANDA_BODY_PX</span> — the same <span style="font-family:var(--mono)">"x,y"→colour</span> shape as the hat maps. Edits auto-save in this browser.</p>
+
+<div class="bodyed" id="bodyed">
+  <div class="bctrls">
+    <label class="fld">trace from<select id="bodyTrace"></select></label>
+    <button type="button" id="bodySeedGrid">seed grid ↺</button>
+    <label class="fld">target cel<input type="text" id="bodyTarget" list="bodyPresets" placeholder="up_upright · side/idle-blink"></label>
+    <datalist id="bodyPresets"></datalist>
+    <button type="button" class="primary" id="bodySave">save cel</button>
+    <button type="button" id="bodyClear">clear grid</button>
+    <button type="button" id="bodyExport">export</button>
+    <button type="button" id="bodyImport">import</button>
+    <label class="chk"><input type="checkbox" id="bodyOnion" checked> onion</label>
+    <label class="chk"><input type="checkbox" id="bodyGrid" checked> grid</label>
+    <label class="chk"><input type="checkbox" id="bodyMirror"> mirror preview</label>
+    <span class="bodyhint" id="bodyHint"></span>
+  </div>
+  <div class="studio_body">
+    <div class="palette" id="bodyPalette"></div>
+    <div class="bodystage" id="bodyStage"></div>
+    <div class="bodyed_side">
+      <span class="bplabel">preview · sprite size</span>
+      <div class="bodyprev" id="bodyPrev"></div>
+      <span class="bplabel" id="bodyDims"></span>
+    </div>
+  </div>
+  <div class="cels" id="bodyCels"></div>
+  <pre class="readout" id="bodyReadout"></pre>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const WS = window.__pandaWS;
+  const stageEl = document.getElementById('bodyStage');
+  if (!WS || !stageEl) return;
+  const { pandaSvg, decode } = WS;
+
+  const N = 48, SCALE = 11;
+  const INK = '#21201c', WHITE = '#ffffff', PINK = '#ffb7c5';
+  const BPAL = [
+    { name: 'ink · body',      color: INK },
+    { name: 'white · face',    color: WHITE },
+    { name: 'pink · ear/nose', color: PINK },
+    { name: 'erase',           color: null },
+  ];
+  const TRACE_DIRS = ['up', 'dUp', 'side', 'dDown', 'down'];
+  const PRESETS = [
+    'up_upright', 'upright_right', 'right_downright', 'downright_down',   // 16-dir intermediates (right half; mirror → left)
+    'side/idle-breathe', 'side/idle-blink', 'side/idle-glance',
+    'down/idle-breathe', 'down/idle-blink', 'down/idle-glance',
+    'dDown/idle-breathe', 'dDown/idle-blink', 'dDown/idle-glance',
+  ];
+  const BASE_HINT = 'trace an existing cel → paint the new angle → name it → save. export bakes them into pandas.js.';
+
+  // ---- state ----
+  const KEY = 'panda_body_px_v2';
+  let cels = load();          // { label: { pixels:{"x,y":colour}, trace:"dir/f" } }
+  let curLabel = null;
+  let pixels = {};            // working grid
+  let onionPx = {};           // rasterised trace, shown faint beneath
+  let trace = 'up/0';
+  let paintColor = INK;
+  let showOnion = true, showGrid = true, mirrorPrev = false;
+
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(cels)); } catch (e) {} }
+
+  // ---- rasteriser: pure-JS scanline fill of the sprite's rectilinear paths ----
+  // The decoded cels are closed axis-aligned polygons on an integer grid, so we
+  // fill them directly (even-odd on vertical edges). No canvas → no cross-origin
+  // taint under file://; deterministic and pixel-exact.
+  const dirCache = {};
+  function parseDir(dir) {
+    if (dirCache[dir]) return dirCache[dir];
+    const paths = [];
+    const re = /<path(?: fill="([^"]*)")? d="M([^"]*)"\/>/g;
+    const decoded = decode(pandaSvg[dir]);
+    let m;
+    while ((m = re.exec(decoded))) {
+      const color = m[1] === '#fff' ? WHITE : m[1] === 'pink' ? PINK : INK;
+      // tokenise by pattern, not whitespace: the decoder glues some codes
+      // (e.g. ' v 1' + 'h -1' → ' v 1h -1'), which a space-split would mangle
+      const t = m[2].match(/[hv]|-?\d+/g);
+      let x = +t[0], y = +t[1];
+      const verts = [[x, y]];
+      for (let i = 2; i + 1 < t.length; i += 2) {
+        if (t[i] === 'h') x += +t[i + 1]; else y += +t[i + 1];
+        verts.push([x, y]);
+      }
+      const edges = [];                                   // vertical edges only (incl. implicit close)
+      for (let i = 0; i < verts.length; i++) {
+        const a = verts[i], b = verts[(i + 1) % verts.length];
+        if (a[0] === b[0] && a[1] !== b[1]) edges.push({ x: a[0], y0: Math.min(a[1], b[1]), y1: Math.max(a[1], b[1]) });
+      }
+      paths.push({ color, edges });
+    }
+    dirCache[dir] = paths;
+    return paths;
+  }
+  function rasterCel(dir, f) {                             // frame f's 48x48 cel → { "x,y": colour }
+    const paths = parseDir(dir), ox = f * 48, px = {};
+    for (const p of paths) {
+      for (let yy = 0; yy < 48; yy++) {
+        const Y = yy + 0.5, xs = [];
+        for (const e of p.edges) if (e.y0 <= Y && Y < e.y1) xs.push(e.x);
+        if (xs.length < 2) continue;
+        xs.sort((a, b) => a - b);
+        for (let k = 0; k + 1 < xs.length; k += 2) {
+          for (let gx = xs[k]; gx < xs[k + 1]; gx++) {
+            const lx = gx - ox;
+            if (lx >= 0 && lx < 48) px[lx + ',' + yy] = p.color;   // later paths overwrite (doc order)
+          }
+        }
+      }
+    }
+    return px;
+  }
+
+  // ---- rendering ----
+  function pxRects(px) {
+    let s = '';
+    for (const k in px) { const i = k.indexOf(','); s += '<rect x="' + k.slice(0, i) + '" y="' + k.slice(i + 1) + '" width="1" height="1" fill="' + px[k] + '"/>'; }
+    return s;
+  }
+  function drawStage() {
+    let grid = '';
+    if (showGrid) {
+      for (let x = 0; x <= N; x++) { const h = x % 8 === 0; grid += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="48" stroke="rgba(60,42,18,' + (h ? 0.32 : 0.10) + ')" stroke-width="0.05"/>'; }
+      for (let y = 0; y <= N; y++) { const h = y % 8 === 0; grid += '<line x1="0" y1="' + y + '" x2="48" y2="' + y + '" stroke="rgba(60,42,18,' + (h ? 0.32 : 0.10) + ')" stroke-width="0.05"/>'; }
+    }
+    const onion = showOnion ? '<g opacity="0.26">' + pxRects(onionPx) + '</g>' : '';
+    stageEl.innerHTML = '<svg viewBox="0 0 48 48" width="' + (48 * SCALE) + '" height="' + (48 * SCALE) + '">'
+      + onion + pxRects(pixels) + grid + '</svg>';
+  }
+  function drawPreview() {
+    const g = mirrorPrev ? '<g transform="translate(48,0) scale(-1,1)">' + pxRects(pixels) + '</g>' : pxRects(pixels);
+    document.getElementById('bodyPrev').innerHTML =
+      '<svg viewBox="0 0 48 48" width="120" height="120" style="background:#efe9dd">' + g + '</svg>';
+    document.getElementById('bodyDims').textContent = Object.keys(pixels).length + ' px' + (curLabel ? ' · ' + curLabel : ' · unsaved');
+  }
+  function drawCels() {
+    const host = document.getElementById('bodyCels');
+    const labels = Object.keys(cels);
+    host.innerHTML = '';
+    if (!labels.length) { host.innerHTML = '<span class="bodyhint">no saved cels yet — seed from a trace, paint, then “save cel”.</span>'; return; }
+    labels.forEach(label => {
+      const chip = document.createElement('div');
+      chip.className = 'celchip' + (label === curLabel ? ' on' : '');
+      chip.innerHTML = '<svg viewBox="0 0 48 48" width="54" height="54">' + pxRects(cels[label].pixels) + '</svg>'
+        + '<span class="cl">' + label + '</span>';
+      const x = document.createElement('button');
+      x.type = 'button'; x.className = 'celx'; x.textContent = '×'; x.title = 'delete';
+      x.addEventListener('click', ev => {
+        ev.stopPropagation();
+        delete cels[label]; if (curLabel === label) curLabel = null;
+        persist(); drawCels(); drawReadout(); drawPreview();
+      });
+      chip.appendChild(x);
+      chip.addEventListener('click', () => loadCel(label));
+      host.appendChild(chip);
+    });
+  }
+  function drawReadout() {
+    const out = {};
+    for (const k in cels) out[k] = cels[k].pixels;
+    const n = Object.keys(out).length;
+    document.getElementById('bodyReadout').textContent =
+      '// panda body cels — ' + n + ' authored · bake into pandas.js\n'
+      + '// each map is "x,y" -> colour (ink ' + INK + ' · white ' + WHITE + ' · pink ' + PINK + '),\n'
+      + '// rendered as 1x1 rects exactly like HAT_PIXELS. Left headings mirror via scale(-1,1).\n\n'
+      + 'const PANDA_BODY_PX = ' + JSON.stringify(out) + ';';
+  }
+  function redraw() { drawStage(); drawPreview(); }
+
+  // ---- actions ----
+  function seedOnion() { const [d, f] = trace.split('/'); onionPx = rasterCel(d, +f); drawStage(); }
+  function seedGrid() { const [d, f] = trace.split('/'); const px = rasterCel(d, +f); pixels = Object.assign({}, px); onionPx = px; redraw(); }
+  function loadCel(label) {
+    curLabel = label; pixels = Object.assign({}, cels[label].pixels);
+    trace = cels[label].trace || trace;
+    document.getElementById('bodyTarget').value = label;
+    document.getElementById('bodyTrace').value = trace;
+    if (showOnion) seedOnion();
+    redraw(); drawCels();
+  }
+  function saveCel() {
+    const label = document.getElementById('bodyTarget').value.trim();
+    if (!label) { flash('name the target cel first'); return; }
+    cels[label] = { pixels: Object.assign({}, pixels), trace };
+    curLabel = label; persist(); drawCels(); drawReadout(); flash('saved “' + label + '”');
+  }
+
+  // ---- paint ----
+  function paintAt(e) {
+    const r = stageEl.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * N);
+    const y = Math.floor((e.clientY - r.top) / r.height * N);
+    if (x < 0 || y < 0 || x >= N || y >= N) return;
+    const key = x + ',' + y;
+    if (paintColor === null) { if (!(key in pixels)) return; delete pixels[key]; }
+    else { if (pixels[key] === paintColor) return; pixels[key] = paintColor; }
+    redraw();
+  }
+  let painting = false;
+  stageEl.addEventListener('pointerdown', e => { painting = true; stageEl.setPointerCapture(e.pointerId); paintAt(e); e.preventDefault(); });
+  stageEl.addEventListener('pointermove', e => { if (painting) paintAt(e); });
+  const stop = () => { painting = false; };
+  stageEl.addEventListener('pointerup', stop);
+  stageEl.addEventListener('pointercancel', stop);
+
+  // ---- palette ----
+  const swBtns = [];
+  const paletteEl = document.getElementById('bodyPalette');
+  BPAL.forEach(p => {
+    const wrap = document.createElement('div'); wrap.className = 'swatch';
+    const btn = document.createElement('button'); btn.type = 'button';
+    if (p.color) { btn.style.background = p.color; btn.style.backgroundImage = 'none'; }
+    else { btn.textContent = '⌫'; btn.style.font = '600 13px var(--mono)'; }
+    if (p.color === paintColor) btn.classList.add('on');
+    btn.setAttribute('aria-label', p.name);
+    btn.addEventListener('click', () => { paintColor = p.color; swBtns.forEach(x => x.classList.remove('on')); btn.classList.add('on'); });
+    swBtns.push(btn);
+    const name = document.createElement('span'); name.className = 'sname'; name.textContent = p.name;
+    wrap.append(btn, name); paletteEl.appendChild(wrap);
+  });
+
+  // ---- controls ----
+  const traceSel = document.getElementById('bodyTrace');
+  TRACE_DIRS.forEach(d => [0, 1, 2].forEach(f => {
+    const o = document.createElement('option'); o.value = d + '/' + f; o.textContent = d + ' · f' + f; traceSel.appendChild(o);
+  }));
+  traceSel.value = trace;
+  traceSel.addEventListener('change', () => { trace = traceSel.value; if (showOnion) seedOnion(); });
+
+  const dl = document.getElementById('bodyPresets');
+  PRESETS.forEach(p => { const o = document.createElement('option'); o.value = p; dl.appendChild(o); });
+
+  document.getElementById('bodySeedGrid').addEventListener('click', seedGrid);
+  document.getElementById('bodySave').addEventListener('click', saveCel);
+  document.getElementById('bodyClear').addEventListener('click', () => { pixels = {}; curLabel = null; redraw(); });
+  document.getElementById('bodyOnion').addEventListener('change', e => { showOnion = e.target.checked; if (showOnion && !Object.keys(onionPx).length) seedOnion(); else drawStage(); });
+  document.getElementById('bodyGrid').addEventListener('change', e => { showGrid = e.target.checked; drawStage(); });
+  document.getElementById('bodyMirror').addEventListener('change', e => { mirrorPrev = e.target.checked; drawPreview(); });
+
+  const hintEl = document.getElementById('bodyHint');
+  let hintTimer = 0;
+  function flash(m) { hintEl.textContent = m; clearTimeout(hintTimer); hintTimer = setTimeout(() => { hintEl.textContent = BASE_HINT; }, 3200); }
+
+  document.getElementById('bodyExport').addEventListener('click', async () => {
+    const out = {}; for (const k in cels) out[k] = cels[k].pixels;
+    const json = JSON.stringify(out);
+    try { await navigator.clipboard.writeText(json); flash('copied — paste to Claude to bake PANDA_BODY_PX into pandas.js'); }
+    catch (e) { window.prompt('copy the body-cel data:', json); }
+  });
+  document.getElementById('bodyImport').addEventListener('click', () => {
+    const t = window.prompt('paste body-cel JSON (label → pixels) to load it');
+    if (!t) return;
+    let obj; try { obj = JSON.parse(t); } catch (e) { flash('that was not valid JSON'); return; }
+    for (const k in obj) cels[k] = { pixels: obj[k], trace: (cels[k] && cels[k].trace) || 'up/0' };
+    persist(); drawCels(); drawReadout(); flash('imported ' + Object.keys(obj).length + ' cel(s)');
+  });
+
+  // ---- init ----
+  hintEl.textContent = BASE_HINT;
+  drawStage(); drawPreview(); drawCels(); drawReadout();
+  seedGrid();   // start with the default trace loaded, so the grid isn't blank
 })();
 </script>

@@ -401,6 +401,16 @@ body:has(.hero-screen) { overflow-x: hidden; }
   width: calc(13 * 100px);
   pointer-events: none;
 }
+// Phase 3: the hat panda's idle — a soft breathing bob while it stands and watches,
+// so it reads as alive rather than frozen. On the sprite, so it rides above the
+// facing flip (inner) and the margin glide (wrapper); carries the hat with it.
+@keyframes panda-watch {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .panda_wrapper.observing .panda_sprite { animation: panda-watch 2.6s ease-in-out infinite; }
+}
 .hit_wrapper {
   height: 100%;
   display: flex;

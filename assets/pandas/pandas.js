@@ -35,6 +35,26 @@
     return x + 100 - FOOT > FORBID.l && x + FOOT < FORBID.r &&
            y + 100 - FOOT > FORBID.t && y + FOOT < FORBID.b;
   };
+  // route the observer around the fenced hero card (the one obstacle). Sample the
+  // straight path; if it grazes the card, detour via the nearest clear card corner
+  // (corners inset by CLEAR so a 100px wrapper stands fully off the fence there).
+  const CLEAR = 120;
+  const crossesFence = (x1, y1, x2, y2) => {
+    if (!FORBID) return false;
+    const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 20));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      if (inForbid(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t)) return true;
+    }
+    return false;
+  };
+  const detourCorner = (x1, y1, x2, y2) => {
+    const cs = [[FORBID.l - CLEAR, FORBID.t - CLEAR], [FORBID.r + CLEAR, FORBID.t - CLEAR],
+                [FORBID.l - CLEAR, FORBID.b + CLEAR], [FORBID.r + CLEAR, FORBID.b + CLEAR]];
+    const score = c => Math.hypot(c[0] - x1, c[1] - y1) + Math.hypot(x2 - c[0], y2 - c[1]);
+    const clear = cs.filter(c => !crossesFence(x1, y1, c[0], c[1]));   // corners reachable straight
+    return (clear.length ? clear : cs).reduce((a, b) => score(b) < score(a) ? b : a);
+  };
 
   // ---- sprite data + decoder from "panda collision" by ma5a (MIT, via CodePen) ----
   const pandaSvg = {
@@ -61,6 +81,7 @@
   };
   const DIRS = Object.keys(DIR_SPRITE);
   const MOVE_SPEEDS = [850, 900, 950, 1000, 1100];
+  const HAT_MOVE_MS = 540;       // the hat panda strides faster than any other panda
   const TURN_OPTIONS = [1, 1, -1, -1, 0];
 
   const INK = '#7c5322';         // deep straw brown — outline + pleats
@@ -152,9 +173,11 @@
       this.turnIndex = Math.floor(Math.random() * 7);
       this.direction = pick(DIRS);
       this.defaultFallDirection = pick(DIRS);
-      this.moveSpeed = pick(MOVE_SPEEDS);
+      this.moveSpeed = hasHat ? HAT_MOVE_MS : pick(MOVE_SPEEDS);   // the hat panda is the fastest
       this.hit = false; this.knocked = false; this.stopped = false;
       this.hasHat = hasHat; this.hatLost = false; this.hatRest = null; this.retrieving = false;
+      this.observer = hasHat;      // Phase 3: the hat panda watches lines instead of wandering
+      this.watchLine = null;
       this.moveQueued = false;
       this.entering = entering;    // Phase 1: walking in from off-stage, not yet wandering
       this.inLine = false;         // Phase 2: its Line once part of a conga
@@ -164,7 +187,7 @@
       stage.appendChild(this.el);
       this.setFacing();
       this.drawFrame();
-      if (!reduced) { this.animate(); if (!entering) this.moveAbout(); }
+      if (!reduced) { this.animate(); if (!entering) (this.observer ? this.observe() : this.moveAbout()); }
     }
     after(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
     setAnimation(name) { this.frame = 0; this.animation = name; }
@@ -195,8 +218,8 @@
         this.el.style.zIndex = y;
       }
     }
-    moveAbout() {
-      if (this.hit || this.retrieving || this.inLine || this.joining) return;
+    // one wander stride: turn a little, step, and bounce off a wall/fence if boxed
+    wanderStep() {
       this.turnIndex += pick(TURN_OPTIONS);
       if (this.turnIndex < 0) this.turnIndex = 7;
       if (this.turnIndex > 7) this.turnIndex = 0;
@@ -216,6 +239,10 @@
         this.direction = DIRS[this.turnIndex];
         this.setFacing();
       }
+    }
+    moveAbout() {
+      if (this.hit || this.retrieving || this.inLine || this.joining) return;
+      this.wanderStep();
       this.scheduleMove();
     }
     scheduleMove() {
@@ -245,7 +272,8 @@
         if (Math.abs(dx) <= STEP && Math.abs(dy) <= STEP) {
           this.setPos(tx, ty);
           this.entering = false;
-          this.moveAbout();                    // arrived — join the troupe
+          if (this.observer) this.observe();   // the hat panda settles into watching
+          else this.moveAbout();               // roamers join the troupe
           return;
         }
         this.setPos(
@@ -278,6 +306,81 @@
         this.after(this.moveSpeed, stride);
       };
       stride();
+    }
+    // ---- Phase 3: the hat panda oversees the lines from a distance ----
+    // It stands well back (3× the base) and faces the line it's watching, planted
+    // and still. When that line drifts past 5×, it relocates back to 3×. It doesn't
+    // camp one team: after a 15–30s lock it moves to another line, overseeing the whole
+    // scene. Default state is still.
+    observe() {
+      if (reduced) return;
+      this.relocating = true; this.focusTicks = 0; this.vAxis = 0; this.td = WATCH_NEAR;
+      const tick = () => {
+        if (this.knocked) { this.after(this.moveSpeed, tick); return; }
+        // choose / rotate the line being overseen — after its lock, move to another
+        const live = lines.filter(l => l.members.length);
+        if (!this.watchLine || !live.includes(this.watchLine) || --this.focusTicks <= 0) {
+          const others = live.filter(l => l !== this.watchLine);
+          const next = others.length ? pick(others) : (live.length ? this.watchLine : null);
+          if (next && next !== this.watchLine) {        // new team — relocate to a fresh vantage
+            this.relocating = true; this.td = WATCH_NEAR; this.vAxis = bestAxis(next, this, WATCH_NEAR);
+          }
+          this.watchLine = next;
+          const ms = FOCUS_MIN + Math.random() * (FOCUS_MAX - FOCUS_MIN);
+          this.focusTicks = Math.max(1, Math.round(ms / this.moveSpeed));
+        }
+        const line = this.watchLine;
+        if (!line) {                                    // no lines yet — amble gently
+          this.el.classList.remove('observing');
+          if (this.animation !== 'walk') this.setAnimation('walk');
+          this.wanderStep();
+          this.after(this.moveSpeed, tick);
+          return;
+        }
+        const lx = line.leader.x, ly = line.leader.y;
+        const ox = this.x - lx, oy = this.y - ly, dist = Math.hypot(ox, oy) || 1;
+        const losBlocked = crossesFence(this.x, this.y, lx, ly);  // hero card between us and the line
+        let maxDot = -Infinity;                         // how close the bearing is to a sprite axis
+        for (const [ux, uy] of AXES) { const d = (ox * ux + oy * uy) / dist; if (d > maxDot) maxDot = d; }
+        const angleOff = maxDot < AXIS_COS;
+        // triggers: drifted too far, view blocked by the card, or facing gone off-axis
+        if (!this.relocating) {
+          if (dist > WATCH_FAR || losBlocked) {
+            this.relocating = true; this.td = WATCH_NEAR; this.vAxis = bestAxis(line, this, this.td);
+          } else if (angleOff) {                        // sidestep at the current distance to re-align
+            this.relocating = true; this.td = Math.min(WATCH_FAR, Math.max(WATCH_NEAR, dist));
+            this.vAxis = bestAxis(line, this, this.td);
+          }
+        }
+        if (this.relocating) {                          // walk to the chosen axis standoff, then plant
+          this.el.classList.remove('observing');
+          if (this.animation !== 'walk') this.setAnimation('walk');
+          const tx = lx + AXES[this.vAxis][0] * this.td, ty = ly + AXES[this.vAxis][1] * this.td;
+          const rx = tx - this.x, ry = ty - this.y;
+          this.stepToward(tx, ty);                      // routes around the card, sets facing
+          const reached = rx * rx + ry * ry <= (STEP * 1.3) ** 2;
+          const settled = !losBlocked && !angleOff && dist >= WATCH_NEAR - STEP && dist <= WATCH_FAR;
+          if (reached || settled) this.relocating = false;
+        } else {                                        // planted — idle bob, faced dead-on at the line
+          if (this.animation !== 'stop') this.setAnimation('stop');
+          this.el.classList.add('observing');
+          const faceDir = heading(lx - this.x, ly - this.y, 8);
+          if (faceDir && faceDir !== this.direction) {
+            this.direction = faceDir; this.turnIndex = DIRS.indexOf(faceDir); this.setFacing();
+          }
+        }
+        this.after(this.moveSpeed, tick);
+      };
+      tick();
+    }
+    stepToward(tx, ty) {
+      let gx = tx, gy = ty;                                  // detour via a card corner if blocked
+      if (crossesFence(this.x, this.y, tx, ty)) [gx, gy] = detourCorner(this.x, this.y, tx, ty);
+      const dx = gx - this.x, dy = gy - this.y, dir = heading(dx, dy);
+      if (dir) { this.direction = dir; this.turnIndex = DIRS.indexOf(dir); this.setFacing(); }
+      this.applyPos(
+        Math.round(this.x + (dx > STEP ? STEP : dx < -STEP ? -STEP : dx)),
+        Math.round(this.y + (dy > STEP ? STEP : dy < -STEP ? -STEP : dy)));
     }
     slide() {
       let x = this.x, y = this.y;
@@ -367,7 +470,7 @@
       });
     }
     tap() { // our one addition
-      if (this.knocked || reduced || this.inLine || this.joining) return;
+      if (this.knocked || reduced || this.inLine || this.joining || this.observer) return;
       this.hit = this.defaultFallDirection;
       this.direction = this.defaultFallDirection;
       this.knock();
@@ -386,10 +489,10 @@
       for (let j = i + 1; j < corners.length; j++) {
         const b = corners[j];
         const pa = a.panda, pb = b.panda;
-        // entering pandas (walk-in) are pure ghosts. A conga panda (in line or
-        // joining) is an unstoppable force: it knocks a free roamer aside without
-        // being knocked itself, and two conga pandas pass cleanly through each other.
-        if (pa === pb || pa.entering || pb.entering) continue;
+        // entering pandas (walk-in) and the observer (hat panda) are pure ghosts. A
+        // conga panda (in line or joining) is an unstoppable force: it knocks a free
+        // roamer aside without being knocked, and two conga pandas pass through each other.
+        if (pa === pb || pa.entering || pb.entering || pa.observer || pb.observer) continue;
         const solidA = pa.inLine || pa.joining;
         const solidB = pb.inLine || pb.joining;
         if (solidA && solidB) continue;
@@ -521,6 +624,38 @@
     }
     setTimeout(manageLines, MANAGE_MS);
   }
+
+  // ---- Phase 3: the hat panda oversees the lines from a distance ----
+  const WATCH_BASE = 150;              // the base standoff unit
+  const WATCH_NEAR = WATCH_BASE * 3;   // it plants (and relocates back) to 3× the base
+  const WATCH_FAR  = WATCH_BASE * 5;   // it only relocates once a line drifts past 5×
+  const FOCUS_MIN = 15000, FOCUS_MAX = 30000;   // it locks onto one line 15–30s before moving on
+  const AXIS_COS = Math.cos(22.5 * Math.PI / 180); // re-align once the bearing drifts 22.5° off an axis
+                                                   // (the half-angle between 8 axes — max tolerance; past it a
+                                                   // neighbouring axis is closer anyway). Tames the over-frequent
+                                                   // sidesteps; drops further once 16 real sprite angles land.
+  // the 8 exact sprite headings as unit vectors. The observer stands on one of these
+  // axes from the line, so its facing lands dead-on — the sprite has no 360° angle.
+  const AXES = DIRS.map(d => {
+    let ux = d.includes('left') ? -1 : d.includes('right') ? 1 : 0;
+    let uy = d.includes('up') ? -1 : d.includes('down') ? 1 : 0;
+    if (ux && uy) { ux *= Math.SQRT1_2; uy *= Math.SQRT1_2; }
+    return [ux, uy];
+  });
+  // the axis whose standoff point (td from the line's front) is nearest the panda,
+  // is on stage, and has a clear line of sight to the line; else the least-bad one
+  const bestAxis = (line, p, td) => {
+    const lx = line.leader.x, ly = line.leader.y;
+    let bi = -1, bs = Infinity, fi = 0, fs = Infinity;
+    for (let i = 0; i < AXES.length; i++) {
+      const vx = lx + AXES[i][0] * td, vy = ly + AXES[i][1] * td;
+      const s = (vx - p.x) ** 2 + (vy - p.y) ** 2;
+      if (s < fs) { fs = s; fi = i; }                          // least-bad fallback
+      if (!inBounds(vx, vy) || crossesFence(vx, vy, lx, ly)) continue;   // on stage, clear view
+      if (s < bs) { bs = s; bi = i; }
+    }
+    return bi >= 0 ? bi : fi;
+  };
 
   // ---- spawn: ten pandas walk on from the edges, the hat panda leading ----
   function spawn() {
