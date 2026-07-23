@@ -318,7 +318,7 @@
       const tick = () => {
         if (this.knocked) { this.after(this.moveSpeed, tick); return; }
         // choose / rotate the line being overseen — after its lock, move to another
-        const live = lines.filter(l => l.members.length);
+        const live = lines.filter(l => l.members.length >= 2);   // a real conga (2+ walking together), not a lone seed leader
         if (!this.watchLine || !live.includes(this.watchLine) || --this.focusTicks <= 0) {
           const others = live.filter(l => l !== this.watchLine);
           const next = others.length ? pick(others) : (live.length ? this.watchLine : null);
