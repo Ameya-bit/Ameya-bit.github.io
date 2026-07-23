@@ -340,6 +340,7 @@
           const next = others.length ? pick(others) : (live.length ? this.watchLine : null);
           if (next && next !== this.watchLine) {        // new team — relocate to a fresh vantage
             this.relocating = true; this.td = WATCH_NEAR; this.vAxis = bestAxis(next, this, WATCH_NEAR);
+            this.gazeTicks = 0;                          // re-pick the scan target for the new line
           }
           this.watchLine = next;
           const ms = FOCUS_MIN + Math.random() * (FOCUS_MAX - FOCUS_MIN);
@@ -373,14 +374,28 @@
           if (this.animation !== 'walk') this.setAnimation('walk');
           const tx = lx + AXES[this.vAxis][0] * this.td, ty = ly + AXES[this.vAxis][1] * this.td;
           const rx = tx - this.x, ry = ty - this.y;
-          this.stepToward(tx, ty);                      // routes around the card, sets facing
+          this.stepWeaving(tx, ty);                     // weaves around the troupe + routes the card
           const reached = rx * rx + ry * ry <= (STEP * 1.3) ** 2;
           const settled = !losBlocked && !angleOff && dist >= WATCH_NEAR - STEP && dist <= WATCH_FAR;
           if (reached || settled) this.relocating = false;
-        } else {                                        // planted — idle bob, faced dead-on at the line
+        } else {                                        // planted — idle bob + an attentive scan
           if (this.animation !== 'stop') this.setAnimation('stop');
           this.el.classList.add('observing');
-          const faceDir = heading(lx - this.x, ly - this.y, 8);
+          // if the troupe crowds our vantage while we're planted, quietly relocate to clearer
+          // air (bestAxis now avoids clusters) — the observer keeps its own space.
+          if (crowdAt(this.x, this.y, this) > CROWD_BUMP) {
+            this.relocating = true; this.td = Math.max(WATCH_NEAR, Math.min(WATCH_FAR, dist));
+            this.vAxis = bestAxis(line, this, this.td);
+          }
+          // scan: every few seconds shift the gaze to a fresh point along the line (leader /
+          // middle / tail / a brief look-around), hold, then move on — attentive study, using
+          // only existing facings (no new cels). Amplitude stays small, so it never spins.
+          if ((this.gazeTicks = (this.gazeTicks || 0) - 1) <= 0) {
+            this.gazeTicks = Math.max(1, Math.round((GAZE_MIN + Math.random() * (GAZE_MAX - GAZE_MIN)) / this.moveSpeed));
+            this.gazeTarget = pickGaze(line);
+          }
+          const g = this.gazeTarget || line.leader;
+          const faceDir = heading(g.x - this.x, g.y - this.y, 8);
           if (faceDir && faceDir !== this.direction) {
             this.direction = faceDir; this.turnIndex = DIRS.indexOf(faceDir); this.setFacing();
           }
@@ -397,6 +412,34 @@
       this.applyPos(
         Math.round(this.x + (dx > STEP ? STEP : dx < -STEP ? -STEP : dx)),
         Math.round(this.y + (dy > STEP ? STEP : dy < -STEP ? -STEP : dy)));
+    }
+    // like stepToward, but the observer also steers *around* the other pandas: among the 8
+    // grid steps toward the (card-routed) goal, take the one that best trades progress against
+    // crowding, so it visibly weaves through the troupe. It stays a collision ghost, so this is
+    // only a preference — after WEAVE_STUCK crowded ticks with no gain it ghosts straight through,
+    // guaranteeing it always reaches the vantage.
+    stepWeaving(tx, ty) {
+      let gx = tx, gy = ty;                                  // keep the card detour from stepToward
+      if (crossesFence(this.x, this.y, tx, ty)) [gx, gy] = detourCorner(this.x, this.y, tx, ty);
+      const sdx = gx - this.x, sdy = gy - this.y, gd = Math.hypot(sdx, sdy) || 1;
+      const ux = sdx / gd, uy = sdy / gd;                    // unit seek vector toward the goal
+      // "hold" (stand still) is the baseline, mildly penalised so a clear forward step always
+      // wins; it only holds when every step would push into a worse crowd — letting a panda pass.
+      let bi = -1, bcx = this.x, bcy = this.y;
+      let best = -WEAVE_CROWD_W * crowdAt(this.x, this.y, this) - WEAVE_HOLD_BIAS;
+      for (let i = 0; i < DIRS.length; i++) {
+        const cx = Math.round(this.x + AXES[i][0] * STEP), cy = Math.round(this.y + AXES[i][1] * STEP);
+        if (!inBounds(cx, cy)) continue;                     // off-stage or into the card
+        const score = (AXES[i][0] * ux + AXES[i][1] * uy) - WEAVE_CROWD_W * crowdAt(cx, cy, this);
+        if (score > best) { best = score; bi = i; bcx = cx; bcy = cy; }
+      }
+      // stuck-breaker: crowding kept us from closing on the goal for too long → ghost through
+      this._weaveStuck = gd < (this._weavePrev ?? Infinity) - 1 ? 0 : (this._weaveStuck || 0) + 1;
+      this._weavePrev = gd;
+      if (this._weaveStuck >= WEAVE_STUCK) { this._weaveStuck = 0; this.stepToward(tx, ty); return; }
+      if (bi < 0) return;                                    // holding this tick to let a panda pass
+      this.direction = DIRS[bi]; this.turnIndex = bi; this.setFacing();
+      this.applyPos(bcx, bcy);
     }
     slide() {
       let x = this.x, y = this.y;
@@ -711,14 +754,49 @@
     if (ux && uy) { ux *= Math.SQRT1_2; uy *= Math.SQRT1_2; }
     return [ux, uy];
   });
-  // the axis whose standoff point (td from the line's front) is nearest the panda,
-  // is on stage, and has a clear line of sight to the line; else the least-bad one
+
+  // ---- Phase 3 refinement (2026-07-23): the observer navigates *around* the troupe and
+  // scans the line while watching — a deliberate agent, not a ghost drifting through. Code +
+  // existing cels only (no new sprite art, per Ameya's no-AI-art call). It stays a collision
+  // ghost underneath, so avoidance is a preference that can never wedge it. ----
+  const AVOID_R = 85;          // personal-space radius: pandas within this crowd a cell/vantage
+  const WEAVE_CROWD_W = 0.7;   // crowd vs. progress trade-off while weaving toward a vantage
+  const WEAVE_HOLD_BIAS = 0.12;// a forward step must beat standing still by this, else it holds a tick
+  const WEAVE_STUCK = 5;       // after this many crowded ticks with no gain, ghost straight through
+  const AXIS_CROWD_W = 24000;  // px² per unit of crowd when scoring vantage points (bestAxis)
+  const CROWD_BUMP = 1.2;      // if the troupe crowds our planted vantage past this, relocate
+  const GAZE_MIN = 1800, GAZE_MAX = 4200;   // hold each gaze target ~2–4s before shifting
+  // summed proximity of other pandas to (x,y) — 0 when clear, grows as they cluster within
+  // AVOID_R. Ignores self and transients (mid-fling, walking in).
+  const crowdAt = (x, y, self) => {
+    let c = 0;
+    for (const q of pandas) {
+      if (q === self || q.flying || q.entering) continue;
+      const dx = q.x - x, dy = q.y - y, d2 = dx * dx + dy * dy;
+      if (d2 < AVOID_R * AVOID_R) c += 1 - Math.sqrt(d2) / AVOID_R;
+    }
+    return c;
+  };
+  // a point for the observer to rest its gaze on — mostly along the watched line
+  // (leader / middle / tail), occasionally a brief glance to the side (look-around).
+  const pickGaze = line => {
+    const r = Math.random();
+    if (r < 0.30) return line.leader;
+    if (r < 0.55) return line.tail;
+    if (r < 0.80) return line.members[Math.floor(line.members.length / 2)] || line.leader;
+    const off = 60;
+    return { x: line.leader.x + (Math.random() * 2 - 1) * off,
+             y: line.leader.y + (Math.random() * 2 - 1) * off };
+  };
+
+  // the axis whose standoff point (td from the line's front) is nearest the panda AND least
+  // crowded, is on stage, and has a clear line of sight to the line; else the least-bad one
   const bestAxis = (line, p, td) => {
     const lx = line.leader.x, ly = line.leader.y;
     let bi = -1, bs = Infinity, fi = 0, fs = Infinity;
     for (let i = 0; i < AXES.length; i++) {
       const vx = lx + AXES[i][0] * td, vy = ly + AXES[i][1] * td;
-      const s = (vx - p.x) ** 2 + (vy - p.y) ** 2;
+      const s = (vx - p.x) ** 2 + (vy - p.y) ** 2 + AXIS_CROWD_W * crowdAt(vx, vy, p);  // near AND clear of the troupe
       if (s < fs) { fs = s; fi = i; }                          // least-bad fallback
       if (!inBounds(vx, vy) || crossesFence(vx, vy, lx, ly)) continue;   // on stage, clear view
       if (s < bs) { bs = s; bi = i; }
