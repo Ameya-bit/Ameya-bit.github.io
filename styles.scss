@@ -297,7 +297,9 @@ img {
 
 .hero-inner {
   max-width: 46rem;
-  padding-block: clamp(2rem, 6vh, 5rem);
+  // an invisible fence: pandas walk around this box, never behind it (pandas.js
+  // reads its rect). The padding sets how much clear space rings the text.
+  padding: clamp(1.75rem, 3.5vw, 3rem);
 }
 
 // Scoped under the content id so these outrank the prose p rules
@@ -357,6 +359,68 @@ img {
 main.content > :last-child {
   margin-bottom: 96px;
 }
+
+// ---- Home-page hero pandas (engine: assets/pandas/pandas.js) ---------------
+// Ten pandas wander the hero; one wears the straw hat. The stage overlays only
+// the .hero region (which sits above the Writing cue), so they never spill into
+// the writing list. Sprite + collision reproduced from ma5a's "panda collision"
+// (MIT); the hat is ours.
+.hero { position: relative; }               // stage anchors to the hero box
+.hero-inner { position: relative; z-index: 1; }   // the fenced card sits above pandas
+// keep the full-bleed stage from ever adding a horizontal scrollbar
+body:has(.hero-screen) { overflow-x: hidden; }
+
+.panda-stage {
+  position: absolute;
+  top: 0;
+  bottom: 0;                // = the hero's height, so nothing crosses the cue
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;       // full-bleed: pandas roam the entire page width
+  overflow: hidden;         // clip pandas to this band
+  z-index: 0;               // own stacking context keeps pandas under the card
+  pointer-events: none;     // empty stage passes clicks through to the page
+}
+
+.panda_wrapper {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  transition: 2s;           // the slow glide between steps, exactly hers
+  cursor: pointer;
+  pointer-events: auto;     // the pandas themselves are tappable
+}
+.panda_wrapper svg { fill: #21201c; display: block; }
+.panda_wrapper.stop { transition: 0 !important; }
+.panda_inner_wrapper { height: 100%; width: 100%; transition: 0; }
+.facing_upleft, .facing_left, .facing_downleft { transform: scale(-1, 1); }
+.panda_sprite {
+  position: absolute;
+  height: 500px;
+  width: calc(13 * 100px);
+  pointer-events: none;
+}
+.hit_wrapper {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+.hit_area { height: 50px; width: 40px; display: flex; flex-wrap: wrap; }
+.panda_wrapper.stop .hit_area { margin-top: 10px; height: 40px; }
+.facing_upleft .hit_area, .facing_left .hit_area, .facing_downleft .hit_area {
+  transform: scale(-1, 1);  // re-flip: parent is mirrored
+}
+.hit_corner { height: 50%; width: 50%; opacity: 0; }   // invisible hitboxes
+.panda_wrapper.hatless .wornhat { display: none; }
+.hat_loose {
+  position: absolute;
+  pointer-events: none;
+  transition: transform 0.75s cubic-bezier(0.22, 0.9, 0.24, 1), opacity 0.15s;
+}
+.hat_loose svg { display: block; fill: #7c5322; }
 
 // ---- Writing list: stacked title + description, instant hover pill ---------
 // Nested under the content id so these outrank the prose a/h3/p rules above.
@@ -443,7 +507,21 @@ main.content > :last-child {
   }
 }
 
-// ---- TOC: quiet chrome until the minimap layer replaces it ------------------
+// ---- TOC: pin the on-this-page rail to the far-left, decoupled from the
+// centered article column. The rail lives in #quarto-sidebar, placed by Quarto
+// at page-start/body-start (just left of the text). Re-place it to start at the
+// screen inset via the grid's own named lines (no position:fixed, no grid
+// flatten — both break Quarto's sticky recompute); the flexible gutter then
+// falls between the rail and the still-centered article column.
+#quarto-content.page-columns #quarto-sidebar.sidebar-navigation {
+  grid-column: screen-start-inset / body-start;
+  justify-self: start;
+}
+
+#quarto-content.page-columns #quarto-sidebar #TOC {
+  max-width: 220px; // keep the rail narrow and left-aligned in the wide band
+}
+
 #TOC,
 .sidebar nav[role="doc-toc"] {
   font-size: 14px;

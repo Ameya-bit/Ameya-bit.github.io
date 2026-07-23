@@ -16,8 +16,9 @@ listing:
 ```{=html}
 <section class="hero-screen">
   <div class="hero" aria-labelledby="hero-headline">
+    <div id="panda-stage" class="panda-stage" aria-hidden="true"></div>
     <div class="hero-inner">
-      <p id="hero-headline" class="hero-headline" role="heading" aria-level="1">Currently, I train small models and take them apart to see what they learned.</p>
+      <p id="hero-headline" class="hero-headline" role="heading" aria-level="1">Right now, I'm trying to replicate Anthropic's global workspace paper</p>
       <p class="hero-lede">Computer Science, Physics, and AI at Penn State (Schreyer Honors). I'm focused on AI interpretability, with a research background in physics-grade computation. This is where I write up what I find.</p>
       <nav class="hero-links" aria-label="Profile links">
         <a href="https://github.com/Ameya-bit">GitHub</a>
@@ -29,6 +30,7 @@ listing:
   </div>
   <p class="writing-cue">Writing</p>
 </section>
+<script src="assets/pandas/pandas.js" defer></script>
 ```
 
 ::: {.writing-section}
