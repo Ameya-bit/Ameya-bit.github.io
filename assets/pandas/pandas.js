@@ -157,6 +157,8 @@
       this.hasHat = hasHat; this.hatLost = false; this.hatRest = null; this.retrieving = false;
       this.moveQueued = false;
       this.entering = entering;    // Phase 1: walking in from off-stage, not yet wandering
+      this.inLine = false;         // Phase 2: its Line once part of a conga
+      this.joining = false;        // Phase 2: its Line while walking to join the tail
       this.timers = [];
       this.el.addEventListener('click', () => this.tap());
       stage.appendChild(this.el);
@@ -194,7 +196,7 @@
       }
     }
     moveAbout() {
-      if (this.hit || this.retrieving) return;
+      if (this.hit || this.retrieving || this.inLine || this.joining) return;
       this.turnIndex += pick(TURN_OPTIONS);
       if (this.turnIndex < 0) this.turnIndex = 7;
       if (this.turnIndex > 7) this.turnIndex = 0;
@@ -246,6 +248,30 @@
           this.moveAbout();                    // arrived — join the troupe
           return;
         }
+        this.setPos(
+          this.x + (dx > STEP ? STEP : dx < -STEP ? -STEP : 0),
+          this.y + (dy > STEP ? STEP : dy < -STEP ? -STEP : 0));
+        this.after(this.moveSpeed, stride);
+      };
+      stride();
+    }
+    // Phase 2: walk to the tail of `line` and lock in as its new last member. The
+    // tail moves, so the target is recomputed each stride; the snake step corrects
+    // spacing the moment we're admitted.
+    joinLine(line) {
+      this.joining = line;
+      let steps = 0;
+      const stride = () => {
+        if (this.joining !== line || !line.members.length || line.full || ++steps > 30) {
+          this.joining = false;
+          if (!this.inLine) this.moveAbout();          // recruitment fell through — resume roaming
+          return;
+        }
+        const [tx, ty] = line.tailSlot();
+        const dx = tx - this.x, dy = ty - this.y;
+        if (dx * dx + dy * dy <= (STEP * 1.3) ** 2) { line.admit(this); return; }
+        const dir = heading(dx, dy);
+        if (dir) { this.direction = dir; this.turnIndex = DIRS.indexOf(dir); this.setFacing(); }
         this.setPos(
           this.x + (dx > STEP ? STEP : dx < -STEP ? -STEP : 0),
           this.y + (dy > STEP ? STEP : dy < -STEP ? -STEP : 0));
@@ -341,7 +367,7 @@
       });
     }
     tap() { // our one addition
-      if (this.knocked || reduced) return;
+      if (this.knocked || reduced || this.inLine || this.joining) return;
       this.hit = this.defaultFallDirection;
       this.direction = this.defaultFallDirection;
       this.knock();
@@ -359,15 +385,20 @@
       const a = corners[i], ar = a.getBoundingClientRect();
       for (let j = i + 1; j < corners.length; j++) {
         const b = corners[j];
-        // entering pandas are ghosts to collision — the walk-in must not knock
-        if (a.panda === b.panda || a.panda.entering || b.panda.entering) continue;
+        const pa = a.panda, pb = b.panda;
+        // entering pandas (walk-in) are pure ghosts. A conga panda (in line or
+        // joining) is an unstoppable force: it knocks a free roamer aside without
+        // being knocked itself, and two conga pandas pass cleanly through each other.
+        if (pa === pb || pa.entering || pb.entering) continue;
+        const solidA = pa.inLine || pa.joining;
+        const solidB = pb.inLine || pb.joining;
+        if (solidA && solidB) continue;
         const br = b.getBoundingClientRect();
         if (overlap(ar.x, br.x) && overlap(ar.x + ar.width, br.x + br.width) &&
             overlap(ar.y, br.y) && overlap(ar.y + ar.height, br.y + br.height)) {
-          if (!hits.has(a.panda)) hits.set(a.panda, {});
-          if (!hits.has(b.panda)) hits.set(b.panda, {});
-          hits.get(a.panda)[a.dataset.pos] = true;
-          hits.get(b.panda)[b.dataset.pos] = true;
+          // only the non-solid (knockable) panda records a hit and gets knocked
+          if (!solidA) { if (!hits.has(pa)) hits.set(pa, {}); hits.get(pa)[a.dataset.pos] = true; }
+          if (!solidB) { if (!hits.has(pb)) hits.set(pb, {}); hits.get(pb)[b.dataset.pos] = true; }
         }
       }
     }
@@ -393,8 +424,105 @@
   const OFF = 100;            // start one wrapper-width off-stage, fully clipped
   const TARGET_IN = 110;      // where the wrapper settles before it starts wandering
 
-  // ---- spawn: ten pandas walk on from the edges, the hat panda leading ----
   const pandas = [];
+
+  // ===================== conga lines (Phase 2) =====================
+  // A line is a follow-the-leader chain: the leader wanders and every follower
+  // steps into the cell the panda ahead just vacated (a snake). Because each
+  // follower copies its predecessor's move, a heading change at the front ripples
+  // down the line — the exact mechanic Phase 4 (activation patching) leans on.
+  const LINE_CAP = 3;          // pandas per line — open decision, default 3 (tunable to 4)
+  const MAX_LINES = 2;         // lines that can coexist (Phase 4 needs two)
+  const LINE_STEP_MS = 950;    // a line advances one stride on this clock
+  const LINE_TURN_P = 0.35;    // chance the leader eases into a turn each stride
+  const JOIN_RADIUS = 340;     // a free panda within this of a tail can be recruited
+  const MANAGE_START = 4200;   // let the entrance breathe before any line forms
+  const MANAGE_MS = 2600;      // cadence of the nucleate / recruit check
+
+  const lines = [];
+  const inBounds = (x, y) =>
+    x > -40 && x < stage.clientWidth - 60 &&
+    y > -40 && y < stage.clientHeight - 60 && !inForbid(x, y);
+  const dist2 = (ax, ay, bx, by) => (ax - bx) ** 2 + (ay - by) ** 2;
+  const isFree = p => !p.hasHat && !p.entering && !p.inLine && !p.joining && !p.knocked;
+  const freePandas = () => pandas.filter(isFree);
+
+  class Line {
+    constructor(leader) {
+      leader.inLine = this; leader.joining = false; leader.moveQueued = false;
+      leader.setAnimation('walk');
+      this.members = [leader];
+      this.step();
+    }
+    get leader() { return this.members[0]; }
+    get tail() { return this.members[this.members.length - 1]; }
+    get full() { return this.members.length >= LINE_CAP; }
+    // the slot one stride behind the tail (opposite its facing) — a recruit's target
+    tailSlot() {
+      const t = this.tail, d = t.direction;
+      return [t.x + (d.includes('left') ? STEP : d.includes('right') ? -STEP : 0),
+              t.y + (d.includes('up') ? STEP : d.includes('down') ? -STEP : 0)];
+    }
+    // the leader's next cell: ease into a gentle turn now and then, else go straight;
+    // rotate to the first legal heading when the chosen one hits an edge or the fence
+    leaderNext() {
+      const L = this.leader;
+      const ti = L.turnIndex + (Math.random() < LINE_TURN_P ? pick([-1, 1]) : 0);
+      for (let r = 0; r < 8; r++) {
+        const k = ((ti + r) % 8 + 8) % 8, dir = DIRS[k];
+        const nx = L.x + (dir.includes('left') ? -STEP : dir.includes('right') ? STEP : 0);
+        const ny = L.y + (dir.includes('up') ? -STEP : dir.includes('down') ? STEP : 0);
+        if (inBounds(nx, ny)) { L.turnIndex = k; L.direction = dir; return [nx, ny]; }
+      }
+      return [L.x, L.y];                                // fully boxed in — hold this stride
+    }
+    step() {
+      if (!this.members.length) return;                // dissolved (Phase 5)
+      const old = this.members.map(m => [m.x, m.y]);
+      const [lx, ly] = this.leaderNext();
+      if (lx !== old[0][0] || ly !== old[0][1]) {       // skip the stride entirely if the leader is boxed
+        const next = [[lx, ly]];
+        for (let i = 1; i < this.members.length; i++) next.push(old[i - 1]);   // into the vacated cell
+        for (let i = 0; i < this.members.length; i++) {
+          const m = this.members[i], nx = next[i][0], ny = next[i][1];
+          const dir = heading(nx - old[i][0], ny - old[i][1]);                 // propagated heading
+          if (dir) { m.direction = dir; m.turnIndex = DIRS.indexOf(dir); m.setFacing(); }
+          m.setPos(nx, ny);
+        }
+      }
+      this.timer = setTimeout(() => this.step(), LINE_STEP_MS);
+    }
+    admit(p) {
+      p.joining = false; p.inLine = this; p.moveQueued = false;
+      p.setAnimation('walk');
+      this.members.push(p);                             // next step() snaps it into formation
+    }
+  }
+
+  // periodically seed a leader and recruit nearby roamers to a tail, one line at a
+  // time. Dissolution / growth-past-cap are Phase 5; here lines form and persist.
+  function manageLines() {
+    for (let i = lines.length - 1; i >= 0; i--) if (!lines[i].members.length) lines.splice(i, 1);
+
+    for (const line of lines) {                          // recruit for any non-full line
+      if (line.full || pandas.some(p => p.joining === line)) continue;   // one recruit inbound at a time
+      const [tx, ty] = line.tailSlot();
+      let best = null, bd = JOIN_RADIUS ** 2;
+      for (const p of freePandas()) {
+        const d = dist2(p.x, p.y, tx, ty);
+        if (d < bd) { bd = d; best = p; }
+      }
+      if (best) best.joinLine(line);
+    }
+
+    // nucleate the next line only once the current ones are full — sequential, calm
+    if (lines.length < MAX_LINES && lines.every(l => l.full) && freePandas().length >= LINE_CAP) {
+      lines.push(new Line(pick(freePandas())));
+    }
+    setTimeout(manageLines, MANAGE_MS);
+  }
+
+  // ---- spawn: ten pandas walk on from the edges, the hat panda leading ----
   function spawn() {
     const W = stage.clientWidth, H = stage.clientHeight;
     if (!W || !H) { requestAnimationFrame(spawn); return; }   // wait for layout
@@ -453,6 +581,7 @@
     setTimeout(wave, LEAD_GAP);                               // give the hat panda its solo beat
 
     setInterval(collisionCheck, 50);
+    setTimeout(manageLines, MANAGE_START);                   // Phase 2: start forming conga lines
     // the fence moves with layout; recompute on resize (debounced by rAF)
     let rAF = 0;
     window.addEventListener('resize', () => {
