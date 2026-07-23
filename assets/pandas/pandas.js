@@ -81,7 +81,7 @@
   };
   const DIRS = Object.keys(DIR_SPRITE);
   const MOVE_SPEEDS = [850, 900, 950, 1000, 1100];
-  const HAT_MOVE_MS = 540;       // the hat panda strides faster than any other panda
+  const HAT_MOVE_MS = 440;       // the hat panda reacts/strides quicker than any roamer (paired with the sharp .hat glide)
   const TURN_OPTIONS = [1, 1, -1, -1, 0];
 
   const INK = '#7c5322';         // deep straw brown — outline + pleats
@@ -150,7 +150,7 @@
   class Panda {
     constructor(x, y, hasHat = false, entering = false) {
       this.el = document.createElement('div');
-      this.el.className = 'panda_wrapper';
+      this.el.className = hasHat ? 'panda_wrapper hat' : 'panda_wrapper';   // .hat gets the sharp, quick glide (Phase 3 refinement)
       this.el.innerHTML = `
         <div class="panda_inner_wrapper">
           <div class="panda_sprite">${spriteBlock(hasHat)}</div>
