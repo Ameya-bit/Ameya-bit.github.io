@@ -5,6 +5,9 @@
 // drawings are ours, finalized in design/sketches/panda-behaviors-workshop.html.
 // Ten pandas wander the hero, one wearing the hat; they stay above the Writing
 // cue because the stage is clipped to the hero region. Respects reduced motion.
+// Phase 1 (entrance): the stage starts empty — the hat panda ambles in first,
+// alone, then the troupe walks on from the edges a couple at a time. See
+// design/panda-choreography.md for the full multi-phase plan.
 (() => {
   'use strict';
   const stage = document.getElementById('panda-stage');
@@ -124,7 +127,7 @@
 
   // ===================== a panda =====================
   class Panda {
-    constructor(x, y, hasHat = false) {
+    constructor(x, y, hasHat = false, entering = false) {
       this.el = document.createElement('div');
       this.el.className = 'panda_wrapper';
       this.el.innerHTML = `
@@ -153,12 +156,13 @@
       this.hit = false; this.knocked = false; this.stopped = false;
       this.hasHat = hasHat; this.hatLost = false; this.hatRest = null; this.retrieving = false;
       this.moveQueued = false;
+      this.entering = entering;    // Phase 1: walking in from off-stage, not yet wandering
       this.timers = [];
       this.el.addEventListener('click', () => this.tap());
       stage.appendChild(this.el);
       this.setFacing();
       this.drawFrame();
-      if (!reduced) { this.animate(); this.moveAbout(); }
+      if (!reduced) { this.animate(); if (!entering) this.moveAbout(); }
     }
     after(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
     setAnimation(name) { this.frame = 0; this.animation = name; }
@@ -216,6 +220,38 @@
       if (this.moveQueued) return;
       this.moveQueued = true;
       this.after(this.moveSpeed, () => { this.moveQueued = false; this.moveAbout(); });
+    }
+    // ---- Phase 1: the entrance ----
+    // direct, unclamped placement — used only while walking in from off-stage,
+    // where the normal applyPos edge/fence clamp would block the entry corridor.
+    setPos(x, y) {
+      this.el.style.marginLeft = x + 'px';
+      this.el.style.marginTop = y + 'px';
+      this.el.style.zIndex = Math.round(y);
+      this.x = x; this.y = y; this.prev = [x, y];
+    }
+    // amble in a straight line from an off-stage edge to (tx, ty), then hand off
+    // to the ordinary wander. Heading is fixed inward so the sprite faces the way
+    // it walks; the 2s CSS glide on the wrapper smooths each stride, exactly as it
+    // does for normal movement.
+    walkIn(dir, tx, ty) {
+      if (reduced) { this.entering = false; return; }
+      this.direction = dir; this.turnIndex = DIRS.indexOf(dir);
+      this.setFacing();
+      const stride = () => {
+        const dx = tx - this.x, dy = ty - this.y;
+        if (Math.abs(dx) <= STEP && Math.abs(dy) <= STEP) {
+          this.setPos(tx, ty);
+          this.entering = false;
+          this.moveAbout();                    // arrived — join the troupe
+          return;
+        }
+        this.setPos(
+          this.x + (dx > STEP ? STEP : dx < -STEP ? -STEP : 0),
+          this.y + (dy > STEP ? STEP : dy < -STEP ? -STEP : 0));
+        this.after(this.moveSpeed, stride);
+      };
+      stride();
     }
     slide() {
       let x = this.x, y = this.y;
@@ -323,7 +359,8 @@
       const a = corners[i], ar = a.getBoundingClientRect();
       for (let j = i + 1; j < corners.length; j++) {
         const b = corners[j];
-        if (a.panda === b.panda) continue;
+        // entering pandas are ghosts to collision — the walk-in must not knock
+        if (a.panda === b.panda || a.panda.entering || b.panda.entering) continue;
         const br = b.getBoundingClientRect();
         if (overlap(ar.x, br.x) && overlap(ar.x + ar.width, br.x + br.width) &&
             overlap(ar.y, br.y) && overlap(ar.y + ar.height, br.y + br.height)) {
@@ -349,12 +386,20 @@
     });
   }
 
-  // ---- spawn: ten pandas across the full page, one wearing the hat ----
+  // ---- Phase 1: the staggered walk-in ----
+  const LEAD_GAP = 1800;      // the hat panda gets a solo beat before the troupe
+  const WAVE_GAP = 1050;      // then pandas arrive a couple at a time
+  const WAVE_SIZE = 2;        // "a couple"
+  const OFF = 100;            // start one wrapper-width off-stage, fully clipped
+  const TARGET_IN = 110;      // where the wrapper settles before it starts wandering
+
+  // ---- spawn: ten pandas walk on from the edges, the hat panda leading ----
   const pandas = [];
   function spawn() {
     const W = stage.clientWidth, H = stage.clientHeight;
     if (!W || !H) { requestAnimationFrame(spawn); return; }   // wait for layout
     computeForbid();                                          // fence the hero card
+
     const place = () => {                                     // a clear spot off the fence
       let x, y, tries = 0;
       do {
@@ -363,13 +408,51 @@
       } while (inForbid(x, y) && ++tries < 40);
       return [x, y];
     };
-    const [hx, hy] = place();
-    pandas.push(new Panda(hx, hy, true));                     // the hat panda
-    for (let i = 1; i < PANDA_COUNT; i++) {
-      const [x, y] = place();
-      pandas.push(new Panda(x, y));
+
+    // reduced motion: no choreography — place them at rest, standing still
+    if (reduced) {
+      const [hx, hy] = place();
+      pandas.push(new Panda(hx, hy, true));
+      for (let i = 1; i < PANDA_COUNT; i++) { const [x, y] = place(); pandas.push(new Panda(x, y)); }
+      return;
     }
-    if (!reduced) setInterval(collisionCheck, 50);
+
+    // an off-stage start + inward target on a random edge, its lane clear of the
+    // fence. Entry runs perpendicular to the edge, so the straight transit never
+    // crosses the centred hero card.
+    const pickEntry = () => {
+      for (let tries = 0; tries < 40; tries++) {
+        const edge = pick(['left', 'right', 'top', 'bottom']);
+        let sx, sy, dir, tx, ty;
+        if (edge === 'left')   { sy = rand(H - 100); sx = -OFF;            dir = 'right'; tx = TARGET_IN;            ty = sy; }
+        if (edge === 'right')  { sy = rand(H - 100); sx = W + OFF - 100;   dir = 'left';  tx = W - 100 - TARGET_IN;  ty = sy; }
+        if (edge === 'top')    { sx = rand(W - 100); sy = -OFF;            dir = 'down';  ty = TARGET_IN;            tx = sx; }
+        if (edge === 'bottom') { sx = rand(W - 100); sy = H + OFF - 100;   dir = 'up';    ty = H - 100 - TARGET_IN;  tx = sx; }
+        if (!inForbid(tx, ty)) return { sx, sy, dir, tx, ty };
+      }
+      const [x, y] = place();                                 // fallback: appear at a clear spot
+      return { sx: x, sy: y, dir: pick(DIRS), tx: x, ty: y };
+    };
+
+    const enterOne = hasHat => {
+      const e = pickEntry();
+      const p = new Panda(e.sx, e.sy, hasHat, true);
+      pandas.push(p);
+      p.walkIn(e.dir, e.tx, e.ty);
+    };
+
+    enterOne(true);                                           // the hat panda, alone, first
+    let entered = 1;
+    const wave = () => {
+      if (entered >= PANDA_COUNT) return;
+      const n = Math.min(WAVE_SIZE, PANDA_COUNT - entered);   // a couple at a time
+      for (let k = 0; k < n; k++) enterOne(false);
+      entered += n;
+      setTimeout(wave, WAVE_GAP);
+    };
+    setTimeout(wave, LEAD_GAP);                               // give the hat panda its solo beat
+
+    setInterval(collisionCheck, 50);
     // the fence moves with layout; recompute on resize (debounced by rAF)
     let rAF = 0;
     window.addEventListener('resize', () => {
