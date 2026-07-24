@@ -7,7 +7,7 @@
 // decoration, clipped to the hero region (never below the Writing cue). Full spec +
 // build log: design/panda-chaos.md.
 //
-// What the troupe does (Phases 0–1 shipped, 2026-07-23):
+// What the troupe does (Phases 0–5 shipped, 2026-07-24):
 //  • Entrance — the stage starts empty; the hat panda ambles in first, alone, then
 //    the troupe walks on from the edges a couple at a time and starts wandering.
 //    Headcount is viewport-aware and deliberately low; below MOBILE_MIN the stage stays
@@ -18,24 +18,35 @@
 //    phases add kinds rather than turning the dial up. Every 7–14s one roamer goes
 //    strange on its own — never two of the same kind running, never the hat panda,
 //    never the oblivious one.
-//  • Tier 1 so far — sleeper (lies down 8–20s), spinner (spins, then staggers off),
-//    tumbler (trips on nothing, over in a second). The unequal lifespans are the timing
-//    design: with one watcher and independent clocks, its early / on-time / too-late
+//  • Tier 1 (all six) — sleeper (lies down 8–20s), spinner (spins, then staggers off),
+//    tumbler (trips on nothing, over in a second), loop (retraces a small octagon 2–4×),
+//    starer (stops and blankly faces the nearest edge 6–12s), zoomies (bolts in a straight
+//    line at ~3× until it crashes into a wall or another panda). The unequal lifespans are the
+//    timing design: with one watcher and independent clocks, its early / on-time / too-late
 //    arrivals fall out on their own. Lateness is never scripted.
+//  • Tier 2, the stack — occasionally (every 60–120s) 1–2 roamers hop onto a base's head; the
+//    base parades as an unstoppable `solid` force while the ghost riders, pinned above, sway ever
+//    harder until the tower topples (or a zoomies bowls it over early), flinging them off to land
+//    and pick themselves up. Riders stand (zero art). One tier-2 incident outranks every tier-1.
+//  • Tier 3, the cascade — rarely (armed every 2–5 min), the next collision or stack topple ignites a
+//    chain reaction: felled pandas topple their nearest standing neighbour, which topples its own, a
+//    two-front domino ripple sweeping ~70–90% of the field (the oblivious one and a couple of stragglers
+//    survive). Nothing freezes; the watcher is pulled to the origin and stands amid the bodies, overwhelmed.
 //  • The oblivious one — one roamer never picked for anything, keeping to a small patch
 //    and idling often. The comic foil; chance collisions may still knock it.
-//  • Hat panda = the watcher. Fastest panda and a collision ghost (never knocked). It
-//    plants at a vantage and studies one subject, gaze drifting. Phase 2 swaps the
-//    ambient subject for a real incident queue so it attends to the anomalies.
+//  • Hat panda = the watcher. Fastest of the troupe and a real, two-way collider (it knocks
+//    and is knocked like anyone). It weaves through the field to a vantage, plants, and studies
+//    one subject, gaze drifting; when the troupe boxes him in he holds, re-vantages, or abandons
+//    the subject rather than phasing through. Phase 2 attends to a real incident queue.
 //  • Motion is transform-only (z-index still from y), so the 20 Hz collision reads
 //    never trip a layout pass. Every loop pauses when the hero scrolls off-screen or
 //    the tab is hidden.
 //  • Reduced motion = a composed tableau, not a random scatter: the troupe scattered,
 //    one 3-high stack mid-parade, one panda fallen, and the hat panda planted facing it.
 //
-// Staged for later phases, deliberately not wired up yet: throwArc (Phase 4 mount hop
-// and topple tosses) and the `solid` collision asymmetry (Phase 4 stack bottom as the
-// unstoppable force).
+// The movement vocabulary is all in play now: throwArc (the stack's mount hop), spin3d (the
+// spinner), the `solid` collision asymmetry (the stack's unstoppable base), and the steered
+// knock-slide (the cascade's domino fall). No new baked art was added for any of it.
 (() => {
   'use strict';
   const stage = document.getElementById('panda-stage');
@@ -109,6 +120,7 @@
   const ANIM = {
     walk: [0, 1, 2, 1], stop: [0], idle: [1],   // idle = f1, the legs-together "mid-stride dip" — a settled pose, not the f0 contact stride
     fall: [3, 4, 5, 6, 5, 7], fallen: [7], standUp: [7, 8, 9, 10, 11, 12],
+    roll: [3, 4, 5, 6, 5],   // the hat panda's dive-roll — the fall tumble WITHOUT settling to fallen (7), so he pops straight up
   };
   const ROW = { up: 0, dUp: 1, side: 2, dDown: 3, down: 4 };
   const DIR_SPRITE = {
@@ -117,7 +129,9 @@
   };
   const DIRS = Object.keys(DIR_SPRITE);
   const MOVE_SPEEDS = [850, 900, 950, 1000, 1100];
-  const HAT_MOVE_MS = 540;       // the hat panda strides faster than any other panda
+  const HAT_MOVE_MS = 540;       // the hat panda's calm stride — faster than any trudging roamer
+  const HAT_ALERT_MS = 380;      // full-alert stride when danger is near — quicker, but never zoomies-fast
+  const HAT_SPRINT_MS = 300;     // full-alert sprint — the dash back for a knocked-off hat (never as fast as zoomies)
   const TURN_OPTIONS = [1, 1, -1, -1, 0];
 
   const INK = '#7c5322';         // deep straw brown — outline + pleats
@@ -217,6 +231,7 @@
       this.solid = false;          // an unstoppable force: knocks roamers aside, is never knocked
                                    // (Phase 4: the stack's bottom panda)
       this.flying = false;         // mid-arc (collision ghost) — throwArc owns this
+      this.riding = false;         // a stack rider, pinned above the base (collision ghost) — Stack owns this
       this.moveQueued = false;
       this.entering = entering;    // walking in from off-stage, not yet wandering
       this.el.addEventListener('click', () => this.tap());
@@ -249,6 +264,7 @@
     }
     animate() {
       if (paused) { this.after(PAUSE_POLL, () => this.animate()); return; }
+      if (this.rolling) { this.after(FRAME_MS, () => this.animate()); return; }   // the dive-roll drives its own cels, fast
       this.drawFrame();
       this.after(FRAME_MS, () => this.animate());
     }
@@ -351,27 +367,30 @@
     // distance band, the hero card blocks the view, the bearing falls off-axis, or the
     // troupe crowds the vantage.
     //
-    // Phase 0 has nothing anomalous to attend to, so pickSubject() returns the ambient
-    // choice: a mildly notable panda, held for a dwell, at the relaxed standoff. Phase 2
-    // replaces that one call with the incident queue — the rest of this loop is unchanged.
+    // What it watches comes from pickWatchTarget(): the top live incident (close standoff), or
+    // — empty queue — an ambient panda held for a dwell at the relaxed standoff (the relax beat).
+    // That picker is the whole Phase-2 seam; everything below (relocate / plant / gaze) is as it
+    // was when the target was a line.
     observe() {
       if (reduced) return;
-      this.relocating = true; this.dwellTicks = 0; this.vAxis = 0; this.td = AMBIENT_STANDOFF;
+      this.relocating = true; this.ambientTicks = 0; this.vAxis = 0; this.td = AMBIENT_STANDOFF; this._incident = null;
+      this._stuck = 0; this._revantaged = false; this._stuckPrev = Infinity;   // hold → re-vantage → abandon accounting (2D)
+      if (!this._reflex) { this._reflex = true; this.hatReflex(); }   // start the dive-roll reflex once
       const tick = () => {
         if (paused) { this.after(PAUSE_POLL, tick); return; }
-        if (this.knocked) { this.after(this.moveSpeed, tick); return; }
-        // choose / rotate the subject when the dwell runs out. A subject that gets knocked
-        // mid-dwell is kept — watching it fall and pick itself up is the point.
-        if (!this.subject || --this.dwellTicks <= 0) {
-          const next = pickSubject(this);
-          if (next && next !== this.subject) {          // fresh subject — go find a vantage on it
-            this.td = AMBIENT_STANDOFF;
-            this.relocating = true; this.vAxis = bestAxis(next, this, this.td);
-            this.gazeTicks = 0;
+        if (this.knocked) return;   // knocked → this loop dies; knock()'s recovery restarts observe() (no double loop)
+        if (this.rolling) { this.after(HAT_ALERT_MS, tick); return; }   // mid dive-roll — yield, it drives his motion
+        // choose what to watch — incident-first, ambient fallback (pickWatchTarget). Runs every
+        // tick, so a fresh incident is noticed at once rather than at the end of an ambient dwell.
+        const want = pickWatchTarget(this);
+        if (want.subject !== this.subject || want.standoff !== this.td) {
+          const newSubject = want.subject !== this.subject;
+          this.subject = want.subject;
+          this.td = want.standoff;
+          if (this.subject) {                           // go find a vantage at the new standoff
+            this.startRelocate(bestAxis(this.subject, this, this.td));
+            if (newSubject) this.gazeTicks = 0;
           }
-          this.subject = next;
-          const ms = DWELL_MIN + Math.random() * (DWELL_MAX - DWELL_MIN);
-          this.dwellTicks = Math.max(1, Math.round(ms / this.moveSpeed));
         }
         const s = this.subject;
         if (!s) {                                       // nobody to watch — amble gently
@@ -385,66 +404,100 @@
         const losBlocked = crossesFence(this.x, this.y, s.x, s.y);  // hero card in the way
         let maxDot = -Infinity;                         // how close the bearing is to a sprite axis
         for (const [ux, uy] of AXES) { const d = (ox * ux + oy * uy) / dist; if (d > maxDot) maxDot = d; }
-        const angleOff = maxDot < AXIS_COS;
+        const angleOff = maxDot < (this._incident ? AXIS_COS : AMBIENT_AXIS_COS);   // loose when relaxing, tight up close
         const near = this.td - STEP, far = this.td * STANDOFF_SLACK;
         // triggers: drifted too far, view blocked by the card, or facing gone off-axis
         if (!this.relocating) {
           if (dist > far || losBlocked) {
-            this.relocating = true; this.vAxis = bestAxis(s, this, this.td);
+            this.startRelocate(bestAxis(s, this, this.td));
           } else if (angleOff) {                        // sidestep at the current distance to re-align
-            this.relocating = true; this.vAxis = bestAxis(s, this, Math.max(this.td, dist));
+            this.startRelocate(bestAxis(s, this, Math.max(this.td, dist)));
           }
         }
         if (this.relocating) {                          // walk to the chosen axis standoff, then plant
           this.el.classList.remove('observing');
           if (this.animation !== 'walk') this.setAnimation('walk');
           const tx = s.x + AXES[this.vAxis][0] * this.td, ty = s.y + AXES[this.vAxis][1] * this.td;
-          const rx = tx - this.x, ry = ty - this.y;
-          this.stepWeaving(tx, ty);                     // weaves around the troupe + routes the card
-          const reached = rx * rx + ry * ry <= (STEP * 1.3) ** 2;
+          this.stepWeaving(tx, ty);                     // weaves round the troupe + routes the card; holds if boxed (no ghosting)
+          const rx = tx - this.x, ry = ty - this.y, gd2 = rx * rx + ry * ry;   // gap to the vantage, after the step
+          const reached = gd2 <= (STEP * 1.3) ** 2;
           const settled = !losBlocked && !angleOff && dist >= near && dist <= far;
-          if (reached || settled) this.relocating = false;
-        } else {                                        // planted — idle bob + an attentive scan
-          if (this.animation !== 'idle') this.setAnimation('idle');   // f1 settled pose, not the f0 stride
-          this.el.classList.add('observing');
-          // if the troupe crowds our vantage while we're planted, quietly relocate to clearer
-          // air (bestAxis avoids clusters) — the watcher keeps its own space.
-          if (crowdAt(this.x, this.y, this) > CROWD_BUMP) {
-            this.relocating = true; this.vAxis = bestAxis(s, this, Math.max(this.td, Math.min(far, dist)));
+          const progressed = gd2 < this._stuckPrev - STEP;   // closed ~a stride toward the vantage this tick
+          this._stuckPrev = gd2;
+          // Phase 2D — no ghost-through. If a wall of real bodies keeps him from closing on the
+          // vantage, escalate rather than phase: first re-vantage (a different approach angle),
+          // then abandon the subject and move on (he misses it, honestly — principle #3/#4).
+          if (reached || settled) {
+            this.relocating = false; this._stuck = 0; this._revantaged = false;
+          } else if (progressed) {
+            this._stuck = 0;
+          } else if (++this._stuck >= WEAVE_STUCK) {
+            this._stuck = 0;
+            if (!this._revantaged) {                    // try a fresh angle in first
+              this._revantaged = true;
+              this.vAxis = bestAxis(s, this, this.td, this.vAxis);
+              this._stuckPrev = Infinity;               // give the new approach a clean run before judging it
+            } else {                                    // still boxed → let this one go
+              if (this._incident) this._incident.abandoned = true;
+              this._incident = null; this.subject = null; this.ambientTicks = 0;
+              this.relocating = false;
+            }
           }
-          // scan: every few seconds shift the gaze to a fresh point, hold, then move on —
-          // attentive study, using only existing facings (no new cels). Amplitude stays
-          // small, so it never spins.
-          if ((this.gazeTicks = (this.gazeTicks || 0) - 1) <= 0) {
-            this.gazeTicks = Math.max(1, Math.round((GAZE_MIN + Math.random() * (GAZE_MAX - GAZE_MIN)) / this.moveSpeed));
-            this.gazeTarget = pickGaze(s, this);
-          }
-          const g = this.gazeTarget || s;
-          const faceDir = heading(g.x - this.x, g.y - this.y, 8);
-          if (faceDir && faceDir !== this.direction) {
-            this.direction = faceDir; this.turnIndex = DIRS.indexOf(faceDir); this.setFacing();
+        } else {                                        // planted
+          // the sidestep tier: a single slow panda drifting into his space → step calmly aside at
+          // stride pace, toward a clear cell away from it. Fast threats and crowds are the reflex's
+          // job (a dive-roll); this keeps the roll rare and plugs the old planted-and-walked-into gap.
+          const drifters = threatsTo(this, HAT_SIDESTEP_R);
+          const stepDir = drifters.length ? bestEscape(this, drifters, STEP, true) : -1;
+          if (stepDir >= 0) {                           // step out of the way, unhurried
+            this.el.classList.remove('observing');
+            if (this.animation !== 'walk') this.setAnimation('walk');
+            this.direction = DIRS[stepDir]; this.turnIndex = stepDir; this.setFacing();
+            const [cx, cy] = stepCell(this.x, this.y, stepDir);
+            this.applyPos(cx, cy);
+          } else {                                       // no one bearing in — idle bob + an attentive scan
+            if (this.animation !== 'idle') this.setAnimation('idle');   // f1 settled pose, not the f0 stride
+            this.el.classList.add('observing');
+            // if the troupe crowds our vantage while we're planted, quietly relocate to clearer
+            // air (bestAxis avoids clusters) — the watcher keeps its own space.
+            if (crowdAt(this.x, this.y, this) > CROWD_BUMP) {
+              this.startRelocate(bestAxis(s, this, Math.max(this.td, Math.min(far, dist))));
+            }
+            // scan: every few seconds shift the gaze to a fresh point, hold, then move on —
+            // attentive study, using only existing facings (no new cels). Amplitude stays
+            // small, so it never spins.
+            if ((this.gazeTicks = (this.gazeTicks || 0) - 1) <= 0) {
+              this.gazeTicks = Math.max(1, Math.round((GAZE_MIN + Math.random() * (GAZE_MAX - GAZE_MIN)) / this.moveSpeed));
+              this.gazeTarget = pickGaze(s, this);
+            }
+            const g = this.gazeTarget || s;
+            const faceDir = heading(g.x - this.x, g.y - this.y, 8);
+            if (faceDir && faceDir !== this.direction) {
+              this.direction = faceDir; this.turnIndex = DIRS.indexOf(faceDir); this.setFacing();
+            }
           }
         }
-        this.after(this.moveSpeed, tick);
+        // full alert when something's bearing down: quicker stepping so the weave keeps up (the
+        // dive-roll is the burst; this is just heightened readiness). Calm otherwise.
+        const alert = threatsTo(this, HAT_DANGER_R).length > 0;
+        this.after(alert ? HAT_ALERT_MS : this.moveSpeed, tick);
       };
       tick();
     }
-    stepToward(tx, ty) {
-      let gx = tx, gy = ty;                                  // detour via a card corner if blocked
-      if (crossesFence(this.x, this.y, tx, ty)) [gx, gy] = detourCorner(this.x, this.y, tx, ty);
-      const dx = gx - this.x, dy = gy - this.y, dir = heading(dx, dy);
-      if (dir) { this.direction = dir; this.turnIndex = DIRS.indexOf(dir); this.setFacing(); }
-      this.applyPos(
-        Math.round(this.x + (dx > STEP ? STEP : dx < -STEP ? -STEP : dx)),
-        Math.round(this.y + (dy > STEP ? STEP : dy < -STEP ? -STEP : dy)));
+    // begin a walk to a fresh vantage axis, resetting the stuck-accounting that drives the
+    // hold → re-vantage → abandon escalation in observe() (Phase 2D — the ghost-through is gone).
+    startRelocate(axis) {
+      this.relocating = true; this.vAxis = axis;
+      this._stuck = 0; this._revantaged = false; this._stuckPrev = Infinity;
     }
-    // like stepToward, but the observer also steers *around* the other pandas: among the 8
-    // grid steps toward the (card-routed) goal, take the one that best trades progress against
-    // crowding, so it visibly weaves through the troupe. It stays a collision ghost, so this is
-    // only a preference — after WEAVE_STUCK crowded ticks with no gain it ghosts straight through,
-    // guaranteeing it always reaches the vantage.
+    // the observer steers *around* the troupe: among the 8 grid steps toward the (card-routed)
+    // goal, take the one that best trades progress against crowding, so it visibly weaves through
+    // the field. Phase 2D: he is a real collider now, so there is no ghost-through escape hatch —
+    // when every step would only push deeper into a crowd he HOLDS (stands a tick to let a panda
+    // pass), and if he stays boxed the observe() loop escalates (re-vantage, then abandon). He
+    // never phases through anyone.
     stepWeaving(tx, ty) {
-      let gx = tx, gy = ty;                                  // keep the card detour from stepToward
+      let gx = tx, gy = ty;                                  // route around the hero card if the straight line grazes it
       if (crossesFence(this.x, this.y, tx, ty)) [gx, gy] = detourCorner(this.x, this.y, tx, ty);
       const sdx = gx - this.x, sdy = gy - this.y, gd = Math.hypot(sdx, sdy) || 1;
       const ux = sdx / gd, uy = sdy / gd;                    // unit seek vector toward the goal
@@ -458,21 +511,80 @@
         const score = (AXES[i][0] * ux + AXES[i][1] * uy) - WEAVE_CROWD_W * crowdAt(cx, cy, this);
         if (score > best) { best = score; bi = i; bcx = cx; bcy = cy; }
       }
-      // stuck-breaker: crowding kept us from closing on the goal for too long → ghost through
-      this._weaveStuck = gd < (this._weavePrev ?? Infinity) - 1 ? 0 : (this._weaveStuck || 0) + 1;
-      this._weavePrev = gd;
-      if (this._weaveStuck >= WEAVE_STUCK) { this._weaveStuck = 0; this.stepToward(tx, ty); return; }
-      if (bi < 0) return;                                    // holding this tick to let a panda pass
+      if (bi < 0) return;                                    // boxed — hold this tick; observe() escalates if it persists
       this.direction = DIRS[bi]; this.turnIndex = bi; this.setFacing();
       this.applyPos(bcx, bcy);
     }
+    // the dive-roll: his one fast escape. Fires from hatReflex when a panda is bearing down.
+    // Reuses the fall tumble cels (roll: no settle to fallen) + the traveling-skid trick (.stop
+    // kills the glide, travel driven tick by tick), then pops straight up. No i-frames — if a
+    // second threat arrives mid-roll it still connects (honest failure). observe() yields while
+    // `rolling`, so this owns his motion for its ~290ms and hands control back on its own.
+    dodgeRoll(dir) {
+      this.rolling = true;
+      this._rollReadyAt = performance.now() + HAT_ROLL_COOLDOWN;
+      this.el.classList.add('stop');
+      this.direction = DIRS[dir]; this.turnIndex = dir; this.setFacing();
+      this.setAnimation('roll');
+      const [ux, uy] = AXES[dir];
+      const ticks = ANIM.roll.length;
+      let k = 0;
+      const step = () => {
+        if (this.knocked) { this.rolling = false; return; }  // clipped mid-roll — the knock owns him now
+        if (paused) { this.after(PAUSE_POLL, step); return; }
+        if (k >= ticks) {                                    // pop straight up — no fallen frame, no get-up
+          this.rolling = false;
+          this.el.classList.remove('stop');
+          this.setAnimation('walk');
+          return;                                            // observe() (yielding) resumes on its next tick
+        }
+        k++;
+        this.drawFrame();                                    // advance the roll cels in lockstep with the travel
+        this.applyPos(Math.round(this.x + ux * HAT_ROLL_DIST / ticks),
+                      Math.round(this.y + uy * HAT_ROLL_DIST / ticks));
+        this.after(HAT_ROLL_FRAME_MS, step);
+      };
+      step();
+    }
+    // the reflex loop — hat panda only, started once from observe(). Polls fast for an imminent
+    // closing threat and spends a dive-roll if one's in range and the cooldown is up. Never dies
+    // (reschedules first), just idles while he can't roll (paused, knocked, mid-roll, retrieving).
+    hatReflex() {
+      const tick = () => {
+        this.after(HAT_REFLEX_MS, tick);
+        if (paused || reduced || this.knocked || this.retrieving || this.rolling || this.entering) return;
+        if (performance.now() < (this._rollReadyAt || 0)) return;          // cooldown
+        const near = threatsTo(this, HAT_DANGER_R);
+        if (!near.length) return;
+        // the roll is the EMERGENCY tier only: a fast (zoomies-class) threat anywhere near, or two+
+        // closing in at once, or one already too close to step away from. A single slow drifter is
+        // left to observe()'s calm sidestep, so the roll stays the rare, earned burst.
+        const fast  = near.some(q => threatSpeed(q) >= HAT_FAST_SPEED);
+        const crowd = threatsTo(this, HAT_ROLL_R).length >= 2;
+        const panic = threatsTo(this, HAT_PANIC_R).length >= 1;
+        if (!(fast || crowd || panic)) return;
+        const dir = bestEscape(this, near, HAT_ROLL_DIST, false);          // flee the whole nearby danger set
+        if (dir >= 0) this.dodgeRoll(dir);
+      };
+      tick();
+    }
+    // the knockback skid: carry the panda IMPACT px in the hit direction *across* the
+    // fall frames so it visibly rolls along the ground, rather than teleporting to where
+    // it lands. `.stop` (set in knock) kills the CSS glide, so — exactly like the tumbler's
+    // skid — the travel is driven tick by tick, one applyPos per roll frame.
     slide() {
-      let x = this.x, y = this.y;
-      if (this.hit.includes('left')) x += IMPACT;
-      if (this.hit.includes('right')) x -= IMPACT;
-      if (this.hit.includes('up')) y += IMPACT;
-      if (this.hit.includes('down')) y -= IMPACT;
-      this.applyPos(x, y);
+      const vx = (this.hit.includes('left') ? IMPACT : 0) - (this.hit.includes('right') ? IMPACT : 0);
+      const vy = (this.hit.includes('up')   ? IMPACT : 0) - (this.hit.includes('down')  ? IMPACT : 0);
+      const ticks = ANIM.fall.length;               // one step per roll frame, so it settles as it lands
+      let k = 0;
+      const step = () => {
+        if (!this.knocked || k >= ticks) return;    // stand-up / re-knock ends the skid
+        if (paused) { this.after(PAUSE_POLL, step); return; }
+        k++;
+        this.applyPos(Math.round(this.x + vx / ticks), Math.round(this.y + vy / ticks));
+        this.after(FRAME_MS, step);
+      };
+      step();
     }
     knock() {
       if (this.knocked) return;
@@ -480,9 +592,9 @@
       this.knocked = true;
       this.el.classList.add('stop');
       this.setFacing();
+      this.setAnimation('fall');   // start the roll frames, then travel across them
       this.slide();
       if (this.hasHat && !this.hatLost) this.dropHat();
-      this.setAnimation('fall');
       const a = FRAME_MS * 6;                       // fall plays through
       const b = 1000 * (rand(4) + 1);               // lies there 2-5s
       const c = FRAME_MS * 6;                       // stand-up plays through
@@ -493,8 +605,47 @@
         this.el.classList.remove('stop');
         if (this.hasHat && this.hatLost) { this.retrieveHat(); return; }
         this.setAnimation('walk');
-        this.moveAbout();
+        (this.observer ? this.observe() : this.moveAbout());   // the watcher returns to its post
       });
+    }
+    // a cascade fall (Phase 5): an ordinary knock recovery, but the slide is a *steered* vector
+    // (vx, vy) aimed at the next domino with magnitude = the actual gap, so the faller lands
+    // overlapping it. Facing snapped to the nearest of the 8. Clears its cascade claim on standing.
+    cascadeKnock(vx, vy, faceDir) {
+      if (this.knocked) return;
+      this.anomaly = null;                          // a hard fall outranks whatever it was doing
+      this.knocked = true;
+      this.hit = faceDir;
+      this.direction = faceDir; this.turnIndex = DIRS.indexOf(faceDir); this.setFacing();
+      this.el.classList.add('stop');                // .stop kills the glide — the slide is driven tick by tick
+      this.setAnimation('fall');
+      this.cascadeSlide(vx, vy);
+      if (this.hasHat && !this.hatLost) this.dropHat();
+      const a = FRAME_MS * 6, b = 1000 * (rand(4) + 1), c = FRAME_MS * 6;   // fall, lie 2–5s, get up
+      this.after(a, () => this.setAnimation('fallen'));
+      this.after(a + b, () => this.setAnimation('standUp'));
+      this.after(a + b + c, () => {
+        this.hit = false; this.knocked = false;
+        cascadeLock.delete(this);
+        this.el.classList.remove('stop');
+        if (this.hasHat && this.hatLost) { this.retrieveHat(); return; }
+        this.setAnimation('walk');
+        (this.observer ? this.observe() : this.moveAbout());
+      });
+    }
+    // carry a cascade faller (vx, vy) px across the fall frames, so it visibly rolls into the
+    // next domino instead of teleporting — the same tick-by-tick skid as the ordinary knock.
+    cascadeSlide(vx, vy) {
+      const ticks = ANIM.fall.length;
+      let k = 0;
+      const step = () => {
+        if (!this.knocked || k >= ticks) return;
+        if (paused) { this.after(PAUSE_POLL, step); return; }
+        k++;
+        this.applyPos(Math.round(this.x + vx / ticks), Math.round(this.y + vy / ticks));
+        this.after(FRAME_MS, step);
+      };
+      step();
     }
     dropHat() {
       const v = HAT_CFG[variant];
@@ -538,7 +689,7 @@
         this.applyPos(
           this.x + (d.includes('left') ? -STEP : d.includes('right') ? STEP : 0),
           this.y + (d.includes('up') ? -STEP : d.includes('down') ? STEP : 0));
-        this.after(v.hurry || this.moveSpeed, stride);
+        this.after(this.observer ? HAT_SPRINT_MS : (v.hurry || this.moveSpeed), stride);   // the watcher dashes, doesn't amble
       };
       stride();
     }
@@ -552,11 +703,11 @@
         this.hatRest = null; this.hatLost = false; this.retrieving = false;
         this.el.classList.remove('hatless');
         this.setAnimation('walk');
-        this.moveAbout();
+        (this.observer ? this.observe() : this.moveAbout());   // hat back on → back to watching
       });
     }
-    tap() { // our one addition
-      if (this.knocked || reduced || this.solid || this.observer) return;
+    tap() { // our one addition — now the watcher is tappable too (a poke knocks it, hat and all)
+      if (this.knocked || reduced || this.solid) return;
       this.hit = this.defaultFallDirection;
       this.direction = this.defaultFallDirection;
       this.knock();
@@ -574,14 +725,16 @@
     // Ownership is `anomaly === tag` alone. A real knock clears `anomaly`, so the running
     // sequence sees it lost the panda and stops — while lieDown, which sets `knocked` on
     // purpose, keeps it.
-    beginAnomaly(tag) {
+    beginAnomaly(tag, ttl) {
       this.anomaly = tag;
       this.moveQueued = false;     // drop any wander stride still queued
+      emitIncident(this, 1, ttl);  // post it to the watcher's attention queue (tier 1)
       return () => this.anomaly === tag;
     }
     endAnomaly() {
       this.anomaly = null;
       this.knocked = false;
+      this.hit = false;            // clear any stale hit stamped while it was down, so moveAbout() doesn't bail
       this.el.classList.remove('stop');
       this.setAnimation('walk');
       this.moveAbout();
@@ -603,13 +756,16 @@
     // SLEEPER — stops mid-walk and lies down deliberately: no slide, no impact, just a panda
     // that stops being a panda for a while. The long one; the watcher usually catches it.
     sleeper() {
-      const owns = this.beginAnomaly('sleeper');
-      this.lieDown(owns, SLEEP_MIN + Math.random() * (SLEEP_MAX - SLEEP_MIN));
+      const nap = SLEEP_MIN + Math.random() * (SLEEP_MAX - SLEEP_MIN);
+      const owns = this.beginAnomaly('sleeper',
+        FRAME_MS * (ANIM.fall.length + ANIM.standUp.length) + nap + AFTERMATH_LINGER);
+      this.lieDown(owns, nap);
     }
     // TUMBLER — trips on nothing: a few quick facing flips while it skids a short way, then
     // it lands splayed and picks itself up. Instant; always inspected after the fact.
     tumbler() {
-      const owns = this.beginAnomaly('tumbler');
+      const owns = this.beginAnomaly('tumbler',
+        TRIP_TICKS * TRIP_TICK_MS + FRAME_MS * (ANIM.fall.length + ANIM.standUp.length) + TRIP_DOWN_MS + AFTERMATH_LINGER);
       const [ux, uy] = AXES[this.turnIndex];
       let i = 0;
       const skid = () => {
@@ -630,7 +786,7 @@
     // SPINNER — spins on the spot, then staggers a few steps in random directions and walks
     // on as if nothing happened. Short.
     spinner() {
-      const owns = this.beginAnomaly('spinner');
+      const owns = this.beginAnomaly('spinner', SPIN_MS + 3 * STAGGER_MS + AFTERMATH_LINGER);
       spin3d([this], SPIN_MS, () => {
         if (!owns()) return;
         let n = 2 + Math.floor(Math.random() * 2);       // 2–3 stagger steps
@@ -649,6 +805,66 @@
         stagger();
       }, owns);
     }
+    // LOOP — retraces a small closed octagon (turnIndex +1 every stride) a few times, then snaps
+    // out and walks on as if it hadn't. Mechanically trivial, organic-looking. Medium; the private
+    // reading is repetition, the canonical LLM failure. The 8 unit steps sum to zero, so each lap
+    // returns to where it began (edges/fence may nudge it — that's fine, it stays a loop).
+    loop() {
+      const laps = LOOP_LAPS_MIN + Math.floor(Math.random() * (LOOP_LAPS_MAX - LOOP_LAPS_MIN + 1));
+      const strides = laps * 8;
+      const owns = this.beginAnomaly('loop', strides * LOOP_STEP_MS + AFTERMATH_LINGER);
+      this.setAnimation('walk');                         // once — per-tick would restart the cycle
+      let n = 0;
+      const step = () => {
+        if (!owns()) return;
+        if (paused) { this.after(PAUSE_POLL, step); return; }
+        if (n++ >= strides) { this.endAnomaly(); return; }
+        this.turnIndex = (this.turnIndex + 1) % 8;
+        this.direction = DIRS[this.turnIndex];
+        this.setFacing();
+        const [cx, cy] = stepCell(this.x, this.y, this.turnIndex);
+        this.applyPos(cx, cy);
+        this.after(LOOP_STEP_MS, step);
+      };
+      step();
+    }
+    // STARER — stops, faces the nearest edge, and holds the settled idle for a while. Nothing
+    // happens. Medium; the whole point is that there is no point (the unit no probe explains).
+    starer() {
+      const hold = STARE_MIN + Math.random() * (STARE_MAX - STARE_MIN);
+      const owns = this.beginAnomaly('starer', hold + AFTERMATH_LINGER);
+      const cx = this.x + CELL / 2, cy = this.y + CELL / 2;   // face whichever edge is nearest the body centre
+      const dl = cx, dr = stage.clientWidth - cx, dt = cy, db = stage.clientHeight - cy;
+      const m = Math.min(dl, dr, dt, db);
+      const dir = m === dl ? 'left' : m === dr ? 'right' : m === dt ? 'up' : 'down';
+      this.direction = dir; this.turnIndex = DIRS.indexOf(dir); this.setFacing();
+      this.setAnimation('idle');                          // the settled f1 pose — a held stare, not a walk
+      this.after(hold, () => { if (owns()) this.endAnomaly(); });
+    }
+    // ZOOMIES — locks a straight heading and bolts at ~3× speed until it meets something: a wall or
+    // the fence (it crashes and tumbles) or another panda (an ordinary knock — feeds the collision
+    // economy, handled by collisionCheck, which clears the anomaly). Short, kinetic; a runaway
+    // activation. `.stop` kills the glide so the dash is driven crisply tick by tick.
+    zoomies() {
+      const owns = this.beginAnomaly('zoomies', ZOOM_TTL);
+      this.turnIndex = Math.floor(Math.random() * 8);
+      this.direction = DIRS[this.turnIndex];
+      this.setFacing();
+      this.el.classList.add('stop');
+      this.setAnimation('walk');
+      const [ux, uy] = AXES[this.turnIndex];
+      const deadline = performance.now() + ZOOM_MAX_MS;
+      const dash = () => {
+        if (!owns()) return;                              // knocked into a panda → collisionCheck owns it now
+        if (paused) { this.after(PAUSE_POLL, dash); return; }
+        if (performance.now() >= deadline) { this.endAnomaly(); return; }   // never found a wall — just stop
+        const bx = this.x, by = this.y;
+        this.applyPos(Math.round(this.x + ux * ZOOM_INCR), Math.round(this.y + uy * ZOOM_INCR));
+        if (this.x === bx && this.y === by) { this.lieDown(owns, ZOOM_TUMBLE_MS); return; }  // wall/fence dead ahead → crash
+        this.after(ZOOM_STEP_MS, dash);
+      };
+      dash();
+    }
   }
 
   // ---- collision: hers, at 20 Hz ----
@@ -663,11 +879,11 @@
       for (let j = i + 1; j < corners.length; j++) {
         const b = corners[j];
         const pa = a.panda, pb = b.panda;
-        // entering pandas (walk-in), the hat panda, and anything mid-arc are pure ghosts.
-        // A `solid` panda (Phase 4: the stack's bottom) is an unstoppable force: it knocks
-        // a roamer aside without being knocked, and two solids pass through each other.
-        if (pa === pb || pa.entering || pb.entering || pa.observer || pb.observer ||
-            pa.flying || pb.flying) continue;
+        // Ghosts (no collision at all): entering pandas (walk-in), anything mid-arc (`flying`),
+        // and the stack's riders (`riding`, pinned above the base). A `solid` panda (the stack's
+        // bottom) is an unstoppable force: it knocks a roamer aside without being knocked, and two
+        // solids pass through each other. The watcher is a real, two-way collider now (2B).
+        if (pa === pb || pa.entering || pb.entering || pa.flying || pb.flying || pa.riding || pb.riding) continue;
         const solidA = pa.solid, solidB = pb.solid;
         if (solidA && solidB) continue;
         const br = b.getBoundingClientRect();
@@ -679,7 +895,17 @@
         }
       }
     }
+    const ignitionSeeds = [];
     hits.forEach((h, p) => {
+      // Already down (a nap, a trip, a get-up)? Leave it be. Stamping a fresh hit/facing on
+      // a panda whose recovery we don't own (lieDown, not knock) leaves `hit` set with nothing
+      // to clear it — endAnomaly() would then bail out of moveAbout() and the roamer walks in
+      // place forever — and it also flips a napping panda's facing mid-nap.
+      if (p.knocked) return;
+      // a cascade front has already claimed this panda — it falls on schedule (steered), so an
+      // ordinary knock here would pre-empt it. (Unclaimed bystanders still get knocked — a felled
+      // panda landing on a survivor is honest spillover.)
+      if (cascadeLock.has(p)) return;
       const set = d => { p.direction = d; p.hit = d; };
       if (h.upleft) set('upleft');
       if (h.downleft) set('downleft');
@@ -690,8 +916,13 @@
       if (h.upleft && h.upright) set('up');
       if (h.downleft && h.downright) set('down');
       if (h.upleft && h.upright && h.downleft && h.downright) set(p.defaultFallDirection);
-      if (!p.knocked) p.knock();
+      p.knock();
+      if (cascadeArmed && !cascadeActive && isRoamer(p)) ignitionSeeds.push(p);
     });
+    // ignition (Phase 5): while armed, the next natural collision between ordinary roamers escalates
+    // into a cascade — but only if it erupts away from the watcher's gaze (else hold for a farther one).
+    if (ignitionSeeds.length && cascadeArmed && !cascadeActive && cascadeElsewhere(ignitionSeeds))
+      igniteCascade(ignitionSeeds);
   }
 
   // ---- the staggered walk-in ----
@@ -702,12 +933,50 @@
   const TARGET_IN = 110;      // where the wrapper settles before it starts wandering
 
   const pandas = [];
+  let hatPanda = null;                  // the watcher — set at spawn; the cascade stages around him
 
   const inBounds = (x, y) =>
     x > -40 && x < stage.clientWidth - 60 &&
     y > -40 && y < stage.clientHeight - 60 && !inForbid(x, y);
   const isFree = p => !p.hasHat && !p.entering && !p.knocked;
   const freePandas = () => pandas.filter(isFree);
+
+  // ---- the incident queue: what the watcher attends to ----
+  // Every anomaly (later the stack + cascade too) posts an incident when it fires. The hat
+  // panda holds one at a time; an empty queue → it falls back to ambient wander-watch (the
+  // relax beat). TTL-based, so an incident outlives its behaviour by a short aftermath linger
+  // — the watcher can inspect the spot after an instant trip — and survives its subject being
+  // knocked mid-inspection (watching it fall and pick itself up is the point).
+  const STICKY_MS = 2500;              // hold the current incident this long before a same/lower-tier
+                                       // newer one can steal focus — stops thrash between simultaneous events
+  const AFTERMATH_LINGER = 2600;       // an incident lingers this long past its behaviour, so instant
+                                       // events still get a look and the watcher isn't yanked away at once
+  const incidents = [];
+  const emitIncident = (subject, tier, ttl) => {
+    const inc = { subject, tier, born: performance.now(), expires: performance.now() + ttl };
+    incidents.push(inc);
+    return inc;
+  };
+  const liveIncidents = () => {
+    const now = performance.now();
+    for (let i = incidents.length - 1; i >= 0; i--) if (incidents[i].expires <= now) incidents.splice(i, 1);
+    return incidents;
+  };
+  // highest tier wins; within a tier, the one nearest the watcher (recency only breaks a
+  // distance tie — essentially never exact). Nearest-first stops him sprinting across the
+  // field past a near incident to a just-happened far one; the overwhelmed/late quality is
+  // carried by TTL diversity + one attention slot + travel time, not by chasing far events.
+  const topIncident = self => {
+    let best = null, bestD = 0;
+    for (const inc of liveIncidents()) {
+      if (!inc.subject || inc.abandoned) continue;   // he gave up reaching this one (2D) — don't re-grab it
+      const d = (inc.subject.x - self.x) ** 2 + (inc.subject.y - self.y) ** 2;
+      if (!best || inc.tier > best.tier ||
+          (inc.tier === best.tier && d < bestD) ||
+          (inc.tier === best.tier && d === bestD && inc.born > best.born)) { best = inc; bestD = d; }
+    }
+    return best;
+  };
 
   // ---- the hat panda's attention: standoffs, gaze, vantage scoring ----
   const INSPECT_NEAR = 140;            // standoff while studying one subject up close (Phase 2)
@@ -718,6 +987,12 @@
                                                    // (the half-angle between 8 axes — max tolerance; past it a
                                                    // neighbouring axis is closer anyway). Tames the over-frequent
                                                    // sidesteps; drops further once 16 real sprite angles land.
+  // Ambient (relaxed) watching gets a far looser tolerance. At the 280px standoff a wandering
+  // subject's every stride (~10°) plus the grid-quantised vantage slop (~13°) keeps tripping the
+  // 22.5° test, and the watcher shuffles back and forth realigning in place. The exact-axis facing
+  // only matters up close (an incident); when merely relaxing, the planted-idle gaze still snaps him
+  // to face the subject, so a loose ~40° tolerance reads fine and kills the jitter.
+  const AMBIENT_AXIS_COS = Math.cos(40 * Math.PI / 180);
   // the 8 exact sprite headings as unit vectors. The watcher stands on one of these
   // axes from its subject, so its facing lands dead-on — the sprite has no 360° angle.
   const AXES = DIRS.map(d => {
@@ -737,12 +1012,14 @@
 
   // the watcher navigates *around* the troupe and scans its subject while watching — a
   // deliberate agent, not a ghost drifting through. Code + existing cels only (no new sprite
-  // art, per Ameya's no-AI-art call). It stays a collision ghost underneath, so avoidance is
-  // a preference that can never wedge it.
+  // art, per Ameya's no-AI-art call). He is a real, two-way collider (2B), so this avoidance is
+  // what actually keeps him out of bodies: when it can't (a wall of pandas boxes him), he holds,
+  // then observe() re-vantages or abandons the subject (2D) — never a phase-through, and if it
+  // all fails he simply takes the hit.
   const AVOID_R = 85;          // personal-space radius: pandas within this crowd a cell/vantage
   const WEAVE_CROWD_W = 0.7;   // crowd vs. progress trade-off while weaving toward a vantage
   const WEAVE_HOLD_BIAS = 0.12;// a forward step must beat standing still by this, else it holds a tick
-  const WEAVE_STUCK = 5;       // after this many crowded ticks with no gain, ghost straight through
+  const WEAVE_STUCK = 5;       // boxed-in ticks with no headway before observe() escalates: re-vantage, then abandon (2D)
   const AXIS_CROWD_W = 24000;  // px² per unit of crowd when scoring vantage points (bestAxis)
   const CROWD_BUMP = 1.2;      // if the troupe crowds our planted vantage past this, relocate
   const GAZE_MIN = 1800, GAZE_MAX = 4200;   // hold each gaze target ~2–4s before shifting
@@ -786,14 +1063,42 @@
     return pool.length ? pick(pool) : (freePandas().find(p => p !== self) || null);
   };
 
+  // what the watcher should be on *this tick*: the top live incident, held with a stickiness
+  // window so it doesn't flip between two simultaneous events; else an ambient subject, held
+  // for a dwell so it doesn't reroll every tick. Also returns the standoff to keep — close for
+  // a real incident, relaxed for ambient. This is the Phase-2 seam: observe() called pickSubject
+  // directly before; now it calls this, and the rest of the loop is unchanged.
+  const pickWatchTarget = self => {
+    const now = performance.now();
+    const top = topIncident(self);
+    const held = self._incident && incidents.includes(self._incident) && !self._incident.abandoned ? self._incident : null;
+    let inc = held;
+    if (top && top !== held && (!held || top.tier > held.tier || now - (self._incidentSince || 0) >= STICKY_MS))
+      inc = top;                                         // higher tier preempts at once; same/lower only after stickiness
+    if (inc && inc.subject) {
+      if (inc !== self._incident) { self._incident = inc; self._incidentSince = now; }
+      self.ambientTicks = 0;                             // so leaving the incident rerolls a fresh relax-subject
+      return { subject: inc.subject, standoff: INSPECT_NEAR };
+    }
+    // empty queue → ambient wander-watch, rerolled once its dwell runs out
+    self._incident = null;
+    if (!self.subject || self.subject.hasHat || !pandas.includes(self.subject) ||
+        (self.ambientTicks = (self.ambientTicks || 0) - 1) <= 0) {
+      self.ambientTicks = Math.max(1, Math.round((DWELL_MIN + Math.random() * (DWELL_MAX - DWELL_MIN)) / self.moveSpeed));
+      return { subject: pickSubject(self), standoff: AMBIENT_STANDOFF };
+    }
+    return { subject: self.subject, standoff: AMBIENT_STANDOFF };
+  };
+
   // the axis whose standoff point (td from the subject) is nearest the panda AND least
   // crowded, is on stage, and has a clear line of sight to the subject. Failing that, the
   // best *on-stage* one (a vantage off the edge is worse than one with a blocked view);
   // failing even that, the least-bad by score.
-  const bestAxis = (subject, p, td) => {
+  const bestAxis = (subject, p, td, avoid = -1) => {
     const lx = subject.x, ly = subject.y;
     let bi = -1, bs = Infinity, oi = -1, os = Infinity, fi = 0, fs = Infinity;
     for (let i = 0; i < AXES.length; i++) {
+      if (i === avoid) continue;                              // re-vantage (2D): force a different approach angle
       const vx = lx + AXES[i][0] * td, vy = ly + AXES[i][1] * td;
       const s = (vx - p.x) ** 2 + (vy - p.y) ** 2 + AXIS_CROWD_W * crowdAt(vx, vy, p);  // near AND clear of the troupe
       if (s < fs) { fs = s; fi = i; }                          // least-bad of all
@@ -803,6 +1108,73 @@
       if (s < bs) { bs = s; bi = i; }
     }
     return bi >= 0 ? bi : oi >= 0 ? oi : fi;
+  };
+
+  // ---- the watcher's reflex: alertness + the dive-roll ----
+  // He walks the line: an outsider studying the chaos who actively, skilfully avoids being
+  // pulled in. Near danger he goes to full alert (faster stepping, still never zoomies-fast);
+  // for an imminent hit he spends his one burst — a cooldown-limited dive-roll toward clear
+  // space. Knockdowns stay rare purely from this maneuvering; the chaos is never touched.
+  // HAT_DANGER_R stays *below* INSPECT_NEAR (140) so the subject he's studying never reads as
+  // a threat — only a third panda closing in does.
+  const HAT_DANGER_R = 130;          // within this, a closing panda puts him on alert (faster stepping)
+  const HAT_ROLL_R = 74;             // within this, an imminent closing panda triggers the dive-roll
+  const HAT_ROLL_DIST = 92;          // how far the roll carries him (~1.8 strides)
+  const HAT_ROLL_FRAME_MS = 58;      // per roll cel — 5 cels ≈ 290ms, much faster than his stride
+  const HAT_ROLL_COOLDOWN = 2600;    // the honest limiter: back-to-back threats catch him between rolls
+  const HAT_THREAT_LOOKAHEAD = 60;   // project a threat this far along its heading when scoring escapes
+  const HAT_REFLEX_MS = 80;          // how often the reflex samples for imminent threats
+  const HAT_CLOSING_MIN = 0.15;      // a panda counts as "bearing down" only past this heading-toward-him dot
+  // the graduated response: sidestep the easy ones, roll only for the hard ones.
+  const HAT_SIDESTEP_R = 108;        // a single slow panda closing within this → step calmly aside (not a roll)
+  const HAT_PANIC_R = 50;            // a threat this close is too near to step out of — roll
+  const HAT_FAST_SPEED = 0.12;       // px/ms; above this a threat is "fast" (zoomies / tumbler skid) → roll
+  const HAT_STEP_CROWD_W = 40;       // px of clearance traded per unit of crowd when choosing a sidestep cell
+  // rough px/ms of a threat, so the reflex can tell a zoomies/skid (→ roll) from a trudging roamer (→ sidestep)
+  const threatSpeed = q => {
+    if (q.anomaly === 'zoomies') return ZOOM_INCR / ZOOM_STEP_MS;   // the runaway — always reads as fast → the watcher rolls
+    if (q.anomaly === 'tumbler') return TRIP_SLIDE / TRIP_TICKS / TRIP_TICK_MS;
+    if (q.knocked) return IMPACT / (FRAME_MS * ANIM.fall.length);
+    return STEP / q.moveSpeed;
+  };
+
+  // pandas actively bearing down on the watcher: moving, within radius R, and heading toward it.
+  // A planted/idle panda (even close) is not a threat — nav avoidance handles static bodies; the
+  // roll is only for things coming *at* him. Walkers, the tumbler's skid, and (Phase 3) zoomies
+  // all present as animation 'walk' or the tumbler tag.
+  const threatsTo = (self, R) => {
+    const out = [];
+    for (const q of pandas) {
+      if (q === self || q.entering || q.flying || q.observer) continue;
+      const dx = self.x - q.x, dy = self.y - q.y, d2 = dx * dx + dy * dy;
+      if (d2 > R * R) continue;
+      if (!(q.animation === 'walk' || q.anomaly === 'tumbler')) continue;   // must be moving
+      const [ux, uy] = AXES[q.turnIndex];
+      const d = Math.sqrt(d2) || 1;
+      if ((ux * dx + uy * dy) / d < HAT_CLOSING_MIN) continue;              // …and heading toward him
+      out.push(q);
+    }
+    return out;
+  };
+  // the escape heading: the roll landing spot (one of the 8) that stays on stage and maximizes
+  // the minimum distance to every threat's *projected* next position. Picking clear space well
+  // is the whole job — there are no i-frames, so a well-chosen roll is the only thing that saves
+  // him. Returns -1 if every landing is off-stage/into the card (then he can't roll — he takes it).
+  const bestEscape = (self, threats, dist, avoidCrowd) => {
+    let bi = -1, bs = -Infinity;
+    for (let i = 0; i < DIRS.length; i++) {
+      const cx = self.x + AXES[i][0] * dist, cy = self.y + AXES[i][1] * dist;
+      if (!inBounds(cx, cy)) continue;
+      let score = Infinity;                                  // clearance = min distance to any threat's projected spot
+      for (const t of threats) {
+        const tx = t.x + AXES[t.turnIndex][0] * HAT_THREAT_LOOKAHEAD;
+        const ty = t.y + AXES[t.turnIndex][1] * HAT_THREAT_LOOKAHEAD;
+        score = Math.min(score, Math.hypot(cx - tx, cy - ty));
+      }
+      if (avoidCrowd) score -= HAT_STEP_CROWD_W * crowdAt(cx, cy, self);   // a sidestep must not land in a body
+      if (score > bs) { bs = score; bi = i; }
+    }
+    return bi;
   };
 
   // ===================== the director =====================
@@ -826,6 +1198,14 @@
   const TRIP_SLIDE = 46;         // how far the trip carries it
   const TRIP_DOWN_MS = 900;      // barely on the ground at all — over before you look
 
+  const LOOP_LAPS_MIN = 2, LOOP_LAPS_MAX = 4;  // the loop retraces its octagon this many times
+  const LOOP_STEP_MS = 420;      // its stride cadence — brisk, so 2–4 laps land in the medium band (~7–13s)
+  const STARE_MIN = 6000, STARE_MAX = 12000;   // the starer holds its blank edge-gaze this long
+  const ZOOM_INCR = 10, ZOOM_STEP_MS = 60;     // the runaway's travel per tick ≈ 0.17px/ms — a clean 3× the trudge
+  const ZOOM_MAX_MS = 8000;      // fuse: a locked heading always meets a wall well before this
+  const ZOOM_TUMBLE_MS = 700;    // splayed on the ground after it crashes into the wall
+  const ZOOM_TTL = 3500;         // the watcher's attention window on a runaway (kinetic → short)
+
   // the standing anchor. One roamer, chosen at spawn, that is never picked for anything:
   // no anomaly now, no mounting later, never targeted by cascade steering. Chance
   // collisions may still knock it, which keeps it honest. Every big event wants a comic
@@ -836,7 +1216,7 @@
   const OBLIVIOUS_IDLE_P = 0.45;              // how often it just stands there
   const OBLIVIOUS_IDLE_MIN = 2200, OBLIVIOUS_IDLE_MAX = 5200;
 
-  const ANOMALIES = ['sleeper', 'spinner', 'tumbler'];
+  const ANOMALIES = ['sleeper', 'spinner', 'tumbler', 'loop', 'starer', 'zoomies'];
   let lastAnomaly = null;
 
   // eligible: an ordinary roamer, on its feet, not already busy. Never the hat panda (it
@@ -844,7 +1224,7 @@
   // walking in from off-stage.
   const anomalyCandidates = () =>
     pandas.filter(p => !p.hasHat && !p.oblivious && !p.entering && !p.knocked &&
-                       !p.anomaly && !p.solid && !p.flying);
+                       !p.anomaly && !p.solid && !p.flying && !p.riding);
 
   function director() {
     const next = () => setTimeout(director, ANOM_GAP_MIN + Math.random() * (ANOM_GAP_MAX - ANOM_GAP_MIN));
@@ -859,10 +1239,371 @@
     next();
   }
 
+  // ===================== tier 2: the stack =====================
+  // A tower parading as one entity — until it isn't. The bottom panda is the only real actor: it
+  // wanders as an unstoppable `solid` force (knocks roamers aside, never knocked). The riders are
+  // ghosts pinned above it, holding a standing pose (prototype: standing, zero art) with a sway that
+  // *grows* the longer it parades, foreshadowing the fall. It topples when the wobble maxes out — or
+  // when something kinetic strikes it (a zoomies runaway into the tower is a gift): the riders are
+  // flung off, land, and pick themselves up, a tossed rider onto a bystander scoring one collateral
+  // knock. A topple is a self-contained payoff, NOT a cascade — Phase 5 will couple the two through
+  // the arming clock (a topple ignites a cascade only while the director is armed).
+  let activeStack = null;
+
+  const STACK_GAP_MIN = 60000, STACK_GAP_MAX = 120000;  // one forms this often — occasional, a set piece
+  const STACK_KICK = 35000;      // the first, once the field has settled
+  const MOUNT_HOP_MS = 440;      // the hop onto a head
+  const MOUNT_NEAR = 68;         // a mounter hops once this close to the base
+  const MOUNT_WALK_MS = 300;     // the walk-up stride — brisk and purposeful, hurrying to join
+  const MOUNT_MAX_STEPS = 24;    // …or after this many strides, it just hops (never stall the assembly)
+  const STACK_INCIDENT_TTL = 60000;   // the tier-2 attention window — long enough to cover assembly + the whole parade
+  const PARADE_MIN = 18000, PARADE_MAX = 34000;   // how long it parades before the wobble maxes and it falls
+  const BASE_STEP = 3, STACK_TICK_MS = 50;        // the base's parade gait — small crisp steps (.stop, no glide) so riders track it
+  const BASE_TURN_P = 0.06;      // chance per tick the base drifts its heading
+  const TOPPLE_HIT_R = 76;       // a zoomies within this of the base brings the whole tower down early
+
+  // ---- seated riders: the tier-2 art ----
+  // A rider is drawn seated and faces the tower's heading — 8 facings from 5 pixel maps + a mirror,
+  // exactly like the walk sprite (DIR_SPRITE). Only `down` is finished art (SIT_DOWN, baked); the
+  // other four are rasterised live from the walk cels via canvas (faithful silhouette, no baked page
+  // weight) and sit-ified as rough drafts, to be redrawn + re-baked from the workshop. The wobble is a
+  // smooth foot-pivoted tilt whose head-shift accumulates up the tower, so the base leads and it travels up.
+  const SIT_DOWN = {"16,9":"#21201c","17,9":"#21201c","22,9":"#ffffff","23,9":"#ffffff","24,9":"#ffffff","25,9":"#ffffff","28,9":"#21201c","29,9":"#21201c","15,10":"#21201c","16,10":"#21201c","17,10":"#21201c","18,10":"#21201c","19,10":"#ffffff","20,10":"#ffffff","21,10":"#ffffff","22,10":"#ffffff","23,10":"#ffffff","24,10":"#ffffff","25,10":"#ffffff","26,10":"#ffffff","27,10":"#ffffff","28,10":"#21201c","29,10":"#21201c","30,10":"#21201c","14,11":"#21201c","15,11":"#21201c","16,11":"#21201c","17,11":"#21201c","18,11":"#ffffff","19,11":"#ffffff","20,11":"#ffffff","21,11":"#ffffff","22,11":"#ffffff","23,11":"#ffffff","24,11":"#ffffff","25,11":"#ffffff","26,11":"#ffffff","27,11":"#ffffff","28,11":"#ffffff","29,11":"#21201c","30,11":"#21201c","31,11":"#21201c","14,12":"#21201c","15,12":"#21201c","16,12":"#21201c","17,12":"#ffffff","18,12":"#ffffff","19,12":"#ffffff","20,12":"#ffffff","21,12":"#ffffff","22,12":"#ffffff","23,12":"#ffffff","24,12":"#ffffff","25,12":"#ffffff","26,12":"#ffffff","27,12":"#ffffff","28,12":"#ffffff","29,12":"#21201c","30,12":"#21201c","31,12":"#21201c","15,13":"#21201c","16,13":"#21201c","17,13":"#ffffff","18,13":"#ffffff","19,13":"#ffffff","20,13":"#ffffff","21,13":"#ffffff","22,13":"#ffffff","23,13":"#ffffff","24,13":"#ffffff","25,13":"#ffffff","26,13":"#ffffff","27,13":"#ffffff","28,13":"#ffffff","29,13":"#ffffff","30,13":"#21201c","16,14":"#ffffff","17,14":"#ffffff","18,14":"#ffffff","19,14":"#ffffff","20,14":"#ffffff","21,14":"#ffffff","22,14":"#ffffff","23,14":"#ffffff","24,14":"#ffffff","25,14":"#ffffff","26,14":"#ffffff","27,14":"#ffffff","28,14":"#ffffff","29,14":"#ffffff","30,14":"#ffffff","15,15":"#ffffff","16,15":"#ffffff","17,15":"#ffffff","18,15":"#ffffff","19,15":"#21201c","20,15":"#21201c","21,15":"#ffffff","22,15":"#ffffff","23,15":"#ffffff","24,15":"#ffffff","25,15":"#ffffff","26,15":"#21201c","27,15":"#21201c","28,15":"#ffffff","29,15":"#ffffff","30,15":"#ffffff","15,16":"#ffffff","16,16":"#ffffff","17,16":"#ffffff","18,16":"#21201c","19,16":"#21201c","20,16":"#21201c","21,16":"#ffffff","22,16":"#ffffff","23,16":"#ffffff","24,16":"#ffffff","25,16":"#ffffff","26,16":"#21201c","27,16":"#21201c","28,16":"#21201c","29,16":"#ffffff","30,16":"#ffffff","14,17":"#ffffff","15,17":"#ffffff","16,17":"#ffffff","17,17":"#ffffff","18,17":"#21201c","19,17":"#21201c","20,17":"#ffffff","21,17":"#ffffff","22,17":"#ffffff","23,17":"#ffffff","24,17":"#ffffff","25,17":"#ffffff","26,17":"#21201c","27,17":"#21201c","28,17":"#ffffff","29,17":"#ffffff","30,17":"#ffffff","31,17":"#ffffff","14,18":"#ffffff","15,18":"#ffffff","16,18":"#ffffff","17,18":"#ffffff","18,18":"#ffffff","19,18":"#ffffff","20,18":"#ffffff","21,18":"#ffffff","22,18":"#ffffff","23,18":"#21201c","24,18":"#21201c","25,18":"#ffffff","26,18":"#ffffff","27,18":"#ffffff","28,18":"#ffffff","29,18":"#ffffff","30,18":"#ffffff","31,18":"#ffffff","15,19":"#ffffff","16,19":"#ffffff","17,19":"#ffffff","18,19":"#ffffff","19,19":"#ffffff","20,19":"#ffffff","21,19":"#ffffff","22,19":"#ffffff","23,19":"#ffffff","24,19":"#ffffff","25,19":"#ffffff","26,19":"#ffffff","27,19":"#ffffff","28,19":"#ffffff","29,19":"#ffffff","30,19":"#ffffff","16,20":"#ffffff","17,20":"#ffffff","18,20":"#ffffff","19,20":"#ffffff","20,20":"#ffffff","21,20":"#ffffff","22,20":"#ffffff","23,20":"#ffffff","24,20":"#ffffff","25,20":"#ffffff","26,20":"#ffffff","27,20":"#ffffff","28,20":"#ffffff","29,20":"#ffffff","30,20":"#21201c","15,21":"#21201c","16,21":"#21201c","17,21":"#21201c","18,21":"#ffffff","19,21":"#ffffff","20,21":"#ffffff","21,21":"#ffffff","22,21":"#ffffff","23,21":"#ffffff","24,21":"#ffffff","25,21":"#ffffff","26,21":"#ffffff","27,21":"#ffffff","28,21":"#21201c","29,21":"#21201c","30,21":"#21201c","31,21":"#21201c","15,22":"#21201c","16,22":"#21201c","17,22":"#21201c","18,22":"#21201c","19,22":"#21201c","20,22":"#21201c","21,22":"#21201c","22,22":"#21201c","23,22":"#21201c","24,22":"#21201c","25,22":"#21201c","26,22":"#21201c","27,22":"#21201c","28,22":"#21201c","29,22":"#21201c","30,22":"#21201c","31,22":"#21201c","32,22":"#21201c","14,23":"#21201c","15,23":"#21201c","16,23":"#21201c","17,23":"#21201c","18,23":"#21201c","19,23":"#21201c","20,23":"#21201c","21,23":"#21201c","22,23":"#21201c","23,23":"#21201c","24,23":"#21201c","25,23":"#21201c","26,23":"#21201c","27,23":"#21201c","28,23":"#21201c","29,23":"#21201c","30,23":"#21201c","31,23":"#21201c","32,23":"#21201c","33,23":"#21201c","14,24":"#21201c","15,24":"#21201c","16,24":"#21201c","17,24":"#21201c","18,24":"#21201c","19,24":"#21201c","20,24":"#21201c","21,24":"#21201c","22,24":"#ffffff","23,24":"#ffffff","24,24":"#ffffff","25,24":"#ffffff","26,24":"#ffffff","27,24":"#ffffff","28,24":"#21201c","29,24":"#21201c","30,24":"#21201c","31,24":"#21201c","32,24":"#21201c","33,24":"#21201c","13,25":"#21201c","14,25":"#21201c","15,25":"#21201c","16,25":"#21201c","17,25":"#21201c","18,25":"#21201c","19,25":"#21201c","20,25":"#ffffff","21,25":"#ffffff","22,25":"#ffffff","23,25":"#ffffff","24,25":"#ffffff","25,25":"#ffffff","26,25":"#ffffff","27,25":"#ffffff","28,25":"#ffffff","29,25":"#ffffff","30,25":"#21201c","31,25":"#21201c","32,25":"#21201c","33,25":"#21201c","13,26":"#21201c","14,26":"#21201c","15,26":"#21201c","16,26":"#21201c","17,26":"#21201c","18,26":"#21201c","19,26":"#ffffff","20,26":"#ffffff","21,26":"#ffffff","22,26":"#ffffff","23,26":"#ffffff","24,26":"#ffffff","25,26":"#ffffff","26,26":"#ffffff","27,26":"#ffffff","28,26":"#ffffff","29,26":"#ffffff","30,26":"#ffffff","31,26":"#21201c","32,26":"#21201c","33,26":"#21201c","13,27":"#21201c","14,27":"#21201c","15,27":"#21201c","16,27":"#21201c","17,27":"#21201c","18,27":"#ffffff","19,27":"#ffffff","20,27":"#ffffff","21,27":"#ffffff","22,27":"#ffffff","23,27":"#ffffff","24,27":"#ffffff","25,27":"#ffffff","26,27":"#ffffff","27,27":"#ffffff","28,27":"#ffffff","29,27":"#ffffff","30,27":"#ffffff","31,27":"#ffffff","32,27":"#21201c","13,28":"#21201c","14,28":"#21201c","15,28":"#21201c","16,28":"#21201c","17,28":"#21201c","18,28":"#21201c","19,28":"#ffffff","20,28":"#ffffff","21,28":"#ffffff","22,28":"#ffffff","23,28":"#ffffff","24,28":"#ffffff","25,28":"#ffffff","26,28":"#ffffff","27,28":"#ffffff","28,28":"#21201c","29,28":"#21201c","30,28":"#21201c","31,28":"#21201c","14,29":"#21201c","15,29":"#21201c","16,29":"#21201c","17,29":"#21201c","18,29":"#21201c","19,29":"#21201c","20,29":"#21201c","21,29":"#ffffff","22,29":"#ffffff","23,29":"#ffffff","24,29":"#ffffff","25,29":"#ffffff","26,29":"#ffffff","27,29":"#21201c","28,29":"#21201c","29,29":"#21201c","30,29":"#21201c","31,29":"#21201c","14,30":"#21201c","15,30":"#21201c","16,30":"#21201c","17,30":"#21201c","18,30":"#21201c","19,30":"#21201c","20,30":"#21201c","21,30":"#ffffff","22,30":"#ffffff","23,30":"#ffffff","24,30":"#ffffff","25,30":"#ffffff","26,30":"#21201c","27,30":"#21201c","28,30":"#21201c","29,30":"#21201c","30,30":"#21201c","31,30":"#21201c","14,31":"#21201c","15,31":"#21201c","16,31":"#21201c","17,31":"#21201c","18,31":"#21201c","19,31":"#21201c","20,31":"#21201c","27,31":"#21201c","28,31":"#21201c","29,31":"#21201c","16,32":"#21201c","17,32":"#21201c","18,32":"#21201c","13,31":"#21201c","21,31":"#21201c","26,31":"#21201c","30,31":"#21201c","15,32":"#21201c","19,32":"#21201c","22,31":"#ffffff","23,31":"#ffffff","24,31":"#ffffff","25,31":"#ffffff"};
+  const S_UNIT = CELL / 48;
+  const SIT_TILT_DEG = 6;          // each rider's tilt at the teeter peak
+  const SIT_TRAVEL_PX = 6;         // its head-shift — accumulates up the tower
+  const SIT_WOBBLE_CYCLE = 1600;   // ms per full teeter
+  const sitKey = (x, y) => x + ',' + y;
+  const SIT_HEX = ['#21201c', '#ffffff', '#ff97ba'];
+  const SIT_RGB = SIT_HEX.map(h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; });
+  // rasterise a walk cel's frame 0 to a 48×48 pixel map via canvas — so the ma5a silhouette renders
+  // faithfully (the paths snake as pixel outlines; a polygon fill stripes them). Async: cb(map) fires
+  // when the SVG image has loaded; on a tainted-canvas failure it cb(null) and the facing keeps its
+  // fallback. This is exactly the workshop's rasterisation, so the site matches the artifact's drafts.
+  const rasterizeSit = (celStr, cb) => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="480" height="480"><g fill="#21201c">' + decode(celStr) + '</g></svg>';
+    const img = new Image();
+    img.onload = () => {
+      const cv = document.createElement('canvas'); cv.width = 48; cv.height = 48;
+      const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0, 48, 48);
+      let d; try { d = g.getImageData(0, 0, 48, 48).data; } catch (e) { cb(null); return; }
+      const map = {};
+      for (let y = 0; y < 48; y++) for (let x = 0; x < 48; x++) {
+        const i = (y * 48 + x) * 4; if (d[i + 3] < 100) continue;
+        let bi = 0, bd = Infinity;
+        for (let p = 0; p < SIT_RGB.length; p++) { const c = SIT_RGB[p], dd = (d[i] - c[0]) ** 2 + (d[i + 1] - c[1]) ** 2 + (d[i + 2] - c[2]) ** 2; if (dd < bd) { bd = dd; bi = p; } }
+        map[sitKey(x, y)] = SIT_HEX[bi];
+      }
+      cb(map);
+    };
+    img.onerror = () => cb(null);
+    img.src = 'data:image/svg+xml;base64,' + btoa(svg);
+  };
+  const sitifySit = map => {                         // squash the legs toward a seated silhouette
+    const ys = Object.keys(map).map(k => +k.split(',')[1]); if (!ys.length) return {};
+    const top = Math.min(...ys), bot = Math.max(...ys), hip = top + Math.round((bot - top) * 0.55), out = {};
+    for (const k in map) { const [x, y] = k.split(',').map(Number); let ny = y; if (y > hip) ny = hip + Math.round((y - hip) * 0.5); out[sitKey(x, ny)] = map[k]; }
+    const seatY = hip + Math.round((bot - hip) * 0.5);
+    for (const k in out) { const [x, y] = k.split(',').map(Number); if (y >= seatY - 1) { out[sitKey(x - 1, y)] = out[sitKey(x - 1, y)] || out[k]; out[sitKey(x + 1, y)] = out[sitKey(x + 1, y)] || out[k]; } }
+    return out;
+  };
+  const measureSit = map => {                        // occupied top/bottom rows (for the seat height)
+    const ys = Object.keys(map).map(k => +k.split(',')[1]); if (!ys.length) return { topRow: 0, botRow: 0 };
+    return { topRow: Math.min(...ys), botRow: Math.max(...ys) };
+  };
+  const sitSvg = map => {
+    let out = '<svg viewBox="0 0 48 48" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" aria-hidden="true">';
+    for (const k in map) { const i = k.indexOf(','); out += '<rect x="' + k.slice(0, i) + '" y="' + k.slice(i + 1) + '" width="1.05" height="1.05" fill="' + map[k] + '"/>'; }
+    return out + '</svg>';
+  };
+  const sitEntry = center => { const b = measureSit(center); return { svg: sitSvg(center), h: b.botRow - b.topRow }; };
+  const SIT = {};
+  ['up', 'dUp', 'side', 'dDown', 'down'].forEach(dir => { SIT[dir] = sitEntry(SIT_DOWN); });   // fallback until the drafts rasterise
+  ['up', 'dUp', 'side', 'dDown'].forEach(dir => rasterizeSit(pandaSvg[dir], map => { if (map) SIT[dir] = sitEntry(sitifySit(map)); }));
+  const sitFace = f => ({ dir: DIR_SPRITE[f] || 'down', flip: /left/.test(f) });   // facing → drawn map + mirror
+  // point a rider's seated sprite at a facing (only rebuilds the DOM when the facing changes)
+  const renderRider = (r, f) => {
+    const { dir, flip } = sitFace(f), kk = dir + (flip ? 'F' : '');
+    if (r._sitKey === kk) return; r._sit.innerHTML = SIT[dir].svg; r._sit.classList.toggle('flip', flip); r._sitKey = kk;
+  };
+
+  // Riders mount flying (ghosts), so the base is made `solid` up front and never knocked during
+  // assembly, and the mounters pass through everyone as they climb — the stack can't be jostled
+  // apart while forming.
+  class Stack {
+    constructor(base, mounters) {
+      this.base = base;
+      this.mounters = mounters;        // to become riders, bottom-first
+      this.riders = [];
+      this.alive = true;
+      this.toppling = false;
+      base.solid = true;               // unstoppable + never knocked, from the first frame
+      base.anomaly = 'stack';          // hold it still during assembly; keeps the director off it
+      base.moveQueued = false;
+      base.setAnimation('idle');
+      // one long-lived tier-2 incident on the base from the outset — outranks every tier-1, so the
+      // watcher comes to study the tower forming and swaying. Shortened to a brief linger on topple.
+      this.incident = emitIncident(base, 2, STACK_INCIDENT_TTL);
+      this.mount(0);
+    }
+    // assemble: each mounter walks up to the base and hops onto the head above the last one
+    mount(i) {
+      if (!this.alive) return;
+      if (i >= this.mounters.length) { this.parade(); return; }
+      const m = this.mounters[i], level = i + 1;
+      m.anomaly = 'stack'; m.moveQueued = false; m.flying = true;   // ghost through the field on the way up
+      m.setAnimation('walk');
+      let steps = 0;
+      const walk = () => {
+        if (!this.alive) return;
+        if (paused) { m.after(PAUSE_POLL, walk); return; }
+        const dx = this.base.x - m.x, dy = (this.base.y + 20) - m.y;
+        if (Math.hypot(dx, dy) <= MOUNT_NEAR || ++steps > MOUNT_MAX_STEPS) {
+          const seat = SIT[sitFace(this.base.direction).dir].h * S_UNIT;   // seated-rider height, so the hop lands where the parade seats it
+          const tx = this.base.x, ty = this.base.y - level * seat;
+          throwArc(m, m.x, m.y, tx, ty, MOUNT_HOP_MS, 'down', () => {
+            m.riding = true;                       // flying cleared by throwArc's finish; now a pinned ghost
+            if (!m._sit) { m._sit = document.createElement('div'); m._sit.className = 'sit'; m.el.appendChild(m._sit); }
+            m._sit.style.display = ''; m._sitKey = null;
+            m.el.classList.add('riding');          // hide the walk sprite, show the seated one
+            renderRider(m, this.base.direction);   // face the tower's current heading (updated each tick)
+            m.el.style.zIndex = Math.round(this.base.y) + level;
+            this.riders.push(m);
+            this.mount(i + 1);
+          });
+          return;
+        }
+        const dir = heading(dx, dy);
+        if (dir) { m.direction = dir; m.turnIndex = DIRS.indexOf(dir); m.setFacing(); }
+        m.applyPos(m.x + (dx > STEP ? STEP : dx < -STEP ? -STEP : dx),
+                   m.y + (dy > STEP ? STEP : dy < -STEP ? -STEP : dy));
+        m.after(MOUNT_WALK_MS, walk);
+      };
+      walk();
+    }
+    parade() {
+      if (!this.alive) return;
+      this.base.el.classList.add('stop');          // drive it tick-by-tick so the riders track it exactly (no glide lag)
+      this.base.setAnimation('walk');
+      this.born = performance.now();
+      this.life = PARADE_MIN + Math.random() * (PARADE_MAX - PARADE_MIN);
+      this.baseDir = Math.floor(Math.random() * 8);
+      this.tick();
+    }
+    tick() {
+      if (!this.alive || this.toppling) return;
+      if (paused) { this.base.after(PAUSE_POLL, () => this.tick()); return; }
+      const now = performance.now(), age = now - this.born;
+      // the tower's heading picks the riders' facing (like the walk sprite) and their seat height
+      if (Math.random() < BASE_TURN_P) this.baseDir = (this.baseDir + pick(TURN_OPTIONS) + 8) % 8;
+      const facing = DIRS[this.baseDir], face = sitFace(facing), rise = SIT[face.dir].h * S_UNIT;
+      // wander the base a small step along its heading; reverse if a wall/fence boxes it. keep on stage.
+      const [ux, uy] = AXES[this.baseDir];
+      const bx = this.base.x, by = this.base.y;
+      this.base.direction = facing; this.base.turnIndex = this.baseDir; this.base.setFacing();
+      const floor = this.riders.length * rise + 10;
+      this.base.applyPos(Math.round(this.base.x + ux * BASE_STEP), Math.max(floor, Math.round(this.base.y + uy * BASE_STEP)));
+      if (this.base.x === bx && this.base.y === by) this.baseDir = (this.baseDir + 4) % 8;
+      // the riders: seated, facing the heading; a foot-pivoted teeter whose head-shift accumulates up
+      // the tower (base leads, each rider above lags → the wobble travels upward).
+      const w = 2 * Math.PI / SIT_WOBBLE_CYCLE;
+      let acc = 0;
+      this.riders.forEach((r, idx) => {
+        const level = idx + 1, sway = Math.sin(now * w - level * 0.9);
+        renderRider(r, facing);
+        r.x = this.base.x + acc; r.y = this.base.y - level * rise;
+        r.el.style.transform = 'translate(' + r.x + 'px, ' + r.y + 'px) rotate(' + (sway * SIT_TILT_DEG) + 'deg)';
+        r.el.style.zIndex = Math.round(this.base.y) + level;
+        acc += sway * SIT_TRAVEL_PX;                 // this rider's head shift → the next rider's seat
+      });
+      if (age >= this.life || this.struck()) { this.topple(); return; }
+      this.base.after(STACK_TICK_MS, () => this.tick());
+    }
+    struck() {   // a runaway ploughs into the tower → bring it down early
+      for (const q of pandas) {
+        if (q.anomaly !== 'zoomies') continue;
+        if ((q.x - this.base.x) ** 2 + (q.y - this.base.y) ** 2 < TOPPLE_HIT_R ** 2) return true;
+      }
+      return false;
+    }
+    topple() {
+      if (this.toppling) return;
+      this.toppling = true; this.alive = false;
+      if (activeStack === this) activeStack = null;
+      if (this.incident) this.incident.expires = performance.now() + AFTERMATH_LINGER;  // watcher lingers on the wreck, then moves on
+      // the whole tower comes down together: drop the riders onto the base so all three hitboxes
+      // overlap, drop every stack flag, and let the ordinary collision logic take over — within a
+      // frame it knocks the coincident pile apart, so all three fall and scatter (no fling-off).
+      this.base.solid = false; this.base.anomaly = null;
+      this.base.el.classList.remove('stop');
+      this.riders.forEach((r, idx) => {
+        r.riding = false; r.flying = false;
+        r.el.classList.remove('riding');                  // un-hide the walk sprite for the fall
+        if (r._sit) { r._sit.style.display = 'none'; r._sit.innerHTML = ''; r._sitKey = null; }
+        r.el.classList.add('stop');                       // no glide — drop straight onto the base, don't drift over 2s
+        r.x = this.base.x + (idx ? 8 : -8); r.y = this.base.y;   // a hair apart so the knocks fan them out
+        r.applyTransform();
+      });
+      this.riders = [];
+      // collisionCheck (≤50ms away) sees the overlapping pile and knocks all three down; each
+      // one's knock() drives its own fall → get-up → rejoin, staggered by the collision order.
+      // Coupling rule (Phase 5): a topple is just a topple — UNLESS the director is armed, in which
+      // case it serves as the cascade's ignition. Rarity stays pinned to the arming clock, so this
+      // is the rarest, best co-occurrence: the watcher is already here studying the tower when it
+      // falls, and the collapse chains outward into the field. No staging guard — let it rip.
+      if (cascadeArmed && !cascadeActive) igniteCascade([this.base]);
+    }
+  }
+
+  // eligible parts for a stack: ordinary roamers on their feet and not otherwise busy.
+  const stackParts = () =>
+    pandas.filter(p => !p.hasHat && !p.oblivious && !p.entering && !p.knocked &&
+                       !p.anomaly && !p.solid && !p.flying && !p.riding);
+
+  function stackDirector() {
+    const next = () => setTimeout(stackDirector, STACK_GAP_MIN + Math.random() * (STACK_GAP_MAX - STACK_GAP_MIN));
+    if (paused) { setTimeout(stackDirector, PAUSE_POLL); return; }   // don't spend a set piece nobody can see
+    if (activeStack) { next(); return; }                            // at most one alive
+    const pool = stackParts();
+    if (pool.length < 3) { next(); return; }                        // a base + 1–2 riders, and leave a field behind
+    const bases = pool.filter(p => p.y >= 2 * RIDER_RISE + 20);      // the base needs headroom for a 3-high tower
+    if (!bases.length) { next(); return; }
+    const base = pick(bases);
+    const nRiders = Math.random() < 0.45 ? 2 : 1;                    // 2 or 3 high
+    const mounters = pool.filter(p => p !== base)                    // the nearest roamers join — short, snappy walk-ups
+      .sort((a, b) => ((a.x - base.x) ** 2 + (a.y - base.y) ** 2) - ((b.x - base.x) ** 2 + (b.y - base.y) ** 2))
+      .slice(0, nRiders);
+    activeStack = new Stack(base, mounters);
+    next();
+  }
+
+  // ===================== tier 3: the cascade =====================
+  // The chain-reaction knockout — the jackpot. Cartoon physics: outcome-authored, physics-flavoured.
+  // The director ARMS on a long jittered timer; while unarmed every collision is ordinary. Once
+  // armed, the next natural collision (or a stack topple, per the coupling rule) IGNITES: the felled
+  // pandas become the fronts of a greedy nearest-neighbour BFS — each faller, on landing, topples its
+  // nearest standing neighbour toward *that* neighbour's own nearest, so a two-front domino ripple
+  // sweeps the field. Coverage is capped at 70–90% (a full clear reads scripted; the oblivious one is
+  // structurally spared and a couple of out-of-range stragglers survive — that's the joke). Recovery is
+  // ordinary, staggered by fall order; nothing freezes — the field going down around the overwhelmed
+  // watcher is the point now. Rarity lives entirely in the arming clock, never in the trigger.
+  const CASCADE_ARM_MIN = 120000, CASCADE_ARM_MAX = 300000;  // re-arm every 2–5 min — where the rarity lives
+  const CASCADE_KICK = 40000;         // the first arming — soon enough to catch one on the live preview
+  const CASCADE_ARM_TIMEOUT = 40000;  // armed with no natural collision this long → manufacture one (liveness)
+  const CHAIN_RANGE = 350;            // a front only reaches a neighbour within this — wider gaps end it
+  const CASCADE_HOP_MIN = 150, CASCADE_HOP_MAX = 230;   // stagger between a faller and the neighbour it fells
+  const CASCADE_COVER_MIN = 0.70, CASCADE_COVER_MAX = 0.90;  // fraction of the field the steering fells — never all
+  const CASCADE_DURATION = 14000;     // machinery idles after this (propagation + recovery done); re-ignition blocked meanwhile
+  const CASCADE_INCIDENT_TTL = 9000;  // the watcher's tier-3 pull to the origin of the carnage
+
+  let cascadeArmed = false, cascadeActive = false;
+  let cascadeLock = new Set(), cascadeFelled = 0, cascadeTargetFell = 0;
+
+  // an ordinary roamer: the only thing the cascade acts on. The watcher only observes, the oblivious
+  // one is immune, and stack members / transients aren't part of the field.
+  const isRoamer = p => !p.hasHat && !p.oblivious && !p.entering && !p.solid && !p.riding && !p.flying;
+  // the cascade's universe — every roamer, standing OR fallen (a just-knocked seed is one of the
+  // felled). Coverage is measured against this, so the oblivious (excluded) plus the uncapped
+  // remainder are the guaranteed survivors.
+  const cascadeUniverse = () => pandas.filter(isRoamer);
+  // a front's next domino: the nearest still-standing roamer within CHAIN_RANGE that no other front
+  // has already claimed. null → the front dies out, and that panda survives.
+  const nearestStandingNeighbour = p => {
+    let best = null, bd = CHAIN_RANGE * CHAIN_RANGE;
+    for (const q of cascadeUniverse()) {
+      if (q === p || q.knocked || cascadeLock.has(q)) continue;
+      const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+      if (d < bd) { bd = d; best = q; }
+    }
+    return best;
+  };
+  // the director stages the cascade to erupt where the watcher ISN'T looking, so he turns to find
+  // the field already going down. Hold the arm if the igniting collision is right under his gaze.
+  const cascadeElsewhere = seeds => {
+    if (!hatPanda) return true;
+    for (const s of seeds) {
+      if (s === hatPanda.subject) return false;
+      if ((s.x - hatPanda.x) ** 2 + (s.y - hatPanda.y) ** 2 < (INSPECT_NEAR * 1.6) ** 2) return false;
+    }
+    return true;
+  };
+
+  // propagate one front from a panda that has just fallen: claim its nearest standing neighbour, then
+  // (a short stagger later) topple that neighbour toward ITS own nearest — so it lands on the next
+  // domino — and recurse. Ends when the front finds no neighbour in range or the coverage cap is hit.
+  function fellNext(fromP) {
+    if (!cascadeActive || cascadeFelled >= cascadeTargetFell) return;
+    const victim = nearestStandingNeighbour(fromP);
+    if (!victim) return;                                   // front dies out — a straggler survives
+    cascadeLock.add(victim); cascadeFelled++;              // claim now so the other front / collisions can't take it
+    const hop = CASCADE_HOP_MIN + Math.random() * (CASCADE_HOP_MAX - CASCADE_HOP_MIN);
+    victim.after(hop, () => {
+      if (!cascadeActive) return;
+      const next = nearestStandingNeighbour(victim);       // steer the fall at the next domino (gap-sized → land overlapping)
+      const vx = next ? next.x - victim.x : AXES[victim.turnIndex][0] * IMPACT;
+      const vy = next ? next.y - victim.y : AXES[victim.turnIndex][1] * IMPACT;
+      victim.cascadeKnock(vx, vy, heading(vx, vy) || victim.defaultFallDirection);
+      fellNext(victim);                                    // the front continues from here
+    });
+  }
+  // ignite from one or more seed pandas — the parties to the igniting collision, or a stack's base.
+  // A seed already knocked (a natural collision) stands as its own fall; a standing seed (a topple or
+  // a forced ignition) is felled first. A tier-3 incident at the origin pulls the watcher in to find
+  // the wreck; he arrives late (it propagates faster than he can cross the field) and scans, overwhelmed.
+  function igniteCascade(seeds) {
+    if (cascadeActive) return;
+    const fronts = seeds.filter(isRoamer);
+    if (!fronts.length) return;
+    cascadeActive = true; cascadeArmed = false;
+    const total = cascadeUniverse().length;
+    cascadeTargetFell = Math.max(fronts.length,
+      Math.round((CASCADE_COVER_MIN + Math.random() * (CASCADE_COVER_MAX - CASCADE_COVER_MIN)) * total));
+    cascadeFelled = 0; cascadeLock = new Set();
+    let cx = 0, cy = 0;
+    fronts.forEach(seed => {
+      cx += seed.x; cy += seed.y;
+      cascadeLock.add(seed); cascadeFelled++;
+      if (!seed.knocked) {                                 // a standing seed (topple / forced) falls now
+        const t = nearestStandingNeighbour(seed);
+        const vx = t ? t.x - seed.x : AXES[seed.turnIndex][0] * IMPACT;
+        const vy = t ? t.y - seed.y : AXES[seed.turnIndex][1] * IMPACT;
+        seed.cascadeKnock(vx, vy, heading(vx, vy) || seed.defaultFallDirection);
+      }
+      fellNext(seed);
+    });
+    // a stationary tier-3 subject at the origin — outranks every tier-1/2, so the watcher scrambles
+    // into the carnage and stands amid the bodies, gaze darting (the "doesn't know where to start" beat).
+    emitIncident({ x: Math.round(cx / fronts.length), y: Math.round(cy / fronts.length) }, 3, CASCADE_INCIDENT_TTL);
+    setTimeout(() => { cascadeActive = false; cascadeLock = new Set(); }, CASCADE_DURATION);
+  }
+  // liveness backstop: armed too long without a natural collision → manufacture the ignition from the
+  // standing roamer farthest from the watcher (so it still erupts "elsewhere") and let it chain from there.
+  function forceIgnite() {
+    if (!cascadeArmed || cascadeActive) return;
+    if (paused) { setTimeout(forceIgnite, PAUSE_POLL); return; }
+    const uni = cascadeUniverse().filter(p => !p.knocked);
+    if (uni.length < 2) { cascadeArmed = false; return; }   // nothing to topple — drop the arm, re-arm later
+    const seed = hatPanda ? uni.reduce((a, b) =>
+      ((b.x - hatPanda.x) ** 2 + (b.y - hatPanda.y) ** 2) > ((a.x - hatPanda.x) ** 2 + (a.y - hatPanda.y) ** 2) ? b : a, uni[0])
+      : uni[0];
+    igniteCascade([seed]);
+  }
+  // the arming clock. Slow and jittered — this is the whole of the cascade's rarity. Arming just
+  // sets the flag (+ a backstop); the ignition is whatever collision or topple comes next.
+  function cascadeDirector() {
+    const next = () => setTimeout(cascadeDirector, CASCADE_ARM_MIN + Math.random() * (CASCADE_ARM_MAX - CASCADE_ARM_MIN));
+    if (paused) { setTimeout(cascadeDirector, PAUSE_POLL); return; }   // don't arm a jackpot nobody can see
+    if (!cascadeActive && !cascadeArmed) {
+      cascadeArmed = true;
+      setTimeout(forceIgnite, CASCADE_ARM_TIMEOUT);
+    }
+    next();
+  }
+
   // ===================== salvaged motion primitives =====================
-  // Both survive the retired patching system intact and are the movement vocabulary the
-  // chaos tiers are built from. spin3d drives the Spinner; throwArc is staged for the
-  // stack's mount hop and topple tosses (Phase 4) and has no caller yet, by design.
+  // Both survive the retired patching system intact and are the movement vocabulary the chaos
+  // tiers are built from. spin3d drives the Spinner; throwArc drives the stack's mount hop and
+  // topple tosses (Phase 4).
 
   const SPIN_STEP_MS = 55;       // how fast a spin flips from one facing to the next
 
@@ -896,6 +1637,8 @@
     const dist = Math.hypot(x1 - x0, y1 - y0);
     const peak = Math.min(150, 45 + dist * 0.3);    // arc height (0 at both ends)
     const base = p.turnIndex;
+    p.flying = true;
+    p.el.classList.add('flinging', 'flying');       // kill the glide + ride on top for the flight (finish() removes them)
     let start = null, done = false;
     const finish = () => {
       if (done) return; done = true;
@@ -1001,11 +1744,11 @@
     // a troupe this size would pile onto the headline.
     if (W < MOBILE_MIN) return;
     computeForbid();                                          // fence the hero card
-    // Viewport-aware headcount, held deliberately low for now. At 20 the ma5a collision
-    // rate alone kept ~13 of them on the ground at any moment, which would bury the
-    // Sleeper — an anomaly can only read as strange against a calm baseline. Raise this
-    // once the chaos tiers are in and we can see what the field can carry.
-    PANDA_COUNT = W >= 1200 ? 10 : 7;
+    // Viewport-aware headcount. Held low (10/7) through Phases 0–5 so each new anomaly kind
+    // could be read against a calm baseline; now all three tiers are in, raised to a full field
+    // (Ameya's call, 2026-07-24) to see what the chaos economy carries at density — a busier
+    // troupe, longer cascade chains, more for the watcher to miss.
+    PANDA_COUNT = W >= 1200 ? 20 : 12;
 
     const place = () => {                                     // a clear spot off the fence
       let x, y, tries = 0;
@@ -1038,6 +1781,7 @@
     const enterOne = (hasHat, oblivious = false) => {
       const e = pickEntry();
       const p = new Panda(e.sx, e.sy, hasHat, true);
+      if (hasHat) hatPanda = p;                               // the watcher — the cascade stages around him
       p.oblivious = oblivious;
       p.home = [e.tx, e.ty];                                  // where it walks in to = its patch
       pandas.push(p);
@@ -1060,6 +1804,8 @@
 
     setInterval(collisionCheck, 50);
     setTimeout(director, ANOM_KICK);                          // the field starts going strange
+    setTimeout(stackDirector, STACK_KICK);                    // …and occasionally builds a tower
+    setTimeout(cascadeDirector, CASCADE_KICK);                // …and, rarely, one bump fells the herd
     // pause everything when the hero scrolls out of view or the tab goes to the background.
     // The per-panda loops poll `paused` and pick up where they left off; collisionCheck
     // returns early. Nothing is torn down, so a resume needs no re-arming.
