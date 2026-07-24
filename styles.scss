@@ -361,10 +361,11 @@ main.content > :last-child {
 }
 
 // ---- Home-page hero pandas (engine: assets/pandas/pandas.js) ---------------
-// Ten pandas wander the hero; one wears the straw hat. The stage overlays only
-// the .hero region (which sits above the Writing cue), so they never spill into
-// the writing list. Sprite + collision reproduced from ma5a's "panda collision"
-// (MIT); the hat is ours.
+// A troupe wanders the hero; one wears the straw hat and watches the rest. The
+// stage overlays only the .hero region (which sits above the Writing cue), so they
+// never spill into the writing list. Below the mid breakpoint the engine leaves the
+// stage empty. Sprite + collision reproduced from ma5a's "panda collision" (MIT);
+// the hat is ours.
 .hero { position: relative; }               // stage anchors to the hero box
 .hero-inner { position: relative; z-index: 1; }   // the fenced card sits above pandas
 // keep the full-bleed stage from ever adding a horizontal scrollbar
@@ -382,17 +383,23 @@ body:has(.hero-screen) { overflow-x: hidden; }
   pointer-events: none;     // empty stage passes clicks through to the page
 }
 
+// position comes entirely from `transform: translate`, never margins — a stride then
+// costs a composite instead of a layout pass, which is what keeps the engine's 20 Hz
+// getBoundingClientRect collision reads cheap. top/left are pinned so the translate
+// origin is the stage corner rather than each wrapper's static position.
 .panda_wrapper {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100px;
   height: 100px;
   overflow: hidden;
-  transition: 2s;           // the slow glide between steps, exactly hers
+  transition: transform 2s; // the slow glide between steps, exactly hers
   cursor: pointer;
   pointer-events: auto;     // the pandas themselves are tappable
 }
 .panda_wrapper svg { fill: #21201c; display: block; }
-.panda_wrapper.stop { transition: 0 !important; }
+.panda_wrapper.stop { transition: none !important; }
 .panda_inner_wrapper { height: 100%; width: 100%; transition: 0; }
 .facing_upleft, .facing_left, .facing_downleft { transform: scale(-1, 1); }
 .panda_sprite {
@@ -401,9 +408,9 @@ body:has(.hero-screen) { overflow-x: hidden; }
   width: calc(13 * 100px);
   pointer-events: none;
 }
-// Phase 3: the hat panda's idle — a soft breathing bob while it stands and watches,
-// so it reads as alive rather than frozen. On the sprite, so it rides above the
-// facing flip (inner) and the margin glide (wrapper); carries the hat with it.
+// the hat panda's idle — a soft breathing bob while it stands and watches, so it reads
+// as alive rather than stopped. On the sprite, so it rides above the facing flip (inner)
+// and the wrapper's translate glide; carries the hat with it.
 @keyframes panda-watch {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-3px); }
@@ -429,14 +436,9 @@ body:has(.hero-screen) { overflow-x: hidden; }
 }
 .hit_corner { height: 50%; width: 50%; opacity: 0; }   // invisible hitboxes
 .panda_wrapper.hatless .wornhat { display: none; }
-// Phase 4: activation patching — spotlight the two lines under intervention, dim
-// the rest (mirrors how patching is drawn in papers: clean vs corrupted, side by
-// side). `.spot` on the participating pandas + the hat panda keeps them lit.
-.panda-stage.intervening .panda_wrapper { opacity: 0.15; transition: opacity 0.45s ease; }
-.panda-stage.intervening .panda_wrapper.spot { opacity: 1; }
-// the flung panda rides above everything; its position is driven frame-by-frame by
-// a rAF parabolic arc (throwArc), so the wrapper's 2s amble transition is disabled
-// while it's in hand / in flight.
+// a panda mid-arc rides above everything; its position is driven frame-by-frame by
+// throwArc's rAF parabola, so the wrapper's 2s amble transition is disabled while it
+// is in the air.
 .panda_wrapper.flying { z-index: 9999; }
 .panda_wrapper.flinging { transition: none; }
 .hat_loose {

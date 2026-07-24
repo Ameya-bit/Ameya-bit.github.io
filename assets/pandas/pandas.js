@@ -1,33 +1,41 @@
-// Home-page hero troupe — a self-contained panda scene that enacts *activation
-// patching* (the causal method underneath the site's circuits). Base sprite +
-// collision engine are a faithful reproduction of "panda collision" by masahito
-// (ma5a): codepen.io/Ma5a/pen/WNEBqPO (MIT), sprite path data reproduced verbatim
-// with thanks. The straw hat (dǒulì) + its per-direction 3-D drawings are ours
-// (design/sketches/panda-behaviors-workshop.html). aria-hidden decoration, clipped
-// to the hero region (never below the Writing cue), rAF paused off-screen / on a
-// hidden tab. Reduced motion = a static tableau. Full spec + build log:
-// design/panda-choreography.md.
+// Home-page hero troupe — a self-portrait: a field of small agents doing inscrutable
+// things, and one figure (the hat panda, the self-insert) moving among them trying to
+// understand. Base sprite + collision engine are a faithful reproduction of "panda
+// collision" by masahito (ma5a): codepen.io/Ma5a/pen/WNEBqPO (MIT), sprite path data
+// reproduced verbatim with thanks. The straw hat (dǒulì) + its per-direction 3-D
+// drawings are ours (design/sketches/panda-behaviors-workshop.html). aria-hidden
+// decoration, clipped to the hero region (never below the Writing cue). Full spec +
+// build log: design/panda-chaos.md.
 //
-// What the troupe does (all five phases shipped, 2026-07-23):
+// What the troupe does (Phases 0–1 shipped, 2026-07-23):
 //  • Entrance — the stage starts empty; the hat panda ambles in first, alone, then
 //    the troupe walks on from the edges a couple at a time and starts wandering.
-//    Headcount is viewport-aware (~20 wide / 12 / 7). ma5a's tap-to-knock and the
-//    knock → fall → get-up collision are kept for free roamers.
-//  • Conga lines — roamers periodically organise into follow-the-leader snakes: each
-//    follower steps into the cell the one ahead vacated, so a heading change at the
-//    front ripples down the line. Lines grow to LINE_CAP (5); a conga panda is an
-//    unstoppable force (knocks roamers aside, passes through other conga pandas).
-//    Lines dissolve on a jittered max age (sooner after a patch); freed pandas roam
-//    and re-form — the scene keeps breathing.
-//  • Hat panda = the interpreter (the self-insert). Fastest panda and a collision
-//    ghost (never knocked). It oversees the lines from a distance, navigating *around*
-//    the other pandas to reach an uncrowded, clear-view vantage, then stands and faces
-//    the line, scanning it (a small gaze shift) while it watches. Never joins a line.
-//  • Activation patching (~every 20–30s) — freeze + spotlight two lines whose headings
-//    differ >45°; the hat panda grabs a panda off line B, spins, and flings it into
-//    line A's upper-middle, swapping out the resident (sent roaming). On resume A's
-//    tail peels onto B's heading as a new line — the visible bend is the patched
-//    activation propagating downstream. The split halves then dissolve and reform.
+//    Headcount is viewport-aware and deliberately low; below MOBILE_MIN the stage stays
+//    empty — the hero copy owns that space. ma5a's tap-to-knock and the knock → fall →
+//    get-up collision are kept.
+//  • The director — one scheduler owning every rate. Variety over frequency: the
+//    baseline stays calm and the chaos comes from many *kinds* of rare event, so later
+//    phases add kinds rather than turning the dial up. Every 7–14s one roamer goes
+//    strange on its own — never two of the same kind running, never the hat panda,
+//    never the oblivious one.
+//  • Tier 1 so far — sleeper (lies down 8–20s), spinner (spins, then staggers off),
+//    tumbler (trips on nothing, over in a second). The unequal lifespans are the timing
+//    design: with one watcher and independent clocks, its early / on-time / too-late
+//    arrivals fall out on their own. Lateness is never scripted.
+//  • The oblivious one — one roamer never picked for anything, keeping to a small patch
+//    and idling often. The comic foil; chance collisions may still knock it.
+//  • Hat panda = the watcher. Fastest panda and a collision ghost (never knocked). It
+//    plants at a vantage and studies one subject, gaze drifting. Phase 2 swaps the
+//    ambient subject for a real incident queue so it attends to the anomalies.
+//  • Motion is transform-only (z-index still from y), so the 20 Hz collision reads
+//    never trip a layout pass. Every loop pauses when the hero scrolls off-screen or
+//    the tab is hidden.
+//  • Reduced motion = a composed tableau, not a random scatter: the troupe scattered,
+//    one 3-high stack mid-parade, one panda fallen, and the hat panda planted facing it.
+//
+// Staged for later phases, deliberately not wired up yet: throwArc (Phase 4 mount hop
+// and topple tosses) and the `solid` collision asymmetry (Phase 4 stack bottom as the
+// unstoppable force).
 (() => {
   'use strict';
   const stage = document.getElementById('panda-stage');
@@ -36,7 +44,15 @@
   const rand = n => Math.ceil(Math.random() * n);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const variant = 'drop';                 // the calm hat-drop skit (no big launch)
-  let PANDA_COUNT = 10;                    // set viewport-aware in spawn() (~20 wide / 12 mid / 7 narrow)
+  const MOBILE_MIN = 800;                 // below this the stage stays empty — the hero copy owns the space
+  let PANDA_COUNT = 10;                   // set viewport-aware in spawn(); see the note there
+
+  // ---- pause: nothing runs while the hero is off-screen or the tab is hidden ----
+  // Recurring loops poll this flag at PAUSE_POLL instead of being torn down, so a
+  // half-finished sequence (a fall, a walk-in) resumes exactly where it left off.
+  const PAUSE_POLL = 400;
+  let onScreen = true, paused = document.hidden;
+  const syncPaused = () => { paused = document.hidden || !onScreen; };
 
   // ---- the hero card is an obstacle: pandas walk around it, never behind ----
   // FORBID is the fenced .hero-inner rectangle in stage-local pixels; a panda's
@@ -183,35 +199,33 @@
       this.sprite = this.el.querySelector('.panda_sprite');
       this.corners = [...this.el.querySelectorAll('.hit_corner')];
       this.corners.forEach(c => { c.panda = this; });
-      this.el.style.marginLeft = x + 'px';
-      this.el.style.marginTop = y + 'px';
-      this.el.style.zIndex = y;
       this.x = x; this.y = y;
-      this.prev = [x, y];
+      this.applyTransform();
       this.frame = 0;
       this.animation = reduced ? 'stop' : 'walk';
       this.turnIndex = Math.floor(Math.random() * 7);
       this.direction = pick(DIRS);
       this.defaultFallDirection = pick(DIRS);
       this.moveSpeed = hasHat ? HAT_MOVE_MS : pick(MOVE_SPEEDS);   // the hat panda is the fastest
-      this.hit = false; this.knocked = false; this.stopped = false;
+      this.hit = false; this.knocked = false;
       this.hasHat = hasHat; this.hatLost = false; this.hatRest = null; this.retrieving = false;
-      this.observer = hasHat;      // Phase 3: the hat panda watches lines instead of wandering
-      this.watchLine = null;
-      this.patching = false;       // Phase 4: hat panda is mid-intervention (runPatch drives it)
-      this.flying = false;         // Phase 4: this panda is mid-fling (collision ghost)
+      this.observer = hasHat;      // the hat panda watches the field instead of wandering
+      this.subject = null;         // what it is currently studying (Phase 2: the held incident)
+      this.anomaly = null;         // the tier-1 behaviour currently running on this panda
+      this.oblivious = false;      // the standing anchor: never picked for anything (set in spawn)
+      this.home = null;            // the patch the oblivious one keeps to
+      this.solid = false;          // an unstoppable force: knocks roamers aside, is never knocked
+                                   // (Phase 4: the stack's bottom panda)
+      this.flying = false;         // mid-arc (collision ghost) — throwArc owns this
       this.moveQueued = false;
-      this.entering = entering;    // Phase 1: walking in from off-stage, not yet wandering
-      this.inLine = false;         // Phase 2: its Line once part of a conga
-      this.joining = false;        // Phase 2: its Line while walking to join the tail
-      this.timers = [];
+      this.entering = entering;    // walking in from off-stage, not yet wandering
       this.el.addEventListener('click', () => this.tap());
       stage.appendChild(this.el);
       this.setFacing();
       this.drawFrame();
       if (!reduced) { this.animate(); if (!entering) (this.observer ? this.observe() : this.moveAbout()); }
     }
-    after(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
+    after(ms, fn) { setTimeout(fn, ms); }
     setAnimation(name) { this.frame = 0; this.animation = name; }
     setFacing() {
       this.inner.className = `panda_inner_wrapper facing_${this.direction}`;
@@ -227,32 +241,40 @@
       this.frame = this.frame === frames.length - 1 ? 0 : this.frame + 1;
     }
     // hold a standing pose (frame column 0) facing the current direction, without
-    // advancing the cycle — used while the troupe is frozen for a patch, so pandas
-    // stand still instead of walking in place.
+    // advancing the cycle — used by the mid-air/mid-spin primitives, where the panda
+    // is being moved *for* it and shouldn't also be walking in place.
     freezeFrame() {
       this.sprite.style.marginLeft = '0px';
       this.sprite.style.marginTop = `-${CELL * ROW[DIR_SPRITE[this.direction]]}px`;
     }
     animate() {
-      // Phase 4: while frozen, everyone but the patch actors (the hat panda and the
-      // panda in mid-throw) holds a still pose.
-      if (!frozen || this.patching || this.flying) this.drawFrame();
-      else this.freezeFrame();
+      if (paused) { this.after(PAUSE_POLL, () => this.animate()); return; }
+      this.drawFrame();
       this.after(FRAME_MS, () => this.animate());
+    }
+    // the one place a panda's position reaches the DOM. Transform (not margins), so a
+    // stride never invalidates layout — which is what keeps the 20 Hz getBoundingClientRect
+    // collision reads cheap. Depth still comes from y.
+    applyTransform() {
+      this.el.style.transform = `translate(${this.x}px, ${this.y}px)`;
+      this.el.style.zIndex = Math.round(this.y);
     }
     applyPos(x, y) { // boundary clamp (hers: lower -40, upper 60) + the hero fence
       const lower = -40, upper = 60;
-      if (x > lower && x < stage.clientWidth - upper && !inForbid(x, this.y)) {
-        this.el.style.marginLeft = x + 'px'; this.x = x; this.prev[0] = x;
-      }
-      if (y > lower && y < stage.clientHeight - upper && !inForbid(this.x, y)) {
-        this.el.style.marginTop = y + 'px'; this.y = y; this.prev[1] = y;
-        this.el.style.zIndex = y;
-      }
+      let moved = false;
+      if (x > lower && x < stage.clientWidth - upper && !inForbid(x, this.y)) { this.x = x; moved = true; }
+      if (y > lower && y < stage.clientHeight - upper && !inForbid(this.x, y)) { this.y = y; moved = true; }
+      if (moved) this.applyTransform();
     }
     // one wander stride: turn a little, step, and bounce off a wall/fence if boxed
     wanderStep() {
-      this.turnIndex += pick(TURN_OPTIONS);
+      // the oblivious one keeps to the patch it settled on: once it strays past its radius
+      // it turns for home instead of drifting further. Nothing else about its walk differs.
+      const strayed = this.oblivious && this.home &&
+        (this.x - this.home[0]) ** 2 + (this.y - this.home[1]) ** 2 > OBLIVIOUS_R ** 2;
+      const homeDir = strayed ? heading(this.home[0] - this.x, this.home[1] - this.y) : '';
+      if (homeDir) this.turnIndex = DIRS.indexOf(homeDir);
+      else this.turnIndex += pick(TURN_OPTIONS);
       if (this.turnIndex < 0) this.turnIndex = 7;
       if (this.turnIndex > 7) this.turnIndex = 0;
       this.direction = DIRS[this.turnIndex];
@@ -273,24 +295,29 @@
       }
     }
     moveAbout() {
-      if (this.hit || this.retrieving || this.inLine || this.joining) return;
-      if (frozen) { this.after(300, () => this.moveAbout()); return; }   // Phase 4: hold during a patch
+      if (this.hit || this.retrieving || this.anomaly) return;   // an anomaly drives its own loop
+      if (paused) { this.after(PAUSE_POLL, () => this.moveAbout()); return; }
+      // the oblivious one idles far more than it walks — placid while the field churns
+      if (this.oblivious && Math.random() < OBLIVIOUS_IDLE_P) {
+        if (this.animation !== 'idle') this.setAnimation('idle');
+        this.scheduleMove(OBLIVIOUS_IDLE_MIN + Math.random() * (OBLIVIOUS_IDLE_MAX - OBLIVIOUS_IDLE_MIN));
+        return;
+      }
+      if (this.animation !== 'walk') this.setAnimation('walk');
       this.wanderStep();
       this.scheduleMove();
     }
-    scheduleMove() {
+    scheduleMove(ms = this.moveSpeed) {
       if (this.moveQueued) return;
       this.moveQueued = true;
-      this.after(this.moveSpeed, () => { this.moveQueued = false; this.moveAbout(); });
+      this.after(ms, () => { this.moveQueued = false; this.moveAbout(); });
     }
-    // ---- Phase 1: the entrance ----
+    // ---- the entrance ----
     // direct, unclamped placement — used only while walking in from off-stage,
     // where the normal applyPos edge/fence clamp would block the entry corridor.
     setPos(x, y) {
-      this.el.style.marginLeft = x + 'px';
-      this.el.style.marginTop = y + 'px';
-      this.el.style.zIndex = Math.round(y);
-      this.x = x; this.y = y; this.prev = [x, y];
+      this.x = x; this.y = y;
+      this.applyTransform();
     }
     // amble in a straight line from an off-stage edge to (tx, ty), then hand off
     // to the ordinary wander. Heading is fixed inward so the sprite faces the way
@@ -301,6 +328,7 @@
       this.direction = dir; this.turnIndex = DIRS.indexOf(dir);
       this.setFacing();
       const stride = () => {
+        if (paused) { this.after(PAUSE_POLL, stride); return; }
         const dx = tx - this.x, dy = ty - this.y;
         if (Math.abs(dx) <= STEP && Math.abs(dy) <= STEP) {
           this.setPos(tx, ty);
@@ -316,105 +344,82 @@
       };
       stride();
     }
-    // Phase 2: walk to the tail of `line` and lock in as its new last member. The
-    // tail moves, so the target is recomputed each stride; the snake step corrects
-    // spacing the moment we're admitted.
-    joinLine(line) {
-      this.joining = line;
-      let steps = 0;
-      const stride = () => {
-        if (frozen) { this.after(300, stride); return; }   // Phase 4: hold — without spending the step budget
-        if (this.joining !== line || !line.members.length || line.full || ++steps > 30) {
-          this.joining = false;
-          if (!this.inLine) this.moveAbout();          // recruitment fell through — resume roaming
-          return;
-        }
-
-        const [tx, ty] = line.tailSlot();
-        const dx = tx - this.x, dy = ty - this.y;
-        if (dx * dx + dy * dy <= (STEP * 1.3) ** 2) { line.admit(this); return; }
-        const dir = heading(dx, dy);
-        if (dir) { this.direction = dir; this.turnIndex = DIRS.indexOf(dir); this.setFacing(); }
-        this.setPos(
-          this.x + (dx > STEP ? STEP : dx < -STEP ? -STEP : 0),
-          this.y + (dy > STEP ? STEP : dy < -STEP ? -STEP : 0));
-        this.after(this.moveSpeed, stride);
-      };
-      stride();
-    }
-    // ---- Phase 3: the hat panda oversees the lines from a distance ----
-    // It stands well back (3× the base) and faces the line it's watching, planted
-    // and still. When that line drifts past 5×, it relocates back to 3×. It doesn't
-    // camp one team: after a 15–30s lock it moves to another line, overseeing the whole
-    // scene. Default state is still.
+    // ---- the hat panda: scramble, plant, study ----
+    // One subject at a time. It walks to a standoff on one of the 8 sprite axes (so its
+    // facing lands dead-on), plants, and studies — gaze drifting between the subject, a
+    // bystander, and a brief look-around. It relocates when the subject drifts out of the
+    // distance band, the hero card blocks the view, the bearing falls off-axis, or the
+    // troupe crowds the vantage.
+    //
+    // Phase 0 has nothing anomalous to attend to, so pickSubject() returns the ambient
+    // choice: a mildly notable panda, held for a dwell, at the relaxed standoff. Phase 2
+    // replaces that one call with the incident queue — the rest of this loop is unchanged.
     observe() {
       if (reduced) return;
-      this.relocating = true; this.focusTicks = 0; this.vAxis = 0; this.td = WATCH_NEAR;
+      this.relocating = true; this.dwellTicks = 0; this.vAxis = 0; this.td = AMBIENT_STANDOFF;
       const tick = () => {
-        if (this.patching) return;   // Phase 4: runPatch is driving the hat panda; it restarts observe() when done
+        if (paused) { this.after(PAUSE_POLL, tick); return; }
         if (this.knocked) { this.after(this.moveSpeed, tick); return; }
-        // choose / rotate the line being overseen — after its lock, move to another
-        const live = lines.filter(l => l.members.length >= 2);   // a real conga (2+ walking together), not a lone seed leader
-        if (!this.watchLine || !live.includes(this.watchLine) || --this.focusTicks <= 0) {
-          const others = live.filter(l => l !== this.watchLine);
-          const next = others.length ? pick(others) : (live.length ? this.watchLine : null);
-          if (next && next !== this.watchLine) {        // new team — relocate to a fresh vantage
-            this.relocating = true; this.td = WATCH_NEAR; this.vAxis = bestAxis(next, this, WATCH_NEAR);
-            this.gazeTicks = 0;                          // re-pick the scan target for the new line
+        // choose / rotate the subject when the dwell runs out. A subject that gets knocked
+        // mid-dwell is kept — watching it fall and pick itself up is the point.
+        if (!this.subject || --this.dwellTicks <= 0) {
+          const next = pickSubject(this);
+          if (next && next !== this.subject) {          // fresh subject — go find a vantage on it
+            this.td = AMBIENT_STANDOFF;
+            this.relocating = true; this.vAxis = bestAxis(next, this, this.td);
+            this.gazeTicks = 0;
           }
-          this.watchLine = next;
-          const ms = FOCUS_MIN + Math.random() * (FOCUS_MAX - FOCUS_MIN);
-          this.focusTicks = Math.max(1, Math.round(ms / this.moveSpeed));
+          this.subject = next;
+          const ms = DWELL_MIN + Math.random() * (DWELL_MAX - DWELL_MIN);
+          this.dwellTicks = Math.max(1, Math.round(ms / this.moveSpeed));
         }
-        const line = this.watchLine;
-        if (!line) {                                    // no lines yet — amble gently
+        const s = this.subject;
+        if (!s) {                                       // nobody to watch — amble gently
           this.el.classList.remove('observing');
           if (this.animation !== 'walk') this.setAnimation('walk');
           this.wanderStep();
           this.after(this.moveSpeed, tick);
           return;
         }
-        const lx = line.leader.x, ly = line.leader.y;
-        const ox = this.x - lx, oy = this.y - ly, dist = Math.hypot(ox, oy) || 1;
-        const losBlocked = crossesFence(this.x, this.y, lx, ly);  // hero card between us and the line
+        const ox = this.x - s.x, oy = this.y - s.y, dist = Math.hypot(ox, oy) || 1;
+        const losBlocked = crossesFence(this.x, this.y, s.x, s.y);  // hero card in the way
         let maxDot = -Infinity;                         // how close the bearing is to a sprite axis
         for (const [ux, uy] of AXES) { const d = (ox * ux + oy * uy) / dist; if (d > maxDot) maxDot = d; }
         const angleOff = maxDot < AXIS_COS;
+        const near = this.td - STEP, far = this.td * STANDOFF_SLACK;
         // triggers: drifted too far, view blocked by the card, or facing gone off-axis
         if (!this.relocating) {
-          if (dist > WATCH_FAR || losBlocked) {
-            this.relocating = true; this.td = WATCH_NEAR; this.vAxis = bestAxis(line, this, this.td);
+          if (dist > far || losBlocked) {
+            this.relocating = true; this.vAxis = bestAxis(s, this, this.td);
           } else if (angleOff) {                        // sidestep at the current distance to re-align
-            this.relocating = true; this.td = Math.min(WATCH_FAR, Math.max(WATCH_NEAR, dist));
-            this.vAxis = bestAxis(line, this, this.td);
+            this.relocating = true; this.vAxis = bestAxis(s, this, Math.max(this.td, dist));
           }
         }
         if (this.relocating) {                          // walk to the chosen axis standoff, then plant
           this.el.classList.remove('observing');
           if (this.animation !== 'walk') this.setAnimation('walk');
-          const tx = lx + AXES[this.vAxis][0] * this.td, ty = ly + AXES[this.vAxis][1] * this.td;
+          const tx = s.x + AXES[this.vAxis][0] * this.td, ty = s.y + AXES[this.vAxis][1] * this.td;
           const rx = tx - this.x, ry = ty - this.y;
           this.stepWeaving(tx, ty);                     // weaves around the troupe + routes the card
           const reached = rx * rx + ry * ry <= (STEP * 1.3) ** 2;
-          const settled = !losBlocked && !angleOff && dist >= WATCH_NEAR - STEP && dist <= WATCH_FAR;
+          const settled = !losBlocked && !angleOff && dist >= near && dist <= far;
           if (reached || settled) this.relocating = false;
         } else {                                        // planted — idle bob + an attentive scan
           if (this.animation !== 'idle') this.setAnimation('idle');   // f1 settled pose, not the f0 stride
           this.el.classList.add('observing');
           // if the troupe crowds our vantage while we're planted, quietly relocate to clearer
-          // air (bestAxis now avoids clusters) — the observer keeps its own space.
+          // air (bestAxis avoids clusters) — the watcher keeps its own space.
           if (crowdAt(this.x, this.y, this) > CROWD_BUMP) {
-            this.relocating = true; this.td = Math.max(WATCH_NEAR, Math.min(WATCH_FAR, dist));
-            this.vAxis = bestAxis(line, this, this.td);
+            this.relocating = true; this.vAxis = bestAxis(s, this, Math.max(this.td, Math.min(far, dist)));
           }
-          // scan: every few seconds shift the gaze to a fresh point along the line (leader /
-          // middle / tail / a brief look-around), hold, then move on — attentive study, using
-          // only existing facings (no new cels). Amplitude stays small, so it never spins.
+          // scan: every few seconds shift the gaze to a fresh point, hold, then move on —
+          // attentive study, using only existing facings (no new cels). Amplitude stays
+          // small, so it never spins.
           if ((this.gazeTicks = (this.gazeTicks || 0) - 1) <= 0) {
             this.gazeTicks = Math.max(1, Math.round((GAZE_MIN + Math.random() * (GAZE_MAX - GAZE_MIN)) / this.moveSpeed));
-            this.gazeTarget = pickGaze(line);
+            this.gazeTarget = pickGaze(s, this);
           }
-          const g = this.gazeTarget || line.leader;
+          const g = this.gazeTarget || s;
           const faceDir = heading(g.x - this.x, g.y - this.y, 8);
           if (faceDir && faceDir !== this.direction) {
             this.direction = faceDir; this.turnIndex = DIRS.indexOf(faceDir); this.setFacing();
@@ -448,7 +453,7 @@
       let bi = -1, bcx = this.x, bcy = this.y;
       let best = -WEAVE_CROWD_W * crowdAt(this.x, this.y, this) - WEAVE_HOLD_BIAS;
       for (let i = 0; i < DIRS.length; i++) {
-        const cx = Math.round(this.x + AXES[i][0] * STEP), cy = Math.round(this.y + AXES[i][1] * STEP);
+        const [cx, cy] = stepCell(this.x, this.y, i);
         if (!inBounds(cx, cy)) continue;                     // off-stage or into the card
         const score = (AXES[i][0] * ux + AXES[i][1] * uy) - WEAVE_CROWD_W * crowdAt(cx, cy, this);
         if (score > best) { best = score; bi = i; bcx = cx; bcy = cy; }
@@ -471,7 +476,8 @@
     }
     knock() {
       if (this.knocked) return;
-      this.knocked = true; this.stopped = true;
+      this.anomaly = null;         // a real knock outranks whatever it was doing
+      this.knocked = true;
       this.el.classList.add('stop');
       this.setFacing();
       this.slide();
@@ -483,7 +489,7 @@
       this.after(a, () => this.setAnimation('fallen'));
       this.after(a + b, () => this.setAnimation('standUp'));
       this.after(a + b + c, () => {
-        this.hit = false; this.knocked = false; this.stopped = false;
+        this.hit = false; this.knocked = false;
         this.el.classList.remove('stop');
         if (this.hasHat && this.hatLost) { this.retrieveHat(); return; }
         this.setAnimation('walk');
@@ -524,6 +530,7 @@
       let steps = 0;
       const stride = () => {
         if (this.knocked || !this.hatRest) return;   // a fresh knock re-enters here after stand-up
+        if (paused) { this.after(PAUSE_POLL, stride); return; }
         const d = heading(this.hatRest.x - 32 - this.x, this.hatRest.y - 50 - this.y);
         if (!d || ++steps > 30) { this.pickUpHat(); return; }
         this.direction = d; this.turnIndex = DIRS.indexOf(d);
@@ -549,10 +556,98 @@
       });
     }
     tap() { // our one addition
-      if (this.knocked || reduced || this.inLine || this.joining || this.observer) return;
+      if (this.knocked || reduced || this.solid || this.observer) return;
       this.hit = this.defaultFallDirection;
       this.direction = this.defaultFallDirection;
       this.knock();
+    }
+
+    // ---- tier 1: individual weirdness ----
+    // One roamer at a time goes strange, then recovers. Each is a self-contained sequence
+    // that owns the panda for its duration: moveAbout() steps aside while `anomaly` is set,
+    // and every step re-checks `owns()` so a real knock (which clears `anomaly`) or a pause
+    // can take the panda back without the sequence fighting for it.
+    //
+    // The lifespans are deliberately unequal — a nap is twenty seconds, a trip is over in
+    // one. That spread is the timing design: with independent clocks and one watcher, its
+    // early / on-time / too-late arrivals fall out on their own. Never script lateness.
+    // Ownership is `anomaly === tag` alone. A real knock clears `anomaly`, so the running
+    // sequence sees it lost the panda and stops — while lieDown, which sets `knocked` on
+    // purpose, keeps it.
+    beginAnomaly(tag) {
+      this.anomaly = tag;
+      this.moveQueued = false;     // drop any wander stride still queued
+      return () => this.anomaly === tag;
+    }
+    endAnomaly() {
+      this.anomaly = null;
+      this.knocked = false;
+      this.el.classList.remove('stop');
+      this.setAnimation('walk');
+      this.moveAbout();
+    }
+    // hold the fallen pose for `ms`, then get up and carry on. `knocked` is set for the
+    // duration so the panda can't be re-knocked while it is already on the ground — and so
+    // a roamer that walks into it trips over it, which is free and funny.
+    lieDown(owns, ms, then) {
+      this.knocked = true;
+      this.el.classList.add('stop');
+      this.setAnimation('fall');
+      const fall = FRAME_MS * ANIM.fall.length;
+      this.after(fall, () => { if (owns()) this.setAnimation('fallen'); });
+      this.after(fall + ms, () => { if (owns()) this.setAnimation('standUp'); });
+      this.after(fall + ms + FRAME_MS * ANIM.standUp.length, () => {
+        if (owns()) (then || (() => this.endAnomaly()))();
+      });
+    }
+    // SLEEPER — stops mid-walk and lies down deliberately: no slide, no impact, just a panda
+    // that stops being a panda for a while. The long one; the watcher usually catches it.
+    sleeper() {
+      const owns = this.beginAnomaly('sleeper');
+      this.lieDown(owns, SLEEP_MIN + Math.random() * (SLEEP_MAX - SLEEP_MIN));
+    }
+    // TUMBLER — trips on nothing: a few quick facing flips while it skids a short way, then
+    // it lands splayed and picks itself up. Instant; always inspected after the fact.
+    tumbler() {
+      const owns = this.beginAnomaly('tumbler');
+      const [ux, uy] = AXES[this.turnIndex];
+      let i = 0;
+      const skid = () => {
+        if (!owns()) return;
+        if (paused) { this.after(PAUSE_POLL, skid); return; }
+        if (i++ >= TRIP_TICKS) { this.lieDown(owns, TRIP_DOWN_MS); return; }
+        this.turnIndex = (this.turnIndex + 1) % 8;
+        this.direction = DIRS[this.turnIndex];
+        this.setFacing(); this.freezeFrame();
+        this.applyPos(Math.round(this.x + ux * TRIP_SLIDE / TRIP_TICKS),
+                      Math.round(this.y + uy * TRIP_SLIDE / TRIP_TICKS));
+        this.after(TRIP_TICK_MS, skid);
+      };
+      this.el.classList.add('stop');   // the skid is driven tick by tick, not glided
+      this.setAnimation('stop');       // hold one cel; the facing flips are the motion
+      skid();
+    }
+    // SPINNER — spins on the spot, then staggers a few steps in random directions and walks
+    // on as if nothing happened. Short.
+    spinner() {
+      const owns = this.beginAnomaly('spinner');
+      spin3d([this], SPIN_MS, () => {
+        if (!owns()) return;
+        let n = 2 + Math.floor(Math.random() * 2);       // 2–3 stagger steps
+        this.setAnimation('walk');                       // once — per-tick would restart the cycle
+        const stagger = () => {
+          if (!owns()) return;
+          if (paused) { this.after(PAUSE_POLL, stagger); return; }
+          if (n-- <= 0) { this.endAnomaly(); return; }
+          this.turnIndex = Math.floor(Math.random() * 8);
+          this.direction = DIRS[this.turnIndex];
+          this.setFacing();
+          const [cx, cy] = stepCell(this.x, this.y, this.turnIndex);
+          this.applyPos(cx, cy);
+          this.after(STAGGER_MS, stagger);
+        };
+        stagger();
+      }, owns);
     }
   }
 
@@ -560,7 +655,7 @@
   const overlap = (a, b) => Math.abs(a - b) < 20;
   const allCorners = () => [...stage.querySelectorAll('.hit_corner')];
   function collisionCheck() {
-    if (document.hidden || frozen) return;   // Phase 4: nobody moves during a patch — no new collisions to resolve
+    if (paused) return;
     const corners = allCorners();
     const hits = new Map(); // panda -> {pos: true}
     for (let i = 0; i < corners.length; i++) {
@@ -568,13 +663,12 @@
       for (let j = i + 1; j < corners.length; j++) {
         const b = corners[j];
         const pa = a.panda, pb = b.panda;
-        // entering pandas (walk-in) and the observer (hat panda) are pure ghosts. A
-        // conga panda (in line or joining) is an unstoppable force: it knocks a free
-        // roamer aside without being knocked, and two conga pandas pass through each other.
+        // entering pandas (walk-in), the hat panda, and anything mid-arc are pure ghosts.
+        // A `solid` panda (Phase 4: the stack's bottom) is an unstoppable force: it knocks
+        // a roamer aside without being knocked, and two solids pass through each other.
         if (pa === pb || pa.entering || pb.entering || pa.observer || pb.observer ||
-            pa.flying || pb.flying) continue;   // Phase 4: a panda in mid-fling is a ghost
-        const solidA = pa.inLine || pa.joining;
-        const solidB = pb.inLine || pb.joining;
+            pa.flying || pb.flying) continue;
+        const solidA = pa.solid, solidB = pb.solid;
         if (solidA && solidB) continue;
         const br = b.getBoundingClientRect();
         if (overlap(ar.x, br.x) && overlap(ar.x + ar.width, br.x + br.width) &&
@@ -600,7 +694,7 @@
     });
   }
 
-  // ---- Phase 1: the staggered walk-in ----
+  // ---- the staggered walk-in ----
   const LEAD_GAP = 1800;      // the hat panda gets a solo beat before the troupe
   const WAVE_GAP = 1050;      // then pandas arrive a couple at a time
   const WAVE_SIZE = 2;        // "a couple"
@@ -609,176 +703,42 @@
 
   const pandas = [];
 
-  // Phase 4: while an intervention runs, the whole troupe holds still (the pause)
-  // and only the hat panda + the two spotlit lines move. Every recurring loop
-  // (wander, line step, observe, line management) checks this and idles.
-  let frozen = false;
-
-  // ===================== conga lines (Phase 2) =====================
-  // A line is a follow-the-leader chain: the leader wanders and every follower
-  // steps into the cell the panda ahead just vacated (a snake). Because each
-  // follower copies its predecessor's move, a heading change at the front ripples
-  // down the line — the exact mechanic Phase 4 (activation patching) leans on.
-  const LINE_CAP = 5;          // pandas per line — raised 3→5 so a patch bend has downstream runway (Phase 4)
-  const MAX_LINES = 2;         // lines that nucleate; a patch split can push the live count to 3 transiently
-  const LINE_STEP_MS = 950;    // a line advances one stride on this clock
-  const LINE_TURN_P = 0.35;    // chance the leader eases into a turn each stride
-  const JOIN_RADIUS = 340;     // a free panda within this of a tail can be recruited
-  const MANAGE_START = 4200;   // let the entrance breathe before any line forms
-  const MANAGE_MS = 2600;      // cadence of the nucleate / recruit check
-
-  // ---- Phase 5: line lifecycle — dissolve & reform so the scene keeps breathing ----
-  // Without this every panda eventually ends up in a permanent line, the roamer pool
-  // dries up, and the form→patch→reform loop dies. Two dissolve triggers (per the
-  // open decision in panda-choreography.md): a line disbands a few seconds after it
-  // takes part in a patch ("the experiment is done"), and every line has a max age so
-  // un-patched lines don't live forever. Dissolved members return to roaming, where
-  // manageLines re-recruits them into fresh lines — the reform half of the loop.
-  const LINE_MAX_LIFE = 42000;   // base max age for a line before it disbands on its own
-  const LINE_LIFE_JITTER = 12000;// ± spread so lines don't all expire in lockstep (→ 30–54s)
-  const POST_PATCH_LIFE = 8000;  // a patched line's two halves disband this soon after the split,
-                                 // long enough to watch the bent tail diverge and walk away first
-  const DISSOLVE_STAGGER = 240;  // members peel off one-by-one (a ripple), not all at once
-  const lifeSpan = () => LINE_MAX_LIFE + (Math.random() * 2 - 1) * LINE_LIFE_JITTER;
-
-  const lines = [];
   const inBounds = (x, y) =>
     x > -40 && x < stage.clientWidth - 60 &&
     y > -40 && y < stage.clientHeight - 60 && !inForbid(x, y);
-  const dist2 = (ax, ay, bx, by) => (ax - bx) ** 2 + (ay - by) ** 2;
-  const isFree = p => !p.hasHat && !p.entering && !p.inLine && !p.joining && !p.knocked;
+  const isFree = p => !p.hasHat && !p.entering && !p.knocked;
   const freePandas = () => pandas.filter(isFree);
 
-  class Line {
-    constructor(leader) {
-      leader.inLine = this; leader.joining = false; leader.moveQueued = false;
-      leader.setAnimation('walk');
-      this.members = [leader];
-      this.dissolving = false;
-      this.armLife(lifeSpan());   // Phase 5: age out on its own if never patched
-      this.step();
-    }
-    get leader() { return this.members[0]; }
-    get tail() { return this.members[this.members.length - 1]; }
-    get full() { return this.members.length >= LINE_CAP; }
-    // the slot one stride behind the tail (opposite its facing) — a recruit's target
-    tailSlot() {
-      const t = this.tail, d = t.direction;
-      return [t.x + (d.includes('left') ? STEP : d.includes('right') ? -STEP : 0),
-              t.y + (d.includes('up') ? STEP : d.includes('down') ? -STEP : 0)];
-    }
-    // the leader's next cell: ease into a gentle turn now and then, else go straight;
-    // rotate to the first legal heading when the chosen one hits an edge or the fence
-    leaderNext() {
-      const L = this.leader;
-      const ti = L.turnIndex + (Math.random() < LINE_TURN_P ? pick([-1, 1]) : 0);
-      for (let r = 0; r < 8; r++) {
-        const k = ((ti + r) % 8 + 8) % 8, dir = DIRS[k];
-        const nx = L.x + (dir.includes('left') ? -STEP : dir.includes('right') ? STEP : 0);
-        const ny = L.y + (dir.includes('up') ? -STEP : dir.includes('down') ? STEP : 0);
-        if (inBounds(nx, ny)) { L.turnIndex = k; L.direction = dir; return [nx, ny]; }
-      }
-      return [L.x, L.y];                                // fully boxed in — hold this stride
-    }
-    step() {
-      if (!this.members.length) return;                // dissolved (Phase 5)
-      if (frozen) { this.timer = setTimeout(() => this.step(), 300); return; }  // Phase 4: hold during a patch
-      const old = this.members.map(m => [m.x, m.y]);
-      const [lx, ly] = this.leaderNext();
-      if (lx !== old[0][0] || ly !== old[0][1]) {       // skip the stride entirely if the leader is boxed
-        const next = [[lx, ly]];
-        for (let i = 1; i < this.members.length; i++) next.push(old[i - 1]);   // into the vacated cell
-        for (let i = 0; i < this.members.length; i++) {
-          const m = this.members[i], nx = next[i][0], ny = next[i][1];
-          const dir = heading(nx - old[i][0], ny - old[i][1]);                 // propagated heading
-          if (dir) { m.direction = dir; m.turnIndex = DIRS.indexOf(dir); m.setFacing(); }
-          m.setPos(nx, ny);
-        }
-      }
-      this.timer = setTimeout(() => this.step(), LINE_STEP_MS);
-    }
-    admit(p) {
-      p.joining = false; p.inLine = this; p.moveQueued = false;
-      p.setAnimation('walk');
-      this.members.push(p);                             // next step() snaps it into formation
-    }
-    // Phase 5: (re)schedule when this line disbands. armLife clears any prior timer, so
-    // a patch can shorten a line's remaining life (POST_PATCH_LIFE) over its birth age.
-    armLife(ms) {
-      clearTimeout(this.lifeTimer);
-      this.lifeTimer = setTimeout(() => this.dissolve(), ms);
-    }
-    // disband: stop the snake, drop out of lines[], and release every member back to
-    // roaming (staggered, so they peel off in a ripple). manageLines then re-recruits
-    // them into fresh lines — the reform half of the loop.
-    dissolve() {
-      if (this.dissolving || !this.members.length) return;
-      if (frozen) { this.armLife(1000); return; }   // never disband a line mid-patch — wait out the freeze
-      this.dissolving = true;
-      clearTimeout(this.timer);                     // stop stepping the snake
-      clearTimeout(this.lifeTimer);
-      const idx = lines.indexOf(this);
-      if (idx >= 0) lines.splice(idx, 1);
-      const members = this.members;
-      this.members = [];                            // step()/manageLines/observe now treat it as gone
-      members.forEach((m, i) => {
-        if (m.inLine && m.inLine !== this) return;  // already moved to another line somehow
-        m.inLine = false; m.joining = false;
-        m.after(i * DISSOLVE_STAGGER, () => {
-          if (m.inLine || m.joining) return;        // got recruited during the peel-off — leave it
-          m.setAnimation('walk');
-          m.moveAbout();
-        });
-      });
-    }
-  }
-
-  // periodically seed a leader and recruit nearby roamers to a tail, one line at a
-  // time. Dissolution / growth-past-cap are Phase 5; here lines form and persist.
-  function manageLines() {
-    if (frozen) { setTimeout(manageLines, 500); return; }   // Phase 4: no new recruiting mid-patch
-    for (let i = lines.length - 1; i >= 0; i--) if (!lines[i].members.length) lines.splice(i, 1);
-
-    for (const line of lines) {                          // recruit for any non-full line
-      if (line.full || pandas.some(p => p.joining === line)) continue;   // one recruit inbound at a time
-      const [tx, ty] = line.tailSlot();
-      let best = null, bd = JOIN_RADIUS ** 2;
-      for (const p of freePandas()) {
-        const d = dist2(p.x, p.y, tx, ty);
-        if (d < bd) { bd = d; best = p; }
-      }
-      if (best) best.joinLine(line);
-    }
-
-    // nucleate the next line only once the current ones are full — sequential, calm
-    if (lines.length < MAX_LINES && lines.every(l => l.full) && freePandas().length >= LINE_CAP) {
-      lines.push(new Line(pick(freePandas())));
-    }
-    setTimeout(manageLines, MANAGE_MS);
-  }
-
-  // ---- Phase 3: the hat panda oversees the lines from a distance ----
-  const WATCH_BASE = 150;              // the base standoff unit
-  const WATCH_NEAR = WATCH_BASE * 3;   // it plants (and relocates back) to 3× the base
-  const WATCH_FAR  = WATCH_BASE * 5;   // it only relocates once a line drifts past 5×
-  const FOCUS_MIN = 15000, FOCUS_MAX = 30000;   // it locks onto one line 15–30s before moving on
+  // ---- the hat panda's attention: standoffs, gaze, vantage scoring ----
+  const INSPECT_NEAR = 140;            // standoff while studying one subject up close (Phase 2)
+  const AMBIENT_STANDOFF = 280;        // the relaxed distance it keeps when nothing is wrong
+  const STANDOFF_SLACK = 1.7;          // it only relocates once the subject drifts past td × this
+  const DWELL_MIN = 8000, DWELL_MAX = 18000;   // it holds one ambient subject this long before moving on
   const AXIS_COS = Math.cos(22.5 * Math.PI / 180); // re-align once the bearing drifts 22.5° off an axis
                                                    // (the half-angle between 8 axes — max tolerance; past it a
                                                    // neighbouring axis is closer anyway). Tames the over-frequent
                                                    // sidesteps; drops further once 16 real sprite angles land.
-  // the 8 exact sprite headings as unit vectors. The observer stands on one of these
-  // axes from the line, so its facing lands dead-on — the sprite has no 360° angle.
+  // the 8 exact sprite headings as unit vectors. The watcher stands on one of these
+  // axes from its subject, so its facing lands dead-on — the sprite has no 360° angle.
   const AXES = DIRS.map(d => {
     let ux = d.includes('left') ? -1 : d.includes('right') ? 1 : 0;
     let uy = d.includes('up') ? -1 : d.includes('down') ? 1 : 0;
     if (ux && uy) { ux *= Math.SQRT1_2; uy *= Math.SQRT1_2; }
     return [ux, uy];
   });
+  // the cell one ordinary stride away along heading index i — ±STEP per axis, exactly as
+  // wanderStep moves. AXES is the *normalized* form and is only for scoring bearings;
+  // stepping along it made the watcher's diagonal strides 50px against everyone else's 71.
+  const stepCell = (x, y, i) => {
+    const d = DIRS[i];
+    return [x + (d.includes('left') ? -STEP : d.includes('right') ? STEP : 0),
+            y + (d.includes('up') ? -STEP : d.includes('down') ? STEP : 0)];
+  };
 
-  // ---- Phase 3 refinement (2026-07-23): the observer navigates *around* the troupe and
-  // scans the line while watching — a deliberate agent, not a ghost drifting through. Code +
-  // existing cels only (no new sprite art, per Ameya's no-AI-art call). It stays a collision
-  // ghost underneath, so avoidance is a preference that can never wedge it. ----
+  // the watcher navigates *around* the troupe and scans its subject while watching — a
+  // deliberate agent, not a ghost drifting through. Code + existing cels only (no new sprite
+  // art, per Ameya's no-AI-art call). It stays a collision ghost underneath, so avoidance is
+  // a preference that can never wedge it.
   const AVOID_R = 85;          // personal-space radius: pandas within this crowd a cell/vantage
   const WEAVE_CROWD_W = 0.7;   // crowd vs. progress trade-off while weaving toward a vantage
   const WEAVE_HOLD_BIAS = 0.12;// a forward step must beat standing still by this, else it holds a tick
@@ -797,114 +757,127 @@
     }
     return c;
   };
-  // a point for the observer to rest its gaze on — mostly along the watched line
-  // (leader / middle / tail), occasionally a brief glance to the side (look-around).
-  const pickGaze = line => {
+  // the nearest other panda to `s`, so the watcher's gaze can flick to a bystander
+  const nearestTo = (s, ...skip) => {
+    let best = null, bd = Infinity;
+    for (const q of pandas) {
+      if (q === s || skip.includes(q) || q.entering) continue;
+      const d = (q.x - s.x) ** 2 + (q.y - s.y) ** 2;
+      if (d < bd) { bd = d; best = q; }
+    }
+    return best;
+  };
+  // a point for the watcher to rest its gaze on — mostly the subject itself, sometimes a
+  // bystander beside it, occasionally a brief glance to the side (look-around).
+  const pickGaze = (subject, self) => {
     const r = Math.random();
-    if (r < 0.30) return line.leader;
-    if (r < 0.55) return line.tail;
-    if (r < 0.80) return line.members[Math.floor(line.members.length / 2)] || line.leader;
+    if (r < 0.55) return subject;
+    if (r < 0.80) { const n = nearestTo(subject, self); if (n) return n; }
     const off = 60;
-    return { x: line.leader.x + (Math.random() * 2 - 1) * off,
-             y: line.leader.y + (Math.random() * 2 - 1) * off };
+    return { x: subject.x + (Math.random() * 2 - 1) * off,
+             y: subject.y + (Math.random() * 2 - 1) * off };
+  };
+  // what the watcher attends to when nothing is anomalous: a panda somewhere out in the
+  // field, preferring ones it isn't already standing on top of. Phase 2 puts the incident
+  // queue in front of this — this stays as the fallback when the queue is empty.
+  const pickSubject = self => {
+    const pool = freePandas().filter(p => p !== self &&
+      (p.x - self.x) ** 2 + (p.y - self.y) ** 2 > (AMBIENT_STANDOFF * 0.5) ** 2);
+    return pool.length ? pick(pool) : (freePandas().find(p => p !== self) || null);
   };
 
-  // the axis whose standoff point (td from the line's front) is nearest the panda AND least
-  // crowded, is on stage, and has a clear line of sight to the line; else the least-bad one
-  const bestAxis = (line, p, td) => {
-    const lx = line.leader.x, ly = line.leader.y;
-    let bi = -1, bs = Infinity, fi = 0, fs = Infinity;
+  // the axis whose standoff point (td from the subject) is nearest the panda AND least
+  // crowded, is on stage, and has a clear line of sight to the subject. Failing that, the
+  // best *on-stage* one (a vantage off the edge is worse than one with a blocked view);
+  // failing even that, the least-bad by score.
+  const bestAxis = (subject, p, td) => {
+    const lx = subject.x, ly = subject.y;
+    let bi = -1, bs = Infinity, oi = -1, os = Infinity, fi = 0, fs = Infinity;
     for (let i = 0; i < AXES.length; i++) {
       const vx = lx + AXES[i][0] * td, vy = ly + AXES[i][1] * td;
       const s = (vx - p.x) ** 2 + (vy - p.y) ** 2 + AXIS_CROWD_W * crowdAt(vx, vy, p);  // near AND clear of the troupe
-      if (s < fs) { fs = s; fi = i; }                          // least-bad fallback
-      if (!inBounds(vx, vy) || crossesFence(vx, vy, lx, ly)) continue;   // on stage, clear view
+      if (s < fs) { fs = s; fi = i; }                          // least-bad of all
+      if (!inBounds(vx, vy)) continue;                         // never send it off-stage or into the card
+      if (s < os) { os = s; oi = i; }                          // best on-stage, view allowed to be blocked
+      if (crossesFence(vx, vy, lx, ly)) continue;              // …and a clear view
       if (s < bs) { bs = s; bi = i; }
     }
-    return bi >= 0 ? bi : fi;
+    return bi >= 0 ? bi : oi >= 0 ? oi : fi;
   };
 
-  // ===================== activation patching (Phase 4) =====================
-  // Freeze the troupe, spotlight two lines, then the hat panda grabs a panda off
-  // line B, spins, and flings it into line A's upper-middle. On resume the tail
-  // from the insertion point peels onto B's heading and walks off as its own line
-  // while the front holds A's heading — the "bend" is the snake engine propagating
-  // the injected heading down the chain, and splitting it into a second line keeps
-  // that bend on screen instead of letting the tail re-trace the old leader.
-  const PATCH_STEP      = 360;    // the hat panda's brisk cadence while intervening
-  const PATCH_MIN_LEN   = 3;      // a line must be at least this long to take part (target and source)
-  const PATCH_INSERT_K  = 2;      // insert here: this many pandas stay clean ahead, the rest bend
-  const PATCH_MIN_ANGLE = 45;     // the two lines' headings must differ by at least this (a real contrast)
-  const FLING_MS        = 680;    // the cross-gap throw — rAF parabolic arc
-  const SPIN_MS         = 850;    // the wind-up spin (~2 turns through the 8 facings)
-  const SPIN_STEP_MS    = 55;     // how fast the spin flips from one facing to the next
-  const GRAB_LIFT       = 24;     // how far the grabbed panda is hoisted above the hat panda
-  const PUSH_DIST       = 95;     // how far the swapped-out (displaced) panda is shoved clear of the line
-  const PATCH_SETTLE    = 2600;   // after the swap, hold the frozen + spotlit tableau, then release motion AND shading together
-  const PATCH_MAX_MS    = 30000;  // watchdog: force-resume if a sequence ever wedges (e.g. tab backgrounded mid-throw)
-  const PATCH_GAP_MIN   = 20000, PATCH_GAP_MAX = 30000;   // ~once per 20–30s
-  const PATCH_KICK      = 12000;  // first attempt — let two lines form and fill first
+  // ===================== the director =====================
+  // One scheduler owns every rate in the scene. The governing principle is *variety over
+  // frequency*: the baseline stays calm — at a glance, wandering pandas and maybe one odd
+  // thing — and the sense of chaos comes from many different kinds of rare event, not from
+  // a higher event rate. So this stays slow, and later phases add kinds rather than turning
+  // the dial up.
+  //
+  // Every behaviour is an individual malfunctioning. No formations, no coordinated walks:
+  // that was the lesson of the retired conga lines, where coordination read as notation
+  // instead of character.
+  const ANOM_GAP_MIN = 7000, ANOM_GAP_MAX = 14000;  // one tier-1 anomaly begins in this window
+  const ANOM_KICK = 9000;        // let the entrance land before anything goes strange
 
-  const dirVec = d => [d.includes('left') ? -1 : d.includes('right') ? 1 : 0,
-                       d.includes('up')   ? -1 : d.includes('down')  ? 1 : 0];
-  const angleBetween = (d1, d2) => {
-    const a = dirVec(d1), b = dirVec(d2);
-    const na = Math.hypot(a[0], a[1]) || 1, nb = Math.hypot(b[0], b[1]) || 1;
-    const c = Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1]) / (na * nb)));
-    return Math.acos(c) * 180 / Math.PI;
-  };
-  // shove a displaced panda clear of the line: perpendicular to the line heading `d`,
-  // on whichever side stays on stage. Returns the target cell.
-  const pushAside = (p, d) => {
-    const [ax, ay] = dirVec(d);
-    for (const [ux, uy] of [[-ay, ax], [ay, -ax]]) {
-      const n = Math.hypot(ux, uy) || 1;
-      const nx = p.x + (ux / n) * PUSH_DIST, ny = p.y + (uy / n) * PUSH_DIST;
-      if (inBounds(nx, ny)) return [Math.round(nx), Math.round(ny)];
-    }
-    return [p.x, p.y];
-  };
+  const SLEEP_MIN = 8000, SLEEP_MAX = 20000;  // how long a sleeper lies there — the long one
+  const SPIN_MS = 1200;          // the spinner's turn on the spot
+  const STAGGER_MS = 190;        // and its quick recovery steps
+  const TRIP_TICKS = 4;          // the tumbler's facing flips as it skids
+  const TRIP_TICK_MS = 60;
+  const TRIP_SLIDE = 46;         // how far the trip carries it
+  const TRIP_DOWN_MS = 900;      // barely on the ground at all — over before you look
 
-  // build a Line from an existing set of members (used by the split), leader facing `dir`
-  function makeLine(members, dir) {
-    const L = Object.create(Line.prototype);
-    L.members = members;
-    L.timer = null;
-    L.dissolving = false;
-    members.forEach(m => { m.inLine = L; m.joining = false; m.moveQueued = false; m.knocked = false; m.setAnimation('walk'); });
-    const lead = members[0];
-    lead.direction = dir; lead.turnIndex = DIRS.indexOf(dir); lead.setFacing();
-    L.armLife(lifeSpan());   // Phase 5: default age; runPatch shortens it to POST_PATCH_LIFE for the split halves
-    L.step();
-    return L;
+  // the standing anchor. One roamer, chosen at spawn, that is never picked for anything:
+  // no anomaly now, no mounting later, never targeted by cascade steering. Chance
+  // collisions may still knock it, which keeps it honest. Every big event wants a comic
+  // foil, and the panda that does nothing is the biggest mystery of all.
+  const OBLIVIOUS_R = 110;                    // the patch it keeps to. An ordinary roamer only
+                                              // covers ~270px in this short band, so anything
+                                              // near 170 was indistinguishable from just walking.
+  const OBLIVIOUS_IDLE_P = 0.45;              // how often it just stands there
+  const OBLIVIOUS_IDLE_MIN = 2200, OBLIVIOUS_IDLE_MAX = 5200;
+
+  const ANOMALIES = ['sleeper', 'spinner', 'tumbler'];
+  let lastAnomaly = null;
+
+  // eligible: an ordinary roamer, on its feet, not already busy. Never the hat panda (it
+  // watches, it is never the thing watched), never the oblivious one, never a panda still
+  // walking in from off-stage.
+  const anomalyCandidates = () =>
+    pandas.filter(p => !p.hasHat && !p.oblivious && !p.entering && !p.knocked &&
+                       !p.anomaly && !p.solid && !p.flying);
+
+  function director() {
+    const next = () => setTimeout(director, ANOM_GAP_MIN + Math.random() * (ANOM_GAP_MAX - ANOM_GAP_MIN));
+    if (paused) { setTimeout(director, PAUSE_POLL); return; }   // don't spend an anomaly nobody can see
+    const pool = anomalyCandidates();
+    if (!pool.length) { next(); return; }
+    // never the same kind twice running — two naps in a row reads as a rule, not a quirk
+    const kinds = ANOMALIES.filter(k => k !== lastAnomaly);
+    const kind = pick(kinds);
+    lastAnomaly = kind;
+    pick(pool)[kind]();
+    next();
   }
 
-  // stride the hat panda to (tx,ty) at the brisk patch cadence, routing round the
-  // fence, then call cb. (stepToward already handles facing + the card detour.)
-  function walkHatTo(H, tx, ty, cb, alive) {
-    H.el.classList.remove('observing');
-    H.setAnimation('walk');
-    let steps = 0;
-    const stride = () => {
-      if (alive && !alive()) return;   // patch was force-ended (watchdog) — stop driving H
-      const dx = tx - H.x, dy = ty - H.y;
-      if (dx * dx + dy * dy <= (STEP * 1.4) ** 2 || ++steps > 40) { cb(); return; }
-      H.stepToward(tx, ty);
-      H.after(PATCH_STEP, stride);
-    };
-    stride();
-  }
+  // ===================== salvaged motion primitives =====================
+  // Both survive the retired patching system intact and are the movement vocabulary the
+  // chaos tiers are built from. spin3d drives the Spinner; throwArc is staged for the
+  // stack's mount hop and topple tosses (Phase 4) and has no caller yet, by design.
+
+  const SPIN_STEP_MS = 55;       // how fast a spin flips from one facing to the next
 
   // 3-D spin using the sprite art we already have: turn the actors through all 8
   // facings in rotational order (up → upright → right → …), which reads as spinning
   // in place — far truer to the pixel art than rotating the flat png. Actors hold a
-  // standing pose; each tick flips to the next facing.
+  // standing pose; each tick flips to the next facing. `alive` lets the caller abandon
+  // the spin midway (a spinning panda that gets knocked must stop spinning).
   function spin3d(actors, totalMs, cb, alive) {
     const ticks = Math.max(8, Math.round(totalMs / SPIN_STEP_MS));
     actors.forEach(p => p.setAnimation('stop'));
     let i = 0;
     const tick = () => {
-      if (alive && !alive()) return;   // patch was force-ended (watchdog) — stop the spin
+      if (alive && !alive()) return;
+      if (paused) { setTimeout(tick, PAUSE_POLL); return; }
       if (i++ >= ticks) { cb(); return; }
       actors.forEach(p => {
         p.turnIndex = (p.turnIndex + 1) % 8;
@@ -929,9 +902,8 @@
       p.flying = false;
       p.el.classList.remove('flinging', 'flying');
       p.direction = faceDir; p.turnIndex = DIRS.indexOf(faceDir); p.setFacing();
-      p.x = x1; p.y = y1; p.prev = [x1, y1];
-      p.el.style.marginLeft = x1 + 'px'; p.el.style.marginTop = y1 + 'px';
-      p.el.style.zIndex = Math.round(y1);
+      p.x = x1; p.y = y1;
+      p.applyTransform();
       cb();
     };
     const frame = t => {
@@ -939,8 +911,7 @@
       const k = Math.min(1, (t - start) / dur);
       const x = x0 + (x1 - x0) * k;
       const y = y0 + (y1 - y0) * k - peak * 4 * k * (1 - k);   // parabola, peak at k=0.5
-      p.el.style.marginLeft = x + 'px';
-      p.el.style.marginTop = y + 'px';
+      p.el.style.transform = `translate(${x}px, ${y}px)`;
       p.turnIndex = (base + Math.round(k * 16)) % 8;            // ~2 tumbles across the flight
       p.direction = DIRS[p.turnIndex]; p.setFacing(); p.freezeFrame();
       if (k < 1) requestAnimationFrame(frame); else finish();
@@ -949,123 +920,92 @@
     setTimeout(finish, dur + 200);   // fallback: rAF is paused when the tab is hidden — never wedge the sequence
   }
 
-  // the whole intervention, start to finish; calls done() when the scene is live again.
-  function runPatch(H, A, B, done) {
-    frozen = true;
-    H.patching = true;
-    stage.classList.add('intervening');
-    const spotted = new Set([...A.members, ...B.members, H]);   // everyone we dim-exempt (grows with the throw)
-    spotted.forEach(p => p.el.classList.add('spot'));
-    const dB = B.leader.direction;          // line B's heading = the value being patched in
-    const dA = A.leader.direction;
-    const grabbed = B.tail;                  // grab from B's tail so B's front chain stays intact
+  // ---- the composed tableau: what reduced motion gets instead of the live scene ----
+  // Not a random scatter — the frozen story. The troupe stands about; a 3-high stack is
+  // mid-parade; one panda is down; and the hat panda is planted at inspecting distance,
+  // facing it. Nothing is scheduled, so nothing ever moves.
+  //
+  // The art occupies rows 19–81 of the 100px cell (62px tall — that is what .hit_area is
+  // sized to), so a rise of exactly one body height puts a rider's feet on the head of the
+  // panda below. Any less and the two silhouettes merge into one blob: this sprite has no
+  // outline, so black meeting black reads as a smear rather than a stack.
+  const RIDER_RISE = 62;
+  const TABLEAU_GAP = 118;      // no two set pieces / bystanders closer than this — the point
+                                // of a composed tableau is that nothing lands on anything else
 
-    // Single terminal path — the scene is live again after this, whatever route got
-    // us here. A watchdog calls it too, so a wedged step (e.g. rAF paused because the
-    // tab was hidden mid-throw) can never leave the whole troupe frozen for good.
-    let finished = false;
-    const cleanup = () => {
-      if (finished) return; finished = true;
-      clearTimeout(guard);
-      frozen = false;
-      grabbed.flying = false;
-      grabbed.el.classList.remove('flinging', 'flying');
-      // if the watchdog fired mid-flight (grab → land), grabbed is in no line and has
-      // no movement loop — send it back to roaming so it can never be orphaned.
-      if (!grabbed.inLine) { grabbed.joining = false; grabbed.setAnimation('walk'); grabbed.moveAbout(); }
-      stage.classList.remove('intervening');
-      spotted.forEach(p => p.el.classList.remove('spot'));
-      H.patching = false;
-      H.observe();                                       // back to watching
-      done();
+  function tableau(place) {
+    const rest = (p, anim, dir) => {
+      p.direction = dir; p.turnIndex = DIRS.indexOf(dir); p.setFacing();
+      p.setAnimation(anim);
+      p.drawFrame();
     };
-    const guard = setTimeout(cleanup, PATCH_MAX_MS);
-    const alive = () => !finished;
+    // a spot from place() that also clears everything already staged
+    const taken = [];
+    const clearSpot = () => {
+      let best = null, bestD = -1;
+      for (let t = 0; t < 60; t++) {
+        const [x, y] = place();
+        let d = Infinity;
+        for (const [px, py] of taken) d = Math.min(d, Math.hypot(x - px, y - py));
+        if (d > bestD) { bestD = d; best = [x, y]; }
+        if (d >= TABLEAU_GAP) break;
+      }
+      taken.push(best);
+      return best;
+    };
+    const put = (x, y, hasHat = false) => {
+      const p = new Panda(x, y, hasHat);
+      pandas.push(p);
+      return p;
+    };
 
-    walkHatTo(H, grabbed.x, grabbed.y, () => {
-      if (finished) return;
-      if (B.tail === grabbed) B.members.pop();     // lift it out of line B
-      grabbed.inLine = false; grabbed.joining = false;
-      grabbed.flying = true;                       // ghost from the moment it's lifted (through spin + throw)
-      // GRAB: hoist the panda onto the hat panda (held just above it, so both read).
-      // .flinging drops the wrapper's 2s glide so placement + the arc are direct.
-      grabbed.el.classList.add('spot', 'flinging', 'flying'); spotted.add(grabbed);
-      grabbed.x = H.x; grabbed.y = H.y - GRAB_LIFT; grabbed.prev = [grabbed.x, grabbed.y];
-      grabbed.el.style.marginLeft = grabbed.x + 'px';
-      grabbed.el.style.marginTop = grabbed.y + 'px';
-      grabbed.el.style.zIndex = 9999;
-      // SPIN: the hat panda and the panda it's holding turn through all 8 facings
-      spin3d([H, grabbed], SPIN_MS, () => {
-        if (finished) return;
-        const k = Math.min(PATCH_INSERT_K, A.members.length);
-        const resident = A.members[k];                 // the panda whose slot gets patched — swapped out
-        const sx = resident ? resident.x : A.tail.x;    // land exactly on that slot
-        const sy = resident ? resident.y : A.tail.y;
-        // THROW: arc across the gap onto the slot
-        throwArc(grabbed, grabbed.x, grabbed.y, sx, sy, FLING_MS, dB, () => {
-          if (finished) return;
-          // SWAP: the thrown panda takes the slot, still facing its own heading dB. The
-          // resident is shoved clear of the line and sent roaming — the patched value
-          // replaces the original activation, which is discarded.
-          A.members.splice(k, resident ? 1 : 0, grabbed); grabbed.inLine = A;
-          if (resident) {
-            resident.inLine = false; resident.joining = false; resident.setAnimation('walk');
-            spotted.add(resident);
-            const [ex, ey] = pushAside(resident, dA);
-            const ed = heading(ex - resident.x, ey - resident.y);
-            if (ed) { resident.direction = ed; resident.turnIndex = DIRS.indexOf(ed); resident.setFacing(); }
-            resident.setPos(ex, ey);                     // shoved clear (glides via the 2s wrapper transition)
-            resident.moveAbout();                        // frozen-guarded → resumes roaming when the scene does
-          }
-          H.setAnimation('stop');
-          // SPLIT: peel the tail (thrown panda + downstream) onto dB as its own line. It's
-          // built frozen, so it won't step yet — nothing moves while the shading is up.
-          const tailMembers = A.members.splice(k);        // [grabbed, ...downstream]
-          tailMembers.forEach(p => spotted.add(p));
-          const tailLine = makeLine(tailMembers, dB);
-          lines.push(tailLine);
-          // Phase 5: the experiment is done — the line's two divergent halves (the clean
-          // front A and the peeled tail on B's heading) disband soon after they've walked
-          // apart, freeing their pandas to reform elsewhere. B (merely shortened, not split)
-          // keeps its own birth-armed lifetime.
-          [A, tailLine].forEach(l => l.members.length && l.armLife(POST_PATCH_LIFE));
-          // hold the frozen, spotlit tableau, then release motion AND shading together
-          // (cleanup unfreezes and un-dims in one step, so nobody moves while still shaded).
-          setTimeout(cleanup, PATCH_SETTLE);
-        });
-      }, alive);
-    }, alive);
-  }
+    // the fallen panda, and the hat panda planted on the first axis that keeps both on stage
+    const [fx, fy] = clearSpot();
+    const fallen = put(fx, fy);
+    rest(fallen, 'fallen', pick(DIRS));
+    fallen.el.classList.add('stop');
 
-  // rare trigger: two lines each ≥ PATCH_MIN_LEN, headings meaningfully apart. The
-  // target A is the longest (most runway); the source B is the most divergent of the rest.
-  function managePatch() {
-    if (reduced) return;
-    const retry = ms => setTimeout(managePatch, ms);
-    if (frozen || document.hidden) return retry(3000);   // don't start an intervention we can't animate
-    const H = pandas.find(p => p.hasHat);
-    if (!H || H.knocked || H.entering) return retry(4000);
-    const live = lines.filter(l => l.members.length >= PATCH_MIN_LEN);   // a line long enough to take part
-    if (live.length < 2) return retry(4000);
-    const A = live.slice().sort((a, b) => b.members.length - a.members.length)[0];
-    let B = null, widest = 0;
-    for (const l of live) {
-      if (l === A) continue;
-      const ang = angleBetween(A.leader.direction, l.leader.direction);
-      if (ang > widest) { widest = ang; B = l; }
+    let hi = 0;
+    for (let i = 0; i < AXES.length; i++) {
+      const vx = fx + AXES[i][0] * INSPECT_NEAR, vy = fy + AXES[i][1] * INSPECT_NEAR;
+      if (inBounds(vx, vy)) { hi = i; break; }
     }
-    if (!B || widest < PATCH_MIN_ANGLE) return retry(4000);
-    runPatch(H, A, B, () => retry(PATCH_GAP_MIN + Math.random() * (PATCH_GAP_MAX - PATCH_GAP_MIN)));
+    const hx = Math.round(fx + AXES[hi][0] * INSPECT_NEAR), hy = Math.round(fy + AXES[hi][1] * INSPECT_NEAR);
+    taken.push([hx, hy]);
+    const hat = put(hx, hy, true);
+    rest(hat, 'idle', heading(fx - hat.x, fy - hat.y, 8) || 'down');
+
+    // the 3-high stack, mid-parade. Riders are explicitly z-ordered above the bottom —
+    // y-derived depth would put them behind it.
+    const [sx, sy] = clearSpot();
+    const facing = pick(['down', 'downleft', 'downright']);   // toward the viewer — a random
+                                                              // heading would show us its back
+    for (let i = 0; i < 3; i++) {
+      const p = put(sx, sy - i * RIDER_RISE);
+      rest(p, 'stop', facing);
+      p.el.style.zIndex = Math.round(sy) + i;
+      if (i) taken.push([sx, sy - i * RIDER_RISE]);
+    }
+
+    while (pandas.length < PANDA_COUNT) {                     // the rest of the troupe, standing about
+      const [x, y] = clearSpot();
+      rest(put(x, y), 'stop', pick(DIRS));
+    }
   }
 
   // ---- spawn: the troupe walks on from the edges, the hat panda leading ----
   function spawn() {
     const W = stage.clientWidth, H = stage.clientHeight;
     if (!W || !H) { requestAnimationFrame(spawn); return; }   // wait for layout
+    // below the mid breakpoint the stage stays empty: the hero copy owns that space, and
+    // a troupe this size would pile onto the headline.
+    if (W < MOBILE_MIN) return;
     computeForbid();                                          // fence the hero card
-    // viewport-aware headcount: cap 5 lines want plenty of roamers, and wide heroes
-    // have the whitespace for a crowd; a phone does not (they'd pile on the headline).
-    PANDA_COUNT = W >= 1200 ? 20 : W >= 800 ? 12 : 7;
+    // Viewport-aware headcount, held deliberately low for now. At 20 the ma5a collision
+    // rate alone kept ~13 of them on the ground at any moment, which would bury the
+    // Sleeper — an anomaly can only read as strange against a calm baseline. Raise this
+    // once the chaos tiers are in and we can see what the field can carry.
+    PANDA_COUNT = W >= 1200 ? 10 : 7;
 
     const place = () => {                                     // a clear spot off the fence
       let x, y, tries = 0;
@@ -1076,13 +1016,7 @@
       return [x, y];
     };
 
-    // reduced motion: no choreography — place them at rest, standing still
-    if (reduced) {
-      const [hx, hy] = place();
-      pandas.push(new Panda(hx, hy, true));
-      for (let i = 1; i < PANDA_COUNT; i++) { const [x, y] = place(); pandas.push(new Panda(x, y)); }
-      return;
-    }
+    if (reduced) { tableau(place); return; }
 
     // an off-stage start + inward target on a random edge, its lane clear of the
     // fence. Entry runs perpendicular to the edge, so the straight transit never
@@ -1101,27 +1035,36 @@
       return { sx: x, sy: y, dir: pick(DIRS), tx: x, ty: y };
     };
 
-    const enterOne = hasHat => {
+    const enterOne = (hasHat, oblivious = false) => {
       const e = pickEntry();
       const p = new Panda(e.sx, e.sy, hasHat, true);
+      p.oblivious = oblivious;
+      p.home = [e.tx, e.ty];                                  // where it walks in to = its patch
       pandas.push(p);
       p.walkIn(e.dir, e.tx, e.ty);
     };
 
     enterOne(true);                                           // the hat panda, alone, first
     let entered = 1;
+    // one of the troupe is the oblivious one, picked before anybody walks on
+    const obliviousAt = 1 + Math.floor(Math.random() * (PANDA_COUNT - 1));
     const wave = () => {
       if (entered >= PANDA_COUNT) return;
+      if (paused) { setTimeout(wave, PAUSE_POLL); return; }
       const n = Math.min(WAVE_SIZE, PANDA_COUNT - entered);   // a couple at a time
-      for (let k = 0; k < n; k++) enterOne(false);
+      for (let k = 0; k < n; k++) enterOne(false, entered + k === obliviousAt);
       entered += n;
       setTimeout(wave, WAVE_GAP);
     };
     setTimeout(wave, LEAD_GAP);                               // give the hat panda its solo beat
 
     setInterval(collisionCheck, 50);
-    setTimeout(manageLines, MANAGE_START);                   // Phase 2: start forming conga lines
-    setTimeout(managePatch, PATCH_KICK);                     // Phase 4: begin looking for a patch to run
+    setTimeout(director, ANOM_KICK);                          // the field starts going strange
+    // pause everything when the hero scrolls out of view or the tab goes to the background.
+    // The per-panda loops poll `paused` and pick up where they left off; collisionCheck
+    // returns early. Nothing is torn down, so a resume needs no re-arming.
+    new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; syncPaused(); }).observe(stage);
+    document.addEventListener('visibilitychange', syncPaused);
     // the fence moves with layout; recompute on resize (debounced by rAF)
     let rAF = 0;
     window.addEventListener('resize', () => {
