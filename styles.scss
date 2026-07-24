@@ -425,12 +425,14 @@ body:has(.hero-screen) { overflow-x: hidden; }
   align-items: center;
   pointer-events: none;
 }
-// sized to the sprite's real bounds (~44–52px wide × ~60px tall at the 100px cell,
-// measured from the path data) so pandas collide near their visible edges instead of
-// clipping — the old 40×50 box sat well inside the drawing. 2×2 corners still map to
-// knock directions; the 20px overlap buffer in collisionCheck rides on top.
-.hit_area { height: 62px; width: 48px; display: flex; flex-wrap: wrap; }
-.panda_wrapper.stop .hit_area { margin-top: 8px; height: 52px; }
+// sized just inside the sprite's real bounds (~44–52px wide × ~60px tall at the 100px
+// cell, measured from the path data) so pandas collide near their visible edges without
+// reaching into the air around them — the earlier 48×62 box overshot the drawing (and its
+// 62 topped even the ~60 sprite height), so collisions fired with a gap. 2×2 corners still
+// map to knock directions; the `overlap < 20` buffer in collisionCheck rides on top — dial
+// either this box or that buffer down further if pandas still collide too eagerly.
+.hit_area { height: 54px; width: 44px; display: flex; flex-wrap: wrap; }
+.panda_wrapper.stop .hit_area { margin-top: 8px; height: 46px; }
 .facing_upleft .hit_area, .facing_left .hit_area, .facing_downleft .hit_area {
   transform: scale(-1, 1);  // re-flip: parent is mirrored
 }
@@ -441,6 +443,16 @@ body:has(.hero-screen) { overflow-x: hidden; }
 // is in the air.
 .panda_wrapper.flying { z-index: 9999; }
 .panda_wrapper.flinging { transition: none; }
+// a stack rider: pinned above the base and teetering. Its transform (translate + a small
+// rotate) is driven every tick by the Stack loop, so the amble glide is off; the rotate
+// pivots about the feet so the sway reads as the whole panda leaning, not spinning.
+.panda_wrapper.riding { transition: none !important; transform-origin: 50% 100%; pointer-events: none; }
+// a seated rider draws a pixel-map SVG (its facing) instead of the walk sprite; the wrapper's
+// translate+rotate teeters it about the feet, and .flip mirrors the three left-facing directions.
+.panda_wrapper.riding .panda_inner_wrapper { visibility: hidden; }
+.panda_wrapper .sit { position: absolute; inset: 0; pointer-events: none; }
+.panda_wrapper .sit > svg { display: block; width: 100%; height: 100%; }
+.panda_wrapper .sit.flip { transform: scaleX(-1); }
 .hat_loose {
   position: absolute;
   pointer-events: none;

@@ -1,0 +1,560 @@
+<title>Panda sitting-rider workshop</title>
+<style>
+  :root {
+    --bg: #f1efe9; --surface: #ffffff; --surface-2: #f7f5f0;
+    --text: #201f1b; --muted: #6b6862; --border: #ded9cf; --border-strong: #c9c2b4;
+    --accent: #7c5322; --accent-soft: #a9793c; --pink: #ff5fa0;
+    --ink: #21201c; --good: #3f7d4f;
+    --checker-a: #eceae3; --checker-b: #e2dfd6;
+    --shadow: 0 1px 2px rgba(40,34,22,.06), 0 8px 24px rgba(40,34,22,.06);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --r: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1917; --surface: #232120; --surface-2: #1f1d1b;
+      --text: #ece8df; --muted: #9a958b; --border: #35302a; --border-strong: #453f37;
+      --accent: #cfa250; --accent-soft: #b9863e; --pink: #ff79ac; --ink: #0f0e0c; --good: #6fbf83;
+      --checker-a: #262320; --checker-b: #2d2926;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f1efe9; --surface: #ffffff; --surface-2: #f7f5f0;
+    --text: #201f1b; --muted: #6b6862; --border: #ded9cf; --border-strong: #c9c2b4;
+    --accent: #7c5322; --accent-soft: #a9793c; --pink: #ff5fa0; --ink: #21201c; --good: #3f7d4f;
+    --checker-a: #eceae3; --checker-b: #e2dfd6;
+    --shadow: 0 1px 2px rgba(40,34,22,.06), 0 8px 24px rgba(40,34,22,.06);
+  }
+  :root[data-theme="dark"] {
+    --bg: #1a1917; --surface: #232120; --surface-2: #1f1d1b;
+    --text: #ece8df; --muted: #9a958b; --border: #35302a; --border-strong: #453f37;
+    --accent: #cfa250; --accent-soft: #b9863e; --pink: #ff79ac; --ink: #0f0e0c; --good: #6fbf83;
+    --checker-a: #262320; --checker-b: #2d2926;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1220px; margin: 0 auto; padding: 28px 24px 80px; }
+  header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 6px; }
+  h1 { font-size: clamp(1.4rem, 1rem + 1.6vw, 2rem); margin: 0; letter-spacing: -.02em; font-weight: 680; text-wrap: balance; }
+  h1 .em { color: var(--accent); }
+  .lede { color: var(--muted); max-width: 66ch; margin: 8px 0 0; font-size: .96rem; }
+  .kbd { font-family: var(--mono); font-size: .82em; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; }
+  .theme-btn { font-family: var(--mono); font-size: .78rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .theme-btn:hover { border-color: var(--border-strong); color: var(--text); }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; margin-top: 22px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow); }
+  .panel > .hd { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .panel > .hd h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; margin: 0; color: var(--muted); font-weight: 640; }
+  .panel > .bd { padding: 14px; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--surface); color: var(--muted); font-family: var(--sans); font-size: .82rem; padding: 7px 11px; cursor: pointer; border-right: 1px solid var(--border); }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .seg button:not([aria-pressed="true"]):hover { background: var(--surface-2); color: var(--text); }
+  button.btn { font-family: var(--sans); font-size: .82rem; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+  button.btn:hover { border-color: var(--border-strong); background: var(--surface-2); }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.btn.primary:hover { background: var(--accent-soft); border-color: var(--accent-soft); }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; font-size: .82rem; color: var(--muted); cursor: pointer; user-select: none; }
+  .toggle input { accent-color: var(--accent); }
+
+  /* direction picker */
+  .dirs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .dir-tab { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 5px 5px 3px; cursor: pointer; width: 62px; text-align: center; }
+  .dir-tab[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .dir-tab canvas { display: block; width: 100%; height: auto; border-radius: 4px; image-rendering: pixelated; background: var(--surface-2); }
+  .dir-tab .dl { font-size: .64rem; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+
+  .editor-wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; margin-top: 12px; }
+  .canvas-hold { position: relative; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; background: var(--surface-2); touch-action: none; }
+  #editor { display: block; cursor: crosshair; image-rendering: pixelated; max-width: 100%; height: auto; }
+  .coord { position: absolute; left: 8px; bottom: 6px; font-family: var(--mono); font-size: .72rem; color: var(--muted); background: color-mix(in srgb, var(--surface) 78%, transparent); padding: 1px 6px; border-radius: 5px; pointer-events: none; }
+  .palette { display: flex; flex-direction: column; gap: 10px; min-width: 150px; }
+  .swatch { display: flex; align-items: center; gap: 9px; padding: 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer; }
+  .swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .swatch .chip { width: 22px; height: 22px; border-radius: 5px; border: 1px solid rgba(0,0,0,.18); flex: none; }
+  .swatch .nm { font-size: .8rem; flex: 1; }
+  .swatch input[type=color] { width: 22px; height: 22px; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: none; cursor: pointer; }
+  .swatch.erase .chip { background:
+      linear-gradient(45deg, var(--checker-b) 25%, transparent 25%), linear-gradient(-45deg, var(--checker-b) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--checker-b) 75%), linear-gradient(-45deg, transparent 75%, var(--checker-b) 75%);
+    background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0; background-color: var(--surface); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .hint { font-size: .8rem; color: var(--muted); margin-top: 10px; }
+  .hint code { font-family: var(--mono); background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }
+
+  .frames { display: flex; gap: 8px; flex-wrap: wrap; }
+  .frame-tab { position: relative; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 5px; cursor: pointer; width: 74px; }
+  .frame-tab[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .frame-tab canvas { display: block; width: 100%; height: auto; border-radius: 4px; image-rendering: pixelated; background: var(--surface-2); }
+  .frame-tab .fname { font-size: .68rem; color: var(--muted); text-align: center; margin-top: 3px; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .frame-tab .kill { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 12px; line-height: 1; cursor: pointer; display: none; }
+  .frame-tab:hover .kill { display: block; }
+  .add-frame { width: 74px; border: 1px dashed var(--border-strong); border-radius: 8px; background: none; color: var(--muted); cursor: pointer; font-size: 1.4rem; }
+  .add-frame:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* compass of 8 facings */
+  .compass { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .compass .cell { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+  .compass .cell.hollow { border-style: dashed; background: none; justify-content: center; }
+  .compass .cell canvas { image-rendering: pixelated; width: 100%; height: auto; }
+  .compass .cell .cl { font-size: .62rem; color: var(--muted); font-family: var(--mono); }
+  .compass .center-note { font-size: .66rem; color: var(--muted); text-align: center; line-height: 1.3; }
+
+  .prev { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .prev canvas { border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); image-rendering: pixelated; max-width: 100%; height: auto; }
+  .prev .cap { font-size: .72rem; color: var(--muted); font-family: var(--mono); }
+  .slider { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); margin-top: 12px; }
+  .slider input { flex: 1; accent-color: var(--accent); }
+
+  textarea { width: 100%; min-height: 120px; font-family: var(--mono); font-size: .74rem; line-height: 1.5; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface-2); color: var(--text); resize: vertical; }
+  .note { font-size: .82rem; color: var(--muted); }
+  .note b { color: var(--text); font-weight: 620; }
+  .attr { font-size: .74rem; color: var(--muted); margin-top: 26px; border-top: 1px solid var(--border); padding-top: 14px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .flash { color: var(--good); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Panda <span class="em">sitting-rider</span> workshop</h1>
+      <p class="lede">Draw the seated rider for <strong>all 8 facings</strong>, the way the walk cycle does it: five drawn directions (<span class="kbd">up · up-right · right · down-right · down</span>), mirrored for the three left-facing ones. Each direction traces its real walk cel, then wobbles. The compass and the head-linked tower show every facing live.</p>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button">theme: auto</button>
+  </header>
+
+  <div class="grid">
+    <!-- ============ editor ============ -->
+    <section class="panel">
+      <div class="hd">
+        <h2>Pixel studio · <span id="activeName" style="color:var(--accent)">down · center</span></h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label class="toggle"><input type="checkbox" id="tglGrid" checked> grid</label>
+          <label class="toggle"><input type="checkbox" id="tglRef" checked> trace</label>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="dirs" id="dirs"></div>
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="tool">
+            <button data-tool="paint" aria-pressed="true">paint</button>
+            <button data-tool="erase" aria-pressed="false">erase</button>
+            <button data-tool="pick" aria-pressed="false">pick</button>
+          </div>
+          <button class="btn" id="btnMirror" title="mirror this drawing left↔right within the frame">flip</button>
+          <button class="btn" id="btnSeed" title="rasterise this facing's walk cel into the frame as a tracing base">seed cel</button>
+          <button class="btn" id="btnSit" title="squash the legs toward a seated silhouette">sit-ify</button>
+          <button class="btn" id="btnDerive" title="regenerate lean L / lean R for this facing from its center frame">derive wobble</button>
+          <button class="btn" id="btnClear">clear</button>
+        </div>
+        <div class="editor-wrap">
+          <div class="canvas-hold">
+            <canvas id="editor" width="576" height="576"></canvas>
+            <span class="coord" id="coord">—</span>
+          </div>
+          <div class="palette" id="palette"></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnNudgeL">◀</button>
+          <button class="btn" id="btnNudgeR">▶</button>
+          <button class="btn" id="btnNudgeU">▲</button>
+          <button class="btn" id="btnNudgeD">▼</button>
+          <span class="hint" style="margin-top:0">nudge to line the feet up between frames &amp; facings</span>
+        </div>
+        <p class="hint">Drag to paint. <code>pick</code> lifts a colour; changing a swatch recolours that shade in this frame. The faint trace is this facing's real walk cel. Only <code>up · up-right · right · down-right · down</code> are drawn — left facings mirror them automatically. Edits auto-save in this browser.</p>
+      </div>
+    </section>
+
+    <!-- ============ frames + previews ============ -->
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <section class="panel">
+        <div class="hd"><h2>Wobble frames · <span id="dirLabel" style="color:var(--accent)">down</span></h2><span id="frameCount" style="font-family:var(--mono);font-size:.72rem;color:var(--muted)"></span></div>
+        <div class="bd">
+          <div class="frames" id="frames"></div>
+          <p class="hint">Order sweeps <code>center → R → center → L</code>. Same wobble frames per facing.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="hd"><h2>All 8 facings</h2></div>
+        <div class="bd">
+          <div class="compass" id="compass"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="hd"><h2>Spinning wobble</h2><span id="spinFacing" style="font-family:var(--mono);font-size:.72rem;color:var(--accent)"></span></div>
+        <div class="bd">
+          <div class="prev"><canvas id="prevSpin" width="150" height="150"></canvas><span class="cap">8 facings, rotational order + teeter</span></div>
+          <div class="slider"><span>slow spin</span><input type="range" id="spin" min="90" max="700" value="220"><span>fast</span></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="hd"><h2>Tower · <span id="stackDirLabel" style="color:var(--accent)">down</span></h2></div>
+        <div class="bd">
+          <div class="prev"><canvas id="prevStack" width="176" height="330"></canvas><span class="cap">3-high · head-linked · base leads</span></div>
+          <div class="slider"><span>slow</span><input type="range" id="speed" min="90" max="600" value="240"><span>fast</span></div>
+          <div class="slider"><span>wobble</span><input type="range" id="wob" min="0" max="10" value="5"><span id="wobVal" style="font-family:var(--mono)">5</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ============ export ============ -->
+  <section class="panel" style="margin-top:22px">
+    <div class="hd">
+      <h2>Export &amp; bake</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="btnImport">import</button>
+        <button class="btn primary" id="btnExport">copy pixel data</button>
+      </div>
+    </div>
+    <div class="bd">
+      <p class="note"><b>How this bakes in.</b> The export is a <code>SIT_DIRS</code> object — the five drawn facings (<code>up, dUp, side, dDown, down</code>), each with its wobble frames in play order, plus the grid, the play order, and the left-facing mirror map. In <span class="kbd">pandas.js</span> a rider picks its facing from the base's heading exactly like the walk sprite (<code>DIR_SPRITE</code>), renders the frame's map as an <code>&lt;svg viewBox="0 0 48 48"&gt;</code> of rects, mirrors with <code>scale(-1,1)</code> for the three left facings, and cycles the wobble from the <code>Stack</code> tick.</p>
+      <textarea id="io" spellcheck="false" placeholder="export drops SIT_DIRS here — or paste a previous export / a single-direction SIT_FRAMES and hit import"></textarea>
+      <p class="hint" id="ioStatus"></p>
+    </div>
+  </section>
+
+  <p class="attr">base sprite: “panda collision” by masahito (ma5a) — codepen.io/Ma5a/pen/WNEBqPO · MIT; the five walk cels are traced under that license, with thanks. The seated poses, wobble, and this studio are ours — hand-drawn here, never generated. Sibling of design/sketches/panda-behaviors-workshop.html.</p>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  // ---------- ma5a decoder + the five walk cels we trace over ----------
+  const CELS = {"up":"d 601 9aAaAaAnBkNnUaNaN\"/D 18 10bAaAnAnBuXaN\"/F 22 10W7AaAaBaEaGiAW-6NiNnXaNbUaNaNaN\"/D 30 10bAaEuUnU\"/D 114 10bAaAnAnBuXaN\"/F 117 10W7AaAaBaBaAaGkAn0NkNnKaNaNaUaNaU\"/D 125 10eAaGnAnUnUnU\"/D 66 12eBnAnAnNnUaN\"/F 70 12W6AaAaAbEaGkAn2NuKaNaUaNaNaNaN\"/D 76 12gEuNnNnN\"/D 593 12eBnAnAuKaN\"/F 596 12eAaAeUbAnEbKeAnAbJnAiAxNxAkAnUaXnNbNaNaU\"/D 604 13bEuK\"/D 166 14eEnAkKaN\"/D 608 14aAnN\"/F 169 15eAeAaAaBaAaAnAnBn0NkNnNnKbNgNaU\"/D 222 15aAbBaGxKnKaN\"/D 175 16gEnAnUnNnN\"/D 308 16aAaAaAaBuAnAnEaAaAaEnAuNnNuNnUnNaUbw-7bN\"/D 314 16gAaGkNuX\"/D 268 17eAaAaAaAaAaGnBnNuUuUaUiNaNaU\"/D 501 17bAaAuAnAnKaN\"/D 548 17eAnAnAnAnKaN\"/F 552 17jEW-6AkNaNaNbN\"/D 557 17gExK\"/D 209 18bAaEeAaBnAuAeAW8NnNnKgGnBn1NkGaAuNnNnXaUnw-6aN\"/F 216 18jAaEgAxEaAaAW-8NkNbNaUnNkUaAeK\"/D 260 18eAaBnAuAnEaBnAnBeAaEnAkNnXnNnNnXaNbXaNaN\"/D 364 18eAaBuNkNaN\"/D 509 18bAaBnAaEnAeAaAaBnAaEnAxXaNuNuNW-8AnAuUaUaNbNW6AeKnNnUaN\"/D 159 19bAaBaAaAeAa0UaNaNeGnAnAnAiNn3NnNnNnXaN\"/F 213 19aAnN\"/D 214 19bBkNaN\"/D 356 19eAnAnAnAnBbNW9NeAaAbAaAaBaBnBkBxUnNaNeUaNnUuNW-9AkAnAnEaAeAaBnAkUkNnXaNaNaw-6aNaN\"/D 460 19eAaBuAnNnK\"/F 502 19W6BaAaEkNW-6AuAnUaUaNaNaN\"/F 312 20gAgAnAnBnAaAaEaAaNaGuAkAW-7NuNnKaAbNaKnNnNnKaNaNbN\"/F 358 20W8AbAaAkAW-9AuUaNaNaN\"/D 403 20eBnBnNnK\"/F 407 20jAbAaAaAaGnAkAW-8NnNnUaUaUaNaN\"/D 412 20gEnNnNuN\"/D 451 20gAnAnAnBnI\"/F 455 20jBaAaEbNaNaGuAnAn1NnXaUaNaNaN\"/D 551 20W6AeAaAaAaEnNuNuNW-9AuAnKaNaNeN\"/F 557 20gAaBnNnNkN\"/D 17 21jAW6NjAaAaBaw6nJnBnAxNnUnNaNbNaNaKnKnNnNW-8AuAnAnGaBbAaAbAnAuAuNnNnw-7nIaUaN\"/D 113 21eAa0NeAaAaBaBnEuKnNuNW-7AuAnBnBnBaAaAeBnAnAxNnw-6nNnKaKaUaU\"/F 263 21W8BnBbBnNuEbNaNbAaBnNuAnEaBnAW-9NaKnNkUaNaBeUnNnAnUnKaNbN\"/D 320 21ew9uAnNnKnNnNaUaNaN\"/F 511 21aAnN\"/D 596 21gAgNjAbBaEaBnBnJnBuAuNnNnXaNbNbNbNnNnNnNnNkNW-8AuAuKaNeN\"/D 65 22aAa2NeAaBaw6uUnUnNuNW-6AkAnAnAnBuw-6aUaN\"/F 462 22bAuN\"/D 462 23bAaAnAuK\"/F 464 23aAnN\"/F 512 23aEuNaU\"/F 21 24W8AaAaEaEnAnAuAW-7NnNuUnXaNaNbN\"/D 417 24aAaBaAnBnAiAW-9NuNnKaNaBaAaAW8NeNaX\"/F 549 24W9AbAbAaBxAnBnAW-6NuNuUnKaNbN\"/F 596 24W8AeAaAaAaAaAuAuAuAnExNuNuNnNnNnKnUbNbN\"/F 71 25W6AbAaBaBaAnAnAnAkAiNkNnNnNnKaNaNaNeN\"/F 119 25W7AbAaEaBnAuAnAkAxNkNnNnUaUaUaNbN\"/D 265 25bAuN\"/F 359 25W9AbBaAnBkAnAaBuAW-7NaUnNkNnKaNaNeN\"/D 403 25aAnN\"/D 449 25bGaAa1NaNbNaAbJnNuNW-6AW-8NnNnNnX\"/D 269 26bAaAnAuK\"/D 361 26bAuN\"/D 365 26bAaAnAuK\"/F 161 27a3AgGnBuAkAW-6NkNnNnXnNaN\"/D 262 27aAaBkUaN\"/D 357 27bAaBnAuUnNaN\"/F 497 27aAnN\"/F 211 28eAa1GnBnNnAkAxNkNnNaNnX\"/F 500 28W8AbAbAnGkAW-6NuNnNnUnNbNaN\"/D 592 28aEaAaAaAbEnAkNnNnw-8\"/D 158 29eGaAuNuX\"/D 272 29bAaAaAnAnAuNnKaN\"/D 546 29aBbAbEnAuNnNnI\"/D 559 29gJnAxNnUaUaN\"/F 418 30aGuAkAW-8NuKW9NjN\"/F 403 31aAnN\"/F 460 31W6AbAuAuAxAiNuNnUW8N\"/D 65 32aAaAaAeAnAnAuNuI\"/D 81 32aGnBxNnUeNaNaN\"/D 129 32aEnAnAxNnNeNaNbN\"/D 177 32aw6uAuNnNnUeNbU\"/F 275 32aAnN\"/F 274 33aAnN\"/D 222 34aBnAkUeN\"/","dUp":"d 17 9eAnAnBuKaN\"/F 20 9jAgAnAnBaBgBaEnAnAn0NkNuNnIaNaNaUaNaN\"/D 113 9eBnAnAuKaN\"/D 29 10bAaAaBnBxUnUaNaN\"/F 116 10W6AbAnBaBeAaBaEnAxAkNiNuNuNnUnNaUaUbNaNaN\"/D 124 10gAaEnBxUnUaU\"/F 166 10eAnBaAaAbNaAaAaAbAuBnAuAkAW-9NnIaUaUaNaNeN\"/D 169 10eAaEnAuNnNnUaN\"/D 213 10bAaEbEuNnUkKaN\"/D 65 11eBnAnAuKaN\"/F 68 12W7AnBaAaAgAaGnAuAW-9NxNuNnUaUaNaNaNaNaN\"/D 75 12eAaGkNnNnUaN\"/D 599 12bAaEaAaAnAnNnUnNuUaN\"/D 159 13bBnBnNnUaN\"/F 209 13eAeBaAbKbAbGnBnAuAkAxAkNuw-7aUaNaN\"/F 216 13bAuN\"/D 591 13bBnAnAnAnKaNaN\"/D 220 14aAnN\"/F 593 14jAbAaBaAaNaNaAaGW-6AW-9AnUnXaNaNaNaN\"/D 205 15bBnEnNnKaN\"/D 548 15eAnAuAnUaN\"/F 550 16gAbBaAbJnNnNnNuNW-9UaNbNbN\"/D 177 17bAaEnAnBnAnAn1AuAuAnAnKnNnNnXaNbBaAW9NeNbNaUbN\"/D 223 17bAaGnAnAuAW-7AkAnAuAnUnUnNbAeNgNeNbNaUaNaN\"/D 556 17eAaBkNnU\"/D 501 19eAaAiNaN\"/D 263 20bAaEiAnKaNbN\"/D 444 20bAaBnAnAnNnKaN\"/F 449 20eAnEgEbKaBeAbAaGnBnAuUuNnUkAW-7NuNnXaNaNaUbN\"/D 452 20eAaBnAxKaN\"/D 16 21bAeAa1AaAaJnw6nAxNaNaNuInNkNW-8BnNnXaUaN\"/D 113 21aAbAjAeNgAeAaAaEnAW-6NuNuNxNkAkAnEuNnXaNaNaNaNaN\"/D 268 21gAaGnJnBnAnAnUnUuNaNaNaNnUnNaUaN\"/D 302 21gAbNgAaAaAaAaBaAaEnBnAxNuNnNnw-6nAnAuNnUnK\"/F 499 21W8EeJxNbNaUuAnBuNuNW-7NaNaNaNaN\"/D 507 21eAaAnAkK\"/D 545 21W9AbAaAaAaBaEnAuNnNnNnNuNuNW-7UaNaN\"/D 63 22bAgAW9NbAaAaBaw6nAnGnAnAkNnXaUeUnNnNnNiNW-6AnAnBaBaAaAbAnAkNnNnw-6nNnUaUaNaN\"/F 456 22aBuNaN\"/D 600 22W8AaBnAn4AuAuXaNW9N\"/D 398 23bBnAnAuUaNaN\"/D 405 23eAaExNnUaN\"/F 222 24bAaw6nBnAnAnAn0NnNnUnKaNbNaNeNW7N\"/F 261 24jAaBaAnAnAnAbBaEiAnBW-6NkUnXaEbKnUbNbXeN\"/F 359 24eAbAew6aBnAnXnNnNuNuNxNaNbN\"/D 362 24eAaAuNuN\"/F 400 24gBaAgUaNaBeAuAuGnAnAuAW-6NuUnIaNaNaN\"/D 411 24gGjAaEnAxNaKnBnBnAnAnAuAuAW-7NuNnNnKaBbAW6NbNaNaXbNbNkU\"/D 455 24bEuK\"/D 254 25gGuAuBaEuKnUaXaN\"/F 307 25aw6aAaAuAnBeNaNnNbAgNaEnAnNuAuBW-8NuNnXaBbKnNaNaNaNnNbNaN\"/D 507 25bBnAuUaN\"/F 543 25W7AbAbAaAaAaAnBnAkAxNuNnNuNnIaN\"/F 115 26eAgAbAbAbBuAuAuBiNnNuNuUnKaNeN\"/F 165 26a2EaExAnAnEkAxNuNuUnUnUaNaNbNbN\"/D 225 26eJnAnAuUaI\"/D 299 26gAaAaAnAnAnAaEuUnUnNnKaN\"/F 494 26aAnN\"/D 495 26W7AbAbAgAaBaAbEnAkNnUuNnNuNW-9AnIaN\"/F 594 26a1JkAnEiNkNnNuXbNbN\"/F 16 27W8AeAaJbAnAnAW-6NkNnNnNnNnKaU\"/F 65 27W6AjAaAaAaBkBnBW-6NnNuNnNnUnUaNaN\"/F 352 27eAaAuAbNgAaAbAnEnBnNxAnAxNnUnIaNaNaN\"/D 355 27jAbAbAaAaw7nAkNnKaKaNuNnNuNkN\"/D 367 27gAaGuAuNnI\"/F 415 27aAnN\"/o 356 28bAuN\"/D 348 29bAnJaBuNnUnNnUaNbN\"/D 354 29bAuN\"/F 416 29aEnBnAnAuNaNaNaUaU\"/D 464 29aAbAaEnAiNaUaK\"/o 258 30bAuN\"/D 351 30bBuU\"/D 445 30bAW7NeBaAbEnAW-7NuNuNnNnNnU\"/D 14 31aAaAaAaAaBnAxNnKaK\"/D 111 31aBbAbBxNnX\"/D 257 31bAuN\"/D 304 31bAuN\"/D 357 31bEkUaN\"/F 495 31W9AbAaAbExAxNxNuNnKaN\"/D 542 31aAbAaAaAnAnAuNnI\"/D 602 31eAaJnAkNnIaN\"/D 126 32bGnBnAuAuNnKaUbNbN\"/D 174 32gAaJnAxNnNnKaNaN\"/D 260 32bAaBnAkKaN\"/D 590 32bAaAeBnAkNnUnU\"/D 308 33bAaAnAkUaN\"/D 555 33bEnAkNuNaNeN\"/D 251 35aAaBuK\"/D 299 35aBaAkUaN\"/D 263 36gBnAxUaN\"/D 313 36bAaBuAuNnUbN\"/D 356 36gBnAkNnNaN\"/F 410 36bAuN\"/","side":"d 28 10eAaBnNuNnN\"/D 124 10eAaEnNnNuU\"/D 170 10bAaEnNuNnNaN\"/D 19 11gEnAkNnUaN\"/F 23 11W6AbAaEaGnAnAkAW-6NxNnw-6aNaAeNaK\"/D 115 11gEnAkNnUaN\"/F 119 11jAbAaBaBnAbBnAnAkAW-7NuNuXaKaAeNaK\"/D 67 12bAaEnAkNnUaNaN\"/D 76 12eAaBuNnNnN\"/F 166 12gAbAbAaAbJnAuAkAn0NuIaNbEaAbKnNuNaUaNbN\"/D 214 12eAaBuNkNaN\"/F 70 13W7AaAaAaBaAuAbNaEuAkAW-8NxNnUaUaNeNaK\"/D 160 13bAaBnAkKaN\"/F 209 14W7AbAuEeUbAaEnAnAnAuAuUuBaAxAuAnAnNnUnXnNbUaKbNaN\"/D 25 15bGkKaN\"/D 121 15bGkKaN\"/D 171 15bAaAnAnNnU\"/D 264 15eBaBbAbAaJnExNnNnw6nGnAuNnw-6nXnNnNnNnUaUaNbAaJaNbAaAaKnNuNnKaUaN\"/D 216 16bAaBkK\"/F 218 16aAnN\"/D 603 16bAaEnNnNnU\"/D 72 17eEnAuX\"/D 127 17bAuN\"/D 162 17bAaEuNnK\"/D 177 17bAaEnBnAnBuNiAkAuAnAW-6NnNnKaNgAa0NeNbNaX\"/D 203 17eBnBuNnUaN\"/D 303 17gAaAeAaAbAaEnBuAuNuNuNuNxKbKaN\"/D 594 17bBnAnAnKaN\"/F 597 17W6AaAaAaAaGnAnAxAkNkNnNnXaNaNaNaN\"/D 30 18bAuN\"/F 548 18W8EbAaBaBnAkAn0NnIaAaNaX\"/D 556 18bAaBkK\"/D 79 19bAuN\"/D 169 19bAuN\"/D 223 19gAaBnBuAW-6AkEnAnAkAxXaNbNgNeNbNaNaNaNaN\"/D 403 19eAaBkNuNaN\"/D 458 19eAaBnAnUnNnN\"/D 545 19eEnAnNnK\"/D 208 20bAaBnAuNnUaN\"/D 449 20bBnBnAnXaN\"/F 452 20W7AaBaAaGnAnAuAxAxNuIaUaUaNaN\"/D 31 21aAbAaAaAaBnAuUnNuNxAkAnAnAnAnAuAkNnXaNaNaNbNeAW6NeN\"/D 113 21bAbAW7NeNbGxAaGnAuNnNnNuNxNnKnU\"/o 169 21aBuNaN\"/D 214 21bAuN\"/F 261 21bAbAaEnNnNuAnX\"/F 401 21eAbAnAaAbUbJnBnAnAnAuAW-6NnUnNbNaXuNaNaNbN\"/D 603 21bEuK\"/D 80 22aBxNeN\"/D 350 22gAbAbAaAaEaGaGnAnAnAuAxNnUaNbNaNaw-6nKnNnNkAnAnKaN\"/D 366 22eAaEuNnNuNaN\"/D 411 22eAaBuAnAnBaJnAnAuAnAxNuNnNnNjNbNaNaNaUaIaN\"/D 596 22bEuK\"/D 66 23eAW8AnAnAnBnBaAaEnBnAnAxNnNnXaNaNaKnKuU\"/F 113 23aEaAgAbAaAaAbNaXnNgAaJnBuAuAkXnNiAuNnw-7\"/o 213 23bBuU\"/F 315 23aAaBaJnBnBnAnKnUnNnNnNbNbUaU\"/F 359 23W6AbAaAaAaJuAnAnEnAkAuNaNaXnXnKnNnNaN\"/D 405 23eBuNnN\"/D 498 23bEuAnAnKaNaN\"/D 507 23eAaEuNnNnU\"/D 549 23aEuUaN\"/D 555 23bEnNnU\"/F 27 24gAbAaGnBnAnAuAuKnNiAnAnAnXbNaNaNaNaNeN\"/F 77 24gAaw6nAnAnAnAuAuNaKnNnUaUaNaNaN\"/F 254 24eAaAaAaGaw6nAnAiUnNxUnXaUaNaNaBbNaNuNaN\"/F 301 24eAbAbAxBnBaAaAkAnAaAkAnKnXaKaBeKuNaN\"/F 351 24eAaAaBnBaNaw6nAnKxBaAeAuAnAnUnNkNnXnUbNaNaBbNaUuNaN\"/D 458 24bBuU\"/F 500 24W7AaAaAbBnBnNuAnAaBnEaAkKnNuNaUnNnAnBnNnNnKaNaNbU\"/D 600 24bAuN\"/D 607 24aAaBaEuNnNW-6NgNaNaN\"/F 66 25bEaEnAnAuw-6aU\"/F 170 25jAeEuAnGnAuAiNnNnNxNnKgNaNbNeN\"/F 219 25W6AaGnBnBuAuAxNnNnNkAnAnNnUeNeNaNaKeN\"/D 248 25bAaAnAnBnNnKaN\"/D 346 25bAaAnAnAuKaN\"/D 396 25eGnAuNnKaN\"/F 413 25bAaAbAnBaExAuInUaNaN\"/D 452 25bBnAuUaN\"/D 560 25aJnAnAaEnBnAuNnKaXaUnNeNaN\"/D 252 26eAnAuU\"/F 299 26aAnN\"/D 300 26bEkUaN\"/F 349 26aAnN\"/D 350 26bBnAuUaN\"/D 402 26aAaEkKaN\"/D 462 26bAaAaAaAaGnAuNnUaUnAW-6NbNaNaU\"/D 552 26bAuN\"/D 594 26aAeAeAkAnBnAuNnIaN\"/F 266 27aAaAgAnBnAnBnAuAnXaw-6\"/D 297 27aEnAnKaN\"/D 304 27gAbAaAaAaBaGkNuNnNuNnNnNnUaU\"/F 308 27bAuN\"/D 406 27aAnN\"/D 456 27bAuN\"/D 545 27aAa0AkAuBaBnAaExNnNnInX\"/D 226 28bAaEuAkNaUaU\"/D 255 28aBnU\"/o 257 28bBuU\"/o 355 28aBnU\"/D 417 28bAaGuKnU\"/D 511 28aEbAaJnAkUnAnAuNnKaUnNaNbAaUaN\"/F 512 28aAaBuK\"/F 556 28aBnGnAxNaUnUbNeN\"/F 601 28W6AaAaBkAnAnAnAxNuNuNaNaUaNeN\"/D 176 29eAaAaBnAnAuNuXaN\"/D 353 29aBnU\"/o 406 29aAnN\"/D 33 30aw6nAkNnUbNaNaU\"/D 116 30jAaGnAnAxNnNnXbN\"/F 464 30aBnBaAW-6AnBnUnNnNnNaNeNW6N\"/D 500 30aAaBnAbAaEiNnNnXaAaUaN\"/D 21 31jAaEnBnAnBxNnUnKaNaNaN\"/D 81 31aGnBnAkNnUbNaNaNaN\"/D 129 31aAaJnAkNnUnNbNbU\"/D 449 31aAgNgAkAnAaAaAaBnAkNkUnI\"/F 559 31aAnN\"/D 368 32gAaAaEuAiNnKaNaN\"/D 606 32eJnAkUnUaNaN\"/D 161 33gAaAaAaBnAnAkUnUnK\"/D 211 33eAaAaAaAaBnAkNuNnNnKaN\"/D 254 33bAaBkNnNaN\"/D 302 33eEkNnNaN\"/F 305 33aAbAaAbAaAiAiKeK\"/D 351 33gEkNnU\"/D 414 33gAaEuAW-6KaNbN\"/F 411 34aAnN\"/D 595 34bAbAaBnAuNnNnK\"/F 410 35aExNaNbN\"/D 459 35jAaBnAxNuUaN\"/D 250 36eAaBnAuNnK\"/D 299 36eGkNnUaN\"/D 347 36eAaBnAuNnK\"/","dDown":"d 28 8bAaGnNnUuNaN\"/F 119 8bAbAaAaAaAaEaBnAnAnAiAiNkUnKaUeNaXeN\"/D 124 8bAaGnNnNnNnNaN\"/D 17 9eEnAnAuNnUaNaN\"/F 21 9W6AbBaBaBaBnAnAuAn2NnXaUbNaNaUaN\"/D 113 9bAaEnAkNnUaNaN\"/D 169 10eAaEnUuNnN\"/D 550 10aAaBnAnAuKaNaN\"/D 602 10eAaBuNuU\"/D 65 11eGnAuNnKaN\"/F 69 11W7BaAaAaBaAaBnAnAxAW-8NkNnXaNeNaKaN\"/D 76 11bAaEnNnNnU\"/F 163 11W7AbBnNuEaAaNaUeAaEnBnAuAkAW-6NuNnNuKaNaUaNaNaN\"/F 552 11W6AaAaAaGaGnAxAiNkNnNnNnKaNaNbNaNaU\"/D 560 11aAaAaEnAnKnNnNaN\"/F 598 11gAbAbAuBaAaKbAaAaEnAnAuAxAW-7NuNnIaUaNbNbN\"/D 159 12eAnAnBuKaN\"/D 218 12bAaBuNnU\"/D 401 12aAaAnAnBnNnUaNaN\"/D 410 12bAaEnNnNnU\"/F 452 12jEaAaAbNaBaBuAnAuAxAiNkKaUaUaNaUbN\"/D 458 12bAaAaBnAuNnNnUaN\"/D 592 12eAnAnBuKaN\"/D 169 13bAaBnAnNnK\"/D 209 13bAnBnAuUaNaN\"/F 212 13W6AaAuBaAaKbBnEnAnAiInUnAnUbN\"/F 404 13W6AaAaBnNuBeNaAaBnAkAkNiAnAnNnKaUaUaNbN\"/D 448 13bBnAnAnKaN\"/D 27 14bAaBkK\"/D 124 14aAaBnAnNnUaN\"/D 177 14aAaw6nAnAnAn0AuAuAnAnNnUnNnNnKaNaAbAaAbAW6NeNbNaUaKaN\"/D 360 14aAaBnNuNaN\"/D 604 14bEnNnU\"/D 19 15bAaAnAuK\"/D 115 15bEnAnNnUaN\"/D 162 15bEnAnNnUaN\"/D 211 15aBaJjNaNaKaNaNbAaGnAaAaJnAnAuNnIxAxAuAnAuNnw-6aUbUaN\"/D 217 15bEnNnU\"/D 501 15bEnAuAnEaEaAaAeAaAaEnAnAW-6NuNnUaNeNnUnNnNnKaUaNaUaNaN\"/F 504 15jAbAaAaBaEaBnAnAnAkAaAaAnAkUnNnNkNnNnKnKaNbNaUaN\"/D 597 15aAaBnAuKaN\"/D 68 16bEnAuKaN\"/D 75 16bAaBnAnNnK\"/D 166 16bAuN\"/F 209 16aBuNaN\"/D 313 16bAaAaAaAaBuNiNnUaNaN\"/F 356 16jAuBuAbNbUaAbExAnNkBnAxNnNaNaUaBbUuNaNbN\"/D 365 16bAaEnEW-7AxAnAnAnBkNnNnUnUaNbAaAgNeNbNgKnNbN\"/D 403 16aEuUaN\"/D 409 16bAaAkU\"/D 512 16bAaGnNnUnU\"/D 258 17gAaJnBnAnAkUnIaUaN\"/D 270 17eAaw6nAnAkNnw-6aNaN\"/D 351 17bBnBnNnUaN\"/D 359 17bBuU\"/D 457 17aAaEuNnUaN\"/D 551 17bEnAnNnUaN\"/D 558 17aAaBuK\"/D 602 17bAuN\"/D 24 18bAuN\"/D 120 18bAuN\"/o 166 18bBuU\"/F 207 18aBnU\"/D 215 18bAuN\"/D 406 18bAuN\"/D 449 18bEnAuUaU\"/D 30 19bAaAaBaGuNnUkNW-7AuAnAnAuAkXaNaNaNa2NbN\"/D 72 19bAuN\"/D 126 19aAaAaBaEnNnNkNxAuAnEnAaAaEnAnAkNnInw-6aUbAjNjNaN\"/D 304 19bAaAaBuAnAnAnNnXaNaN\"/D 353 19bBuU\"/D 357 19bAuN\"/F 264 20gJaAeNaEnBnAnAuAW-8NuNnNnUnIaBaBeNaNaUaUaN\"/D 413 20aAaAbBaEaBaGuAkNnNnXaNaNaNnNuNkAkAnAnAuAuAnUnKaNaNaNjAeNeN\"/D 461 20eAaGnAuAuNnUuAxAuBnAeAaAaEnAnAkNnNnXuNnKaUaNbAjNgNbNaN\"/D 545 20bAaAaAeAjNgAaJnGnAnAuNnUaNbNaNnUnUiAaEnAkNnNnKnNnNnK\"/D 555 20bAuN\"/D 608 20bAaAaGuNnNnNxAiAuAnAnAnAbAbAaEnAnAuNnNnIuNnKaNaNaNbAW7NgNbN\"/D 79 21aAaAaw6nKnNnNW-8AnAnAnBaAaAaGnAnAkNnKnXnXaUaNbAW8NgN\"/F 308 21W9AbAaBaBnAuAuAW-8NkNnNnNaNaNaNbU\"/o 356 21eAnAuU\"/D 452 21bAuN\"/D 512 22aEuUaN\"/F 22 23W7AeBaBnBnAnAnAuAxNnNnNkNkUaNbNaNaNbN\"/F 121 23gAeAaAaAnBnBuAnAnAW-6NaKnNnNaKaNbN\"/F 217 23gJaAbNaBnAuAnAiUnUnNkAnAnKaNaNbNgN\"/F 360 23W8AaAkAnJnAkAnNuNiNnNaUaNaNaNgN\"/F 410 23eAbAaAnAnAnEnAxNnNuNxNbNbNaNaNeN\"/D 504 23bBnAuUaN\"/F 545 23aAaAaEaAaAeNaKnNjBaBaAnAuAuAxNnNnNnNnNnNuKaN\"/F 604 23gAaAaGnAnAuAuAiUnNuNuNaNaNaNbNjN\"/F 71 24W8AaAaGnAnAuAnAiKnNnNnUaNaNaN\"/F 166 24a1BnAuAnGnAiUnNiAnKaNaNbNbN\"/D 321 24aAaGnAuAkAnAn0NuNnNnUaNaAaAeAW8NbNbNaK\"/F 457 24bBaAbNbNaBnBnAnAnAW-6NnNnNkNaUbNgN\"/D 366 25gAaBaGnAkNuNnIaN\"/F 496 25aAaAaBaAkAnNnXaN\"/D 176 26bAbGuAiXaNbN\"/D 465 26aAaAaGnAxNuNaNaNaUaN\"/D 508 26bAuN\"/D 513 26aEaGnAkNnUaNnNnNeNaN\"/D 129 27aw8nAxNnUaNaNbUaU\"/D 544 27bAaAaAaAaAaBnAkNnNnUnX\"/D 32 28aJnAnAuNnNaNaNaNaU\"/D 211 28eAaBaBnBnAuNnNnNnKaNaN\"/D 401 29gAbAaJnAuAuNnUnw-6\"/D 609 29aEnBnAkNnUbNbNaN\"/D 15 30eAeAaAaBnBnAnAkNnUnw-6\"/D 80 30aEnAnAkUaNbNaN\"/D 161 30jAaEnBnAxUnXaN\"/D 353 31jAbJnAxNnNnI\"/","down":"d 16 9bAaAnAnBuNnUaNaN\"/F 22 9gAbAaBaAaEaBnAnAuAn0NuNnNnUaUaNaUaNaNeN\"/D 28 9bAaAaBnAnNnUnU\"/D 113 9bBnAnBuKaNaN\"/F 117 9jAbAaBaBaBaEuAuAn0NkNnKaUaNaUaNaNbN\"/D 124 9bAaGnNnUnU\"/D 65 11bBnAnBuKaNaN\"/F 69 11jAaAaAaAaBaAaBnAnAuAn0NkNnUaUaNaUaNaNbN\"/D 75 11bAaEnNnNnU\"/D 159 11bAaBnAnAnNnKaN\"/D 170 11eAaEnNnNnNnN\"/F 163 12W8AaAaAaAaAaEnAnAuAn1NnNnNnNnNaUbNaNaNaN\"/D 219 13aAaAaBuNnNnNaN\"/D 170 14aAaAaBuNnK\"/D 209 14bAaAuAuAnUaNaN\"/F 213 14jAaAaAaAaBnAnAnAiNbNuAnNkAnAnAnNnKaUaNbAnBbNaUuNbNaN\"/D 19 15bBnAuUaN\"/D 26 15bAaAnAuK\"/D 114 15bEnAuKaN\"/D 122 15bAaBkK\"/D 162 15aGuNnNaNaN\"/D 353 15bBnAuUaN\"/D 363 15aAaBuNnNaN\"/D 402 15bBuAnUaN\"/F 405 15gAaAaAnAnAaAbUnNbBaBkAW-9NuKaNaNbNaN\"/D 410 15bAaBuNnU\"/D 602 15bAaBkNnNaN\"/D 67 16aAaBnAuKaN\"/D 74 16bAaBuNnU\"/F 355 16W6AbAuBbUaAaBnAiNuAxNnUaNaBbUuNaN\"/D 450 16aAaAnAuUaN\"/D 458 16bAaBuNnU\"/D 592 16bEnAuKaN\"/F 596 16jAaAbAaBaBnBnAnAW-8NxXaUaNaUbN\"/D 166 17bAuN\"/D 176 17aAaJnAnAnAnNW-9AkAuAkNnNnUnKaNaNbAaAaAaAa1NbNaNaK\"/D 210 17bBnAuUaN\"/D 217 17bAaBuNnU\"/F 452 17W6AaAuBaAaKaAaBnAuAW-8NuKaNbAnBbKnNaN\"/D 496 17bBnBnAnKaU\"/F 500 17jEaAbUaBaEnAnAnAuAW-7NuNnUaKaUaNbN\"/D 505 17bAaEuNnK\"/F 548 17jAaAaAaAaAaGnAkAW-8NkKaUaNaKbN\"/D 555 17bAaBnAnNnNnNaN\"/D 23 18bAuN\"/D 118 18bAuN\"/D 313 18eAaAaBaEnAxNnUnKaU\"/D 354 18bBuU\"/D 361 18bBuU\"/D 366 18bAaEnAnAnAnNn1AuAnNnUnKaNbBaAa1NaUaN\"/D 403 18aEuUaN\"/D 410 18aAaBuNnNaN\"/D 544 18bEnAnNnUaN\"/D 71 19bAuN\"/o 166 19bBuU\"/D 214 19bAuN\"/D 222 19bAaGnAnBuNW-9AuAuAuXaNaNaNaNeAaAjNaNaNaN\"/D 258 19bAbw6nAnAxNnIaUbN\"/D 266 19gAaBaGnAxNnUnXaN\"/D 358 19bAuN\"/D 451 19aEuUaN\"/D 457 19bEnNnU\"/D 30 20aAaAaAaJnAuKnNuNW-6AuAnBnEaAaAaGnAnAkNnNnw-6nw-6aUaUeAa0NbN\"/D 126 20aBaAaAaBaEnBnJnAnAxUnUaUaNbKnNnUnNW-8AuAnAnBuNnKaUaNaNeAa0NbN\"/D 305 20bAaBaGnAxNnIaNaN\"/D 406 20bAuN\"/D 602 20aAaBnAnNnUaN\"/D 78 21aAaBaBaGnBnGnAkNnKaNaNaNaKnNnNn0AnAnAnBbAbAaGnAxNnw-6nNnKaUaUeAa0NbN\"/o 214 21bAuN\"/o 357 21bAuN\"/D 454 21bAuN\"/D 594 21bEnAnNnUaN\"/F 264 22aBaBaAgNaKaw7nBnAnAuAW-9NuNnNnNnw-6aBaAgNaNaKbN\"/F 310 22bAaBaAgNaUaw6nAuAuAkAiNkNnXaAgNaXaN\"/D 400 22bAW9NeAaBnAnAkUiAnAkNuKaN\"/D 460 22bAaEuAnAnAuNnUaNW-6AnAnBbAaBaBnAxNnXnIaNaNbAW8NbN\"/D 320 23bAaGnAnBnAnAuAuAn0NuNnNnNnUaNbEaAeAjNeNbNbNaw-6\"/D 498 23aEuUaN\"/D 503 23bAaBuNnU\"/D 547 23aEuUaN\"/D 553 23bAaBuNnU\"/D 605 23aAaAaGnAnNnNW-8AnEnAaBbBnAuNnKnUnNnXaNeAW8NaNaU\"/F 22 24W6AbAaEaAuAuBnAnAiUnNnNnKaUaNbN\"/F 115 24W8AaBaAaEuAnBW-6NnNnNuNkNaUaNaNbN\"/F 354 24a1AbAaAuAuAnEaAW-7NnKuNkUaNbN\"/D 509 24bEnAaAaEnBnAkNnKaNxNxAaAaEnAuNuNnNnIaNaAbAW7NbNaNaN\"/D 558 24aAaGnBnGnBkIaXnNeNaU\"/D 598 24bAuN\"/F 67 25a0AaAaEnAnAnAnBW-6KnNuNuUaNaNaN\"/F 165 25W9AaAaBaBnNkAnEaAW-8UuNkAnNnXbNbNeN\"/F 405 25jBeNaNaAaEnNkAnAnEiNnUnNnNuAnAnKaNbAeNaN\"/F 451 25W6AnBaAbNaNaNbAnAnAnAnAnBiNnUnNuUaNaN\"/F 212 26W9AbAuAnAnEaAuAiKnNnNuAnAnNnUbNbNbN\"/D 500 26bAuN\"/D 550 26bAuN\"/D 366 27bAaBaBnBxNnNnKaNbN\"/D 462 27aBaBnBnAkNnUaNaNaNaN\"/F 510 27aAnN\"/D 544 27bAW8AiAaBaGnBkNnNnUnKnKaN\"/D 221 28eGnAnAuNnKaNaN\"/D 351 28eAbGnAuAuNnIaN\"/D 400 28bAaAaGnAuNnNnNnUaNaN\"/D 412 28eAaEnAnAkNnKaNaN\"/F 554 28aGnEkKnUnNjN\"/F 597 28W8AaAaBnNuBnAnAW-6UnNaKaN\"/F 499 29gAgAnBiUnNnN\"/D 30 30bJnAnAkNnUaNaUbN\"/D 110 30eAbAaAaBnBxNnKnK\"/D 173 30eAbGnAkNnNnKaN\"/D 209 30bAaAaGnAuNnNnNnUaNaN\"/F 558 31aBnU\"/D 604 31bAaGnAuNnKaU\"/D 160 32eAbBaBnBkNnNnNnKaN\"/"};
+  const DOWN_FRAMES = [{"name":"lean L","pixels":{"13,9":"#21201c","14,9":"#21201c","19,9":"#ffffff","20,9":"#ffffff","21,9":"#ffffff","22,9":"#ffffff","25,9":"#21201c","26,9":"#21201c","12,10":"#21201c","13,10":"#21201c","14,10":"#21201c","15,10":"#21201c","16,10":"#ffffff","17,10":"#ffffff","18,10":"#ffffff","19,10":"#ffffff","20,10":"#ffffff","21,10":"#ffffff","22,10":"#ffffff","23,10":"#ffffff","24,10":"#ffffff","25,10":"#21201c","26,10":"#21201c","27,10":"#21201c","11,11":"#21201c","12,11":"#21201c","13,11":"#21201c","14,11":"#21201c","15,11":"#ffffff","16,11":"#ffffff","17,11":"#ffffff","18,11":"#ffffff","19,11":"#ffffff","20,11":"#ffffff","21,11":"#ffffff","22,11":"#ffffff","23,11":"#ffffff","24,11":"#ffffff","25,11":"#ffffff","26,11":"#21201c","27,11":"#21201c","28,11":"#21201c","11,12":"#21201c","12,12":"#21201c","13,12":"#21201c","14,12":"#ffffff","15,12":"#ffffff","16,12":"#ffffff","17,12":"#ffffff","18,12":"#ffffff","19,12":"#ffffff","20,12":"#ffffff","21,12":"#ffffff","22,12":"#ffffff","23,12":"#ffffff","24,12":"#ffffff","25,12":"#ffffff","26,12":"#21201c","27,12":"#21201c","28,12":"#21201c","13,13":"#21201c","14,13":"#21201c","15,13":"#ffffff","16,13":"#ffffff","17,13":"#ffffff","18,13":"#ffffff","19,13":"#ffffff","20,13":"#ffffff","21,13":"#ffffff","22,13":"#ffffff","23,13":"#ffffff","24,13":"#ffffff","25,13":"#ffffff","26,13":"#ffffff","27,13":"#ffffff","28,13":"#21201c","14,14":"#ffffff","15,14":"#ffffff","16,14":"#ffffff","17,14":"#ffffff","18,14":"#ffffff","19,14":"#ffffff","20,14":"#ffffff","21,14":"#ffffff","22,14":"#ffffff","23,14":"#ffffff","24,14":"#ffffff","25,14":"#ffffff","26,14":"#ffffff","27,14":"#ffffff","28,14":"#ffffff","13,15":"#ffffff","14,15":"#ffffff","15,15":"#ffffff","16,15":"#ffffff","17,15":"#21201c","18,15":"#21201c","19,15":"#ffffff","20,15":"#ffffff","21,15":"#ffffff","22,15":"#ffffff","23,15":"#ffffff","24,15":"#21201c","25,15":"#21201c","26,15":"#ffffff","27,15":"#ffffff","28,15":"#ffffff","13,16":"#ffffff","14,16":"#ffffff","15,16":"#ffffff","16,16":"#21201c","17,16":"#21201c","18,16":"#21201c","19,16":"#ffffff","20,16":"#ffffff","21,16":"#ffffff","22,16":"#ffffff","23,16":"#ffffff","24,16":"#21201c","25,16":"#21201c","26,16":"#21201c","27,16":"#ffffff","28,16":"#ffffff","12,17":"#ffffff","13,17":"#ffffff","14,17":"#ffffff","15,17":"#ffffff","16,17":"#21201c","17,17":"#21201c","18,17":"#ffffff","19,17":"#ffffff","20,17":"#ffffff","21,17":"#ffffff","22,17":"#ffffff","23,17":"#ffffff","24,17":"#21201c","25,17":"#21201c","26,17":"#ffffff","27,17":"#ffffff","28,17":"#ffffff","29,17":"#ffffff","12,18":"#ffffff","13,18":"#ffffff","14,18":"#ffffff","15,18":"#ffffff","16,18":"#ffffff","17,18":"#ffffff","18,18":"#ffffff","19,18":"#ffffff","20,18":"#ffffff","21,18":"#21201c","22,18":"#21201c","23,18":"#ffffff","24,18":"#ffffff","25,18":"#ffffff","26,18":"#ffffff","27,18":"#ffffff","28,18":"#ffffff","29,18":"#ffffff","13,19":"#ffffff","14,19":"#ffffff","15,19":"#ffffff","16,19":"#ffffff","17,19":"#ffffff","18,19":"#ffffff","19,19":"#ffffff","20,19":"#ffffff","21,19":"#ffffff","22,19":"#ffffff","23,19":"#ffffff","24,19":"#ffffff","25,19":"#ffffff","26,19":"#ffffff","27,19":"#ffffff","28,19":"#ffffff","14,20":"#ffffff","15,20":"#ffffff","16,20":"#ffffff","17,20":"#ffffff","18,20":"#ffffff","19,20":"#ffffff","20,20":"#ffffff","21,20":"#ffffff","22,20":"#ffffff","23,20":"#ffffff","24,20":"#ffffff","25,20":"#ffffff","26,20":"#ffffff","27,20":"#ffffff","28,20":"#21201c","14,21":"#21201c","15,21":"#21201c","16,21":"#21201c","17,21":"#ffffff","18,21":"#ffffff","19,21":"#ffffff","20,21":"#ffffff","21,21":"#ffffff","22,21":"#ffffff","23,21":"#ffffff","24,21":"#ffffff","25,21":"#ffffff","26,21":"#ffffff","27,21":"#21201c","28,21":"#21201c","29,21":"#21201c","30,21":"#21201c","14,22":"#21201c","15,22":"#21201c","16,22":"#21201c","17,22":"#21201c","18,22":"#21201c","19,22":"#21201c","20,22":"#21201c","21,22":"#21201c","22,22":"#21201c","23,22":"#21201c","24,22":"#21201c","25,22":"#21201c","26,22":"#21201c","27,22":"#21201c","28,22":"#21201c","29,22":"#21201c","30,22":"#21201c","31,22":"#21201c","13,23":"#21201c","14,23":"#21201c","15,23":"#21201c","16,23":"#21201c","17,23":"#21201c","18,23":"#21201c","19,23":"#21201c","20,23":"#21201c","21,23":"#21201c","22,23":"#21201c","23,23":"#21201c","24,23":"#21201c","25,23":"#21201c","26,23":"#21201c","27,23":"#21201c","28,23":"#21201c","29,23":"#21201c","30,23":"#21201c","31,23":"#21201c","32,23":"#21201c","13,24":"#21201c","14,24":"#21201c","15,24":"#21201c","16,24":"#21201c","17,24":"#21201c","18,24":"#21201c","19,24":"#21201c","20,24":"#21201c","21,24":"#ffffff","22,24":"#ffffff","23,24":"#ffffff","24,24":"#ffffff","25,24":"#ffffff","26,24":"#ffffff","27,24":"#21201c","28,24":"#21201c","29,24":"#21201c","30,24":"#21201c","31,24":"#21201c","32,24":"#21201c","12,25":"#21201c","13,25":"#21201c","14,25":"#21201c","15,25":"#21201c","16,25":"#21201c","17,25":"#21201c","18,25":"#21201c","19,25":"#ffffff","20,25":"#ffffff","21,25":"#ffffff","22,25":"#ffffff","23,25":"#ffffff","24,25":"#ffffff","25,25":"#ffffff","26,25":"#ffffff","27,25":"#ffffff","28,25":"#ffffff","29,25":"#21201c","30,25":"#21201c","31,25":"#21201c","32,25":"#21201c","12,26":"#21201c","13,26":"#21201c","14,26":"#21201c","15,26":"#21201c","16,26":"#21201c","17,26":"#21201c","18,26":"#ffffff","19,26":"#ffffff","20,26":"#ffffff","21,26":"#ffffff","22,26":"#ffffff","23,26":"#ffffff","24,26":"#ffffff","25,26":"#ffffff","26,26":"#ffffff","27,26":"#ffffff","28,26":"#ffffff","29,26":"#ffffff","30,26":"#21201c","31,26":"#21201c","32,26":"#21201c","12,27":"#21201c","13,27":"#21201c","14,27":"#21201c","15,27":"#21201c","16,27":"#21201c","17,27":"#ffffff","18,27":"#ffffff","19,27":"#ffffff","20,27":"#ffffff","21,27":"#ffffff","22,27":"#ffffff","23,27":"#ffffff","24,27":"#ffffff","25,27":"#ffffff","26,27":"#ffffff","27,27":"#ffffff","28,27":"#ffffff","29,27":"#ffffff","30,27":"#ffffff","31,27":"#21201c","12,28":"#21201c","13,28":"#21201c","14,28":"#21201c","15,28":"#21201c","16,28":"#21201c","17,28":"#21201c","18,28":"#ffffff","19,28":"#ffffff","20,28":"#ffffff","21,28":"#ffffff","22,28":"#ffffff","23,28":"#ffffff","24,28":"#ffffff","25,28":"#ffffff","26,28":"#ffffff","27,28":"#21201c","28,28":"#21201c","29,28":"#21201c","30,28":"#21201c","14,29":"#21201c","15,29":"#21201c","16,29":"#21201c","17,29":"#21201c","18,29":"#21201c","19,29":"#21201c","20,29":"#21201c","21,29":"#ffffff","22,29":"#ffffff","23,29":"#ffffff","24,29":"#ffffff","25,29":"#ffffff","26,29":"#ffffff","27,29":"#21201c","28,29":"#21201c","29,29":"#21201c","30,29":"#21201c","31,29":"#21201c","14,30":"#21201c","15,30":"#21201c","16,30":"#21201c","17,30":"#21201c","18,30":"#21201c","19,30":"#21201c","20,30":"#21201c","21,30":"#ffffff","22,30":"#ffffff","23,30":"#ffffff","24,30":"#ffffff","25,30":"#ffffff","26,30":"#21201c","27,30":"#21201c","28,30":"#21201c","29,30":"#21201c","30,30":"#21201c","31,30":"#21201c","14,31":"#21201c","15,31":"#21201c","16,31":"#21201c","17,31":"#21201c","18,31":"#21201c","19,31":"#21201c","20,31":"#21201c","27,31":"#21201c","28,31":"#21201c","29,31":"#21201c","16,32":"#21201c","17,32":"#21201c","18,32":"#21201c","13,31":"#21201c","21,31":"#21201c","26,31":"#21201c","30,31":"#21201c","15,32":"#21201c","19,32":"#21201c","22,31":"#ffffff","23,31":"#ffffff","24,31":"#ffffff","25,31":"#ffffff"}},{"name":"center","pixels":{"16,9":"#21201c","17,9":"#21201c","22,9":"#ffffff","23,9":"#ffffff","24,9":"#ffffff","25,9":"#ffffff","28,9":"#21201c","29,9":"#21201c","15,10":"#21201c","16,10":"#21201c","17,10":"#21201c","18,10":"#21201c","19,10":"#ffffff","20,10":"#ffffff","21,10":"#ffffff","22,10":"#ffffff","23,10":"#ffffff","24,10":"#ffffff","25,10":"#ffffff","26,10":"#ffffff","27,10":"#ffffff","28,10":"#21201c","29,10":"#21201c","30,10":"#21201c","14,11":"#21201c","15,11":"#21201c","16,11":"#21201c","17,11":"#21201c","18,11":"#ffffff","19,11":"#ffffff","20,11":"#ffffff","21,11":"#ffffff","22,11":"#ffffff","23,11":"#ffffff","24,11":"#ffffff","25,11":"#ffffff","26,11":"#ffffff","27,11":"#ffffff","28,11":"#ffffff","29,11":"#21201c","30,11":"#21201c","31,11":"#21201c","14,12":"#21201c","15,12":"#21201c","16,12":"#21201c","17,12":"#ffffff","18,12":"#ffffff","19,12":"#ffffff","20,12":"#ffffff","21,12":"#ffffff","22,12":"#ffffff","23,12":"#ffffff","24,12":"#ffffff","25,12":"#ffffff","26,12":"#ffffff","27,12":"#ffffff","28,12":"#ffffff","29,12":"#21201c","30,12":"#21201c","31,12":"#21201c","15,13":"#21201c","16,13":"#21201c","17,13":"#ffffff","18,13":"#ffffff","19,13":"#ffffff","20,13":"#ffffff","21,13":"#ffffff","22,13":"#ffffff","23,13":"#ffffff","24,13":"#ffffff","25,13":"#ffffff","26,13":"#ffffff","27,13":"#ffffff","28,13":"#ffffff","29,13":"#ffffff","30,13":"#21201c","16,14":"#ffffff","17,14":"#ffffff","18,14":"#ffffff","19,14":"#ffffff","20,14":"#ffffff","21,14":"#ffffff","22,14":"#ffffff","23,14":"#ffffff","24,14":"#ffffff","25,14":"#ffffff","26,14":"#ffffff","27,14":"#ffffff","28,14":"#ffffff","29,14":"#ffffff","30,14":"#ffffff","15,15":"#ffffff","16,15":"#ffffff","17,15":"#ffffff","18,15":"#ffffff","19,15":"#21201c","20,15":"#21201c","21,15":"#ffffff","22,15":"#ffffff","23,15":"#ffffff","24,15":"#ffffff","25,15":"#ffffff","26,15":"#21201c","27,15":"#21201c","28,15":"#ffffff","29,15":"#ffffff","30,15":"#ffffff","15,16":"#ffffff","16,16":"#ffffff","17,16":"#ffffff","18,16":"#21201c","19,16":"#21201c","20,16":"#21201c","21,16":"#ffffff","22,16":"#ffffff","23,16":"#ffffff","24,16":"#ffffff","25,16":"#ffffff","26,16":"#21201c","27,16":"#21201c","28,16":"#21201c","29,16":"#ffffff","30,16":"#ffffff","14,17":"#ffffff","15,17":"#ffffff","16,17":"#ffffff","17,17":"#ffffff","18,17":"#21201c","19,17":"#21201c","20,17":"#ffffff","21,17":"#ffffff","22,17":"#ffffff","23,17":"#ffffff","24,17":"#ffffff","25,17":"#ffffff","26,17":"#21201c","27,17":"#21201c","28,17":"#ffffff","29,17":"#ffffff","30,17":"#ffffff","31,17":"#ffffff","14,18":"#ffffff","15,18":"#ffffff","16,18":"#ffffff","17,18":"#ffffff","18,18":"#ffffff","19,18":"#ffffff","20,18":"#ffffff","21,18":"#ffffff","22,18":"#ffffff","23,18":"#21201c","24,18":"#21201c","25,18":"#ffffff","26,18":"#ffffff","27,18":"#ffffff","28,18":"#ffffff","29,18":"#ffffff","30,18":"#ffffff","31,18":"#ffffff","15,19":"#ffffff","16,19":"#ffffff","17,19":"#ffffff","18,19":"#ffffff","19,19":"#ffffff","20,19":"#ffffff","21,19":"#ffffff","22,19":"#ffffff","23,19":"#ffffff","24,19":"#ffffff","25,19":"#ffffff","26,19":"#ffffff","27,19":"#ffffff","28,19":"#ffffff","29,19":"#ffffff","30,19":"#ffffff","16,20":"#ffffff","17,20":"#ffffff","18,20":"#ffffff","19,20":"#ffffff","20,20":"#ffffff","21,20":"#ffffff","22,20":"#ffffff","23,20":"#ffffff","24,20":"#ffffff","25,20":"#ffffff","26,20":"#ffffff","27,20":"#ffffff","28,20":"#ffffff","29,20":"#ffffff","30,20":"#21201c","15,21":"#21201c","16,21":"#21201c","17,21":"#21201c","18,21":"#ffffff","19,21":"#ffffff","20,21":"#ffffff","21,21":"#ffffff","22,21":"#ffffff","23,21":"#ffffff","24,21":"#ffffff","25,21":"#ffffff","26,21":"#ffffff","27,21":"#ffffff","28,21":"#21201c","29,21":"#21201c","30,21":"#21201c","31,21":"#21201c","15,22":"#21201c","16,22":"#21201c","17,22":"#21201c","18,22":"#21201c","19,22":"#21201c","20,22":"#21201c","21,22":"#21201c","22,22":"#21201c","23,22":"#21201c","24,22":"#21201c","25,22":"#21201c","26,22":"#21201c","27,22":"#21201c","28,22":"#21201c","29,22":"#21201c","30,22":"#21201c","31,22":"#21201c","32,22":"#21201c","14,23":"#21201c","15,23":"#21201c","16,23":"#21201c","17,23":"#21201c","18,23":"#21201c","19,23":"#21201c","20,23":"#21201c","21,23":"#21201c","22,23":"#21201c","23,23":"#21201c","24,23":"#21201c","25,23":"#21201c","26,23":"#21201c","27,23":"#21201c","28,23":"#21201c","29,23":"#21201c","30,23":"#21201c","31,23":"#21201c","32,23":"#21201c","33,23":"#21201c","14,24":"#21201c","15,24":"#21201c","16,24":"#21201c","17,24":"#21201c","18,24":"#21201c","19,24":"#21201c","20,24":"#21201c","21,24":"#21201c","22,24":"#ffffff","23,24":"#ffffff","24,24":"#ffffff","25,24":"#ffffff","26,24":"#ffffff","27,24":"#ffffff","28,24":"#21201c","29,24":"#21201c","30,24":"#21201c","31,24":"#21201c","32,24":"#21201c","33,24":"#21201c","13,25":"#21201c","14,25":"#21201c","15,25":"#21201c","16,25":"#21201c","17,25":"#21201c","18,25":"#21201c","19,25":"#21201c","20,25":"#ffffff","21,25":"#ffffff","22,25":"#ffffff","23,25":"#ffffff","24,25":"#ffffff","25,25":"#ffffff","26,25":"#ffffff","27,25":"#ffffff","28,25":"#ffffff","29,25":"#ffffff","30,25":"#21201c","31,25":"#21201c","32,25":"#21201c","33,25":"#21201c","13,26":"#21201c","14,26":"#21201c","15,26":"#21201c","16,26":"#21201c","17,26":"#21201c","18,26":"#21201c","19,26":"#ffffff","20,26":"#ffffff","21,26":"#ffffff","22,26":"#ffffff","23,26":"#ffffff","24,26":"#ffffff","25,26":"#ffffff","26,26":"#ffffff","27,26":"#ffffff","28,26":"#ffffff","29,26":"#ffffff","30,26":"#ffffff","31,26":"#21201c","32,26":"#21201c","33,26":"#21201c","13,27":"#21201c","14,27":"#21201c","15,27":"#21201c","16,27":"#21201c","17,27":"#21201c","18,27":"#ffffff","19,27":"#ffffff","20,27":"#ffffff","21,27":"#ffffff","22,27":"#ffffff","23,27":"#ffffff","24,27":"#ffffff","25,27":"#ffffff","26,27":"#ffffff","27,27":"#ffffff","28,27":"#ffffff","29,27":"#ffffff","30,27":"#ffffff","31,27":"#ffffff","32,27":"#21201c","13,28":"#21201c","14,28":"#21201c","15,28":"#21201c","16,28":"#21201c","17,28":"#21201c","18,28":"#21201c","19,28":"#ffffff","20,28":"#ffffff","21,28":"#ffffff","22,28":"#ffffff","23,28":"#ffffff","24,28":"#ffffff","25,28":"#ffffff","26,28":"#ffffff","27,28":"#ffffff","28,28":"#21201c","29,28":"#21201c","30,28":"#21201c","31,28":"#21201c","14,29":"#21201c","15,29":"#21201c","16,29":"#21201c","17,29":"#21201c","18,29":"#21201c","19,29":"#21201c","20,29":"#21201c","21,29":"#ffffff","22,29":"#ffffff","23,29":"#ffffff","24,29":"#ffffff","25,29":"#ffffff","26,29":"#ffffff","27,29":"#21201c","28,29":"#21201c","29,29":"#21201c","30,29":"#21201c","31,29":"#21201c","14,30":"#21201c","15,30":"#21201c","16,30":"#21201c","17,30":"#21201c","18,30":"#21201c","19,30":"#21201c","20,30":"#21201c","21,30":"#ffffff","22,30":"#ffffff","23,30":"#ffffff","24,30":"#ffffff","25,30":"#ffffff","26,30":"#21201c","27,30":"#21201c","28,30":"#21201c","29,30":"#21201c","30,30":"#21201c","31,30":"#21201c","14,31":"#21201c","15,31":"#21201c","16,31":"#21201c","17,31":"#21201c","18,31":"#21201c","19,31":"#21201c","20,31":"#21201c","27,31":"#21201c","28,31":"#21201c","29,31":"#21201c","16,32":"#21201c","17,32":"#21201c","18,32":"#21201c","13,31":"#21201c","21,31":"#21201c","26,31":"#21201c","30,31":"#21201c","15,32":"#21201c","19,32":"#21201c","22,31":"#ffffff","23,31":"#ffffff","24,31":"#ffffff","25,31":"#ffffff"}},{"name":"lean R","pixels":{"19,9":"#21201c","20,9":"#21201c","25,9":"#ffffff","26,9":"#ffffff","27,9":"#ffffff","28,9":"#ffffff","31,9":"#21201c","32,9":"#21201c","18,10":"#21201c","19,10":"#21201c","20,10":"#21201c","21,10":"#21201c","22,10":"#ffffff","23,10":"#ffffff","24,10":"#ffffff","25,10":"#ffffff","26,10":"#ffffff","27,10":"#ffffff","28,10":"#ffffff","29,10":"#ffffff","30,10":"#ffffff","31,10":"#21201c","32,10":"#21201c","33,10":"#21201c","17,11":"#21201c","18,11":"#21201c","19,11":"#21201c","20,11":"#21201c","21,11":"#ffffff","22,11":"#ffffff","23,11":"#ffffff","24,11":"#ffffff","25,11":"#ffffff","26,11":"#ffffff","27,11":"#ffffff","28,11":"#ffffff","29,11":"#ffffff","30,11":"#ffffff","31,11":"#ffffff","32,11":"#21201c","33,11":"#21201c","34,11":"#21201c","17,12":"#21201c","18,12":"#21201c","19,12":"#21201c","20,12":"#ffffff","21,12":"#ffffff","22,12":"#ffffff","23,12":"#ffffff","24,12":"#ffffff","25,12":"#ffffff","26,12":"#ffffff","27,12":"#ffffff","28,12":"#ffffff","29,12":"#ffffff","30,12":"#ffffff","31,12":"#ffffff","32,12":"#21201c","33,12":"#21201c","34,12":"#21201c","17,13":"#21201c","18,13":"#21201c","19,13":"#ffffff","20,13":"#ffffff","21,13":"#ffffff","22,13":"#ffffff","23,13":"#ffffff","24,13":"#ffffff","25,13":"#ffffff","26,13":"#ffffff","27,13":"#ffffff","28,13":"#ffffff","29,13":"#ffffff","30,13":"#ffffff","31,13":"#ffffff","32,13":"#21201c","18,14":"#ffffff","19,14":"#ffffff","20,14":"#ffffff","21,14":"#ffffff","22,14":"#ffffff","23,14":"#ffffff","24,14":"#ffffff","25,14":"#ffffff","26,14":"#ffffff","27,14":"#ffffff","28,14":"#ffffff","29,14":"#ffffff","30,14":"#ffffff","31,14":"#ffffff","32,14":"#ffffff","17,15":"#ffffff","18,15":"#ffffff","19,15":"#ffffff","20,15":"#ffffff","21,15":"#21201c","22,15":"#21201c","23,15":"#ffffff","24,15":"#ffffff","25,15":"#ffffff","26,15":"#ffffff","27,15":"#ffffff","28,15":"#21201c","29,15":"#21201c","30,15":"#ffffff","31,15":"#ffffff","32,15":"#ffffff","17,16":"#ffffff","18,16":"#ffffff","19,16":"#ffffff","20,16":"#21201c","21,16":"#21201c","22,16":"#21201c","23,16":"#ffffff","24,16":"#ffffff","25,16":"#ffffff","26,16":"#ffffff","27,16":"#ffffff","28,16":"#21201c","29,16":"#21201c","30,16":"#21201c","31,16":"#ffffff","32,16":"#ffffff","16,17":"#ffffff","17,17":"#ffffff","18,17":"#ffffff","19,17":"#ffffff","20,17":"#21201c","21,17":"#21201c","22,17":"#ffffff","23,17":"#ffffff","24,17":"#ffffff","25,17":"#ffffff","26,17":"#ffffff","27,17":"#ffffff","28,17":"#21201c","29,17":"#21201c","30,17":"#ffffff","31,17":"#ffffff","32,17":"#ffffff","33,17":"#ffffff","16,18":"#ffffff","17,18":"#ffffff","18,18":"#ffffff","19,18":"#ffffff","20,18":"#ffffff","21,18":"#ffffff","22,18":"#ffffff","23,18":"#ffffff","24,18":"#ffffff","25,18":"#21201c","26,18":"#21201c","27,18":"#ffffff","28,18":"#ffffff","29,18":"#ffffff","30,18":"#ffffff","31,18":"#ffffff","32,18":"#ffffff","33,18":"#ffffff","17,19":"#ffffff","18,19":"#ffffff","19,19":"#ffffff","20,19":"#ffffff","21,19":"#ffffff","22,19":"#ffffff","23,19":"#ffffff","24,19":"#ffffff","25,19":"#ffffff","26,19":"#ffffff","27,19":"#ffffff","28,19":"#ffffff","29,19":"#ffffff","30,19":"#ffffff","31,19":"#ffffff","32,19":"#ffffff","18,20":"#ffffff","19,20":"#ffffff","20,20":"#ffffff","21,20":"#ffffff","22,20":"#ffffff","23,20":"#ffffff","24,20":"#ffffff","25,20":"#ffffff","26,20":"#ffffff","27,20":"#ffffff","28,20":"#ffffff","29,20":"#ffffff","30,20":"#ffffff","31,20":"#ffffff","32,20":"#21201c","16,21":"#21201c","17,21":"#21201c","18,21":"#21201c","19,21":"#ffffff","20,21":"#ffffff","21,21":"#ffffff","22,21":"#ffffff","23,21":"#ffffff","24,21":"#ffffff","25,21":"#ffffff","26,21":"#ffffff","27,21":"#ffffff","28,21":"#ffffff","29,21":"#21201c","30,21":"#21201c","31,21":"#21201c","32,21":"#21201c","16,22":"#21201c","17,22":"#21201c","18,22":"#21201c","19,22":"#21201c","20,22":"#21201c","21,22":"#21201c","22,22":"#21201c","23,22":"#21201c","24,22":"#21201c","25,22":"#21201c","26,22":"#21201c","27,22":"#21201c","28,22":"#21201c","29,22":"#21201c","30,22":"#21201c","31,22":"#21201c","32,22":"#21201c","33,22":"#21201c","15,23":"#21201c","16,23":"#21201c","17,23":"#21201c","18,23":"#21201c","19,23":"#21201c","20,23":"#21201c","21,23":"#21201c","22,23":"#21201c","23,23":"#21201c","24,23":"#21201c","25,23":"#21201c","26,23":"#21201c","27,23":"#21201c","28,23":"#21201c","29,23":"#21201c","30,23":"#21201c","31,23":"#21201c","32,23":"#21201c","33,23":"#21201c","34,23":"#21201c","15,24":"#21201c","16,24":"#21201c","17,24":"#21201c","18,24":"#21201c","19,24":"#21201c","20,24":"#21201c","21,24":"#21201c","22,24":"#21201c","23,24":"#ffffff","24,24":"#ffffff","25,24":"#ffffff","26,24":"#ffffff","27,24":"#ffffff","28,24":"#ffffff","29,24":"#21201c","30,24":"#21201c","31,24":"#21201c","32,24":"#21201c","33,24":"#21201c","34,24":"#21201c","14,25":"#21201c","15,25":"#21201c","16,25":"#21201c","17,25":"#21201c","18,25":"#21201c","19,25":"#21201c","20,25":"#21201c","21,25":"#ffffff","22,25":"#ffffff","23,25":"#ffffff","24,25":"#ffffff","25,25":"#ffffff","26,25":"#ffffff","27,25":"#ffffff","28,25":"#ffffff","29,25":"#ffffff","30,25":"#ffffff","31,25":"#21201c","32,25":"#21201c","33,25":"#21201c","34,25":"#21201c","14,26":"#21201c","15,26":"#21201c","16,26":"#21201c","17,26":"#21201c","18,26":"#21201c","19,26":"#21201c","20,26":"#ffffff","21,26":"#ffffff","22,26":"#ffffff","23,26":"#ffffff","24,26":"#ffffff","25,26":"#ffffff","26,26":"#ffffff","27,26":"#ffffff","28,26":"#ffffff","29,26":"#ffffff","30,26":"#ffffff","31,26":"#ffffff","32,26":"#21201c","33,26":"#21201c","34,26":"#21201c","14,27":"#21201c","15,27":"#21201c","16,27":"#21201c","17,27":"#21201c","18,27":"#21201c","19,27":"#ffffff","20,27":"#ffffff","21,27":"#ffffff","22,27":"#ffffff","23,27":"#ffffff","24,27":"#ffffff","25,27":"#ffffff","26,27":"#ffffff","27,27":"#ffffff","28,27":"#ffffff","29,27":"#ffffff","30,27":"#ffffff","31,27":"#ffffff","32,27":"#ffffff","33,27":"#21201c","14,28":"#21201c","15,28":"#21201c","16,28":"#21201c","17,28":"#21201c","18,28":"#21201c","19,28":"#21201c","20,28":"#ffffff","21,28":"#ffffff","22,28":"#ffffff","23,28":"#ffffff","24,28":"#ffffff","25,28":"#ffffff","26,28":"#ffffff","27,28":"#ffffff","28,28":"#ffffff","29,28":"#21201c","30,28":"#21201c","31,28":"#21201c","32,28":"#21201c","14,29":"#21201c","15,29":"#21201c","16,29":"#21201c","17,29":"#21201c","18,29":"#21201c","19,29":"#21201c","20,29":"#21201c","21,29":"#ffffff","22,29":"#ffffff","23,29":"#ffffff","24,29":"#ffffff","25,29":"#ffffff","26,29":"#ffffff","27,29":"#21201c","28,29":"#21201c","29,29":"#21201c","30,29":"#21201c","31,29":"#21201c","14,30":"#21201c","15,30":"#21201c","16,30":"#21201c","17,30":"#21201c","18,30":"#21201c","19,30":"#21201c","20,30":"#21201c","21,30":"#ffffff","22,30":"#ffffff","23,30":"#ffffff","24,30":"#ffffff","25,30":"#ffffff","26,30":"#21201c","27,30":"#21201c","28,30":"#21201c","29,30":"#21201c","30,30":"#21201c","31,30":"#21201c","14,31":"#21201c","15,31":"#21201c","16,31":"#21201c","17,31":"#21201c","18,31":"#21201c","19,31":"#21201c","20,31":"#21201c","27,31":"#21201c","28,31":"#21201c","29,31":"#21201c","16,32":"#21201c","17,32":"#21201c","18,32":"#21201c","13,31":"#21201c","21,31":"#21201c","26,31":"#21201c","30,31":"#21201c","15,32":"#21201c","19,32":"#21201c","22,31":"#ffffff","23,31":"#ffffff","25,31":"#ffffff","24,31":"#ffffff"}}];   // Ameya's hand-drawn down-facing wobble
+  const decodeRef = { a:' h 1',b:' h 2',e:' h 3',g:' h 4',j:' h 5',A:' v 1',B:' v 2',E:' v 3',G:' v 4',J:' v 5',n:'h -1',u:' h -2',k:' h -3',x:' h -4',i:' h -5',N:' v -1',U:' v -2',K:' v -3',X:' v -4',I:' v -5',w:' v ',W:' h ',D:'<path d="M',o:'<path fill="pink" d="M',F:'<path fill="#fff" d="M','/':'/>',d:'<path d="M',f:'<path fill="#fff" d="M' };
+  const decode = s => s.split('').map(c => decodeRef[c] === undefined ? c : decodeRef[c]).join('');
+
+  const W = 48, H = 48, CELL = 12;
+  const INK = '#21201c', WHT = '#ffffff', PINK = '#ff97ba', SHADE = '#6f6a63';
+  const DIRS5 = ['up', 'dUp', 'side', 'dDown', 'down'];
+  const DIR_LABEL = { up:'up', dUp:'up-right', side:'right', dDown:'down-right', down:'down' };
+  const LS_KEY = 'panda-sit-workshop-v2';
+  // the 8 facings → which drawn cel + whether to mirror (left side), laid out as a compass
+  const COMPASS = [
+    ['up-left', 'dUp', true],  ['up', 'up', false],       ['up-right', 'dUp', false],
+    ['left', 'side', true],    null,                       ['right', 'side', false],
+    ['down-left', 'dDown', true], ['down', 'down', false], ['down-right', 'dDown', false],
+  ];
+  // the 8 facings in rotational order (like the game's spin3d): [label, drawn cel, mirror?]
+  const SPIN = [
+    ['up','up',false], ['up-right','dUp',false], ['right','side',false], ['down-right','dDown',false],
+    ['down','down',false], ['down-left','dDown',true], ['left','side',true], ['up-left','dUp',true],
+  ];
+
+  const key = (x, y) => x + ',' + y;
+  let state = {
+    dirs: { up:{frames:[]}, dUp:{frames:[]}, side:{frames:[]}, dDown:{frames:[]}, down:{frames:[]} },
+    activeDir: 'down', active: 1,
+    palette: [ {name:'body', hex:INK}, {name:'white', hex:WHT}, {name:'pink', hex:PINK}, {name:'shade', hex:SHADE} ],
+    swatch: 0, tool: 'paint', showGrid: true, showRef: true, speed: 240, spin: 220, wob: 5, theme: 'auto',
+  };
+  const curDir = () => state.dirs[state.activeDir];
+  const curFrame = () => curDir().frames[state.active];
+
+  // ---------- references (one rasterised cel per facing) ----------
+  const refImg = {}, refSample = {};
+  const hex2rgb = h => { if (h[0] !== '#') { const m = h.match(/\d+/g); return [+m[0],+m[1],+m[2]]; } const n = parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
+  function buildReferences(cb) {
+    let left = DIRS5.length;
+    DIRS5.forEach(dir => {
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="480" height="480"><g fill="' + INK + '">' + decode(CELS[dir]) + '</g></svg>';
+      const img = new Image();
+      img.onload = () => {
+        refImg[dir] = img;
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0, W, H);
+        const d = g.getImageData(0, 0, W, H).data; const s = {}; const cols = [INK, WHT, PINK];
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+          const i = (y*W+x)*4; if (d[i+3] < 100) continue;
+          let best = INK, bd = Infinity;
+          for (const hex of cols) { const [cr,cg,cb] = hex2rgb(hex); const dd = (d[i]-cr)**2+(d[i+1]-cg)**2+(d[i+2]-cb)**2; if (dd < bd) { bd = dd; best = hex; } }
+          s[key(x,y)] = best;
+        }
+        refSample[dir] = s;
+        if (--left === 0) cb();
+      };
+      img.onerror = () => { if (--left === 0) cb(); };
+      img.src = 'data:image/svg+xml;base64,' + btoa(svg);
+    });
+  }
+
+  // ---------- transforms ----------
+  function sitify(map) {
+    const ys = Object.keys(map).map(k => +k.split(',')[1]); if (!ys.length) return {};
+    const top = Math.min(...ys), bot = Math.max(...ys), hip = top + Math.round((bot-top)*0.55);
+    const out = {};
+    for (const k in map) { const [x,y] = k.split(',').map(Number); let ny = y; if (y > hip) ny = hip + Math.round((y-hip)*0.5); out[key(x,ny)] = map[k]; }
+    const seatY = hip + Math.round((bot-hip)*0.5);
+    for (const k in out) { const [x,y] = k.split(',').map(Number); if (y >= seatY-1) { out[key(x-1,y)] = out[key(x-1,y)] || out[k]; out[key(x+1,y)] = out[key(x+1,y)] || out[k]; } }
+    return out;
+  }
+  function lean(map, amt) {
+    const ys = Object.keys(map).map(k => +k.split(',')[1]); if (!ys.length) return {};
+    const top = Math.min(...ys), bot = Math.max(...ys), span = Math.max(1, bot-top); const out = {};
+    for (const k in map) { const [x,y] = k.split(',').map(Number); const nx = x + Math.round(amt*(bot-y)/span); if (nx>=0&&nx<W) out[key(nx,y)] = map[k]; }
+    return out;
+  }
+  const mirror = map => { const out = {}; for (const k in map) { const [x,y] = k.split(',').map(Number); out[key(W-1-x,y)] = map[k]; } return out; };
+  function nudge(map, dx, dy) { const out = {}; for (const k in map) { const [x,y] = k.split(',').map(Number); const nx=x+dx, ny=y+dy; if (nx>=0&&nx<W&&ny>=0&&ny<H) out[key(nx,ny)] = map[k]; } return out; }
+  const centerIdx = dir => { const i = state.dirs[dir].frames.findIndex(f => f.name === 'center'); return i < 0 ? 0 : i; };
+  function deriveWobble(dir) {
+    const fr = state.dirs[dir].frames, c = fr[centerIdx(dir)]; if (!c) return;
+    fr.forEach(f => { if (f.name === 'lean L') f.map = lean(c.map, -3); if (f.name === 'lean R') f.map = lean(c.map, 3); });
+  }
+  const seedDir = dir => {
+    const center = sitify(refSample[dir] || {});
+    return [ {name:'lean L', map:lean(center,-3)}, {name:'center', map:center}, {name:'lean R', map:lean(center,3)} ];
+  };
+
+  // ---------- rendering helpers ----------
+  const cssvar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  function checkers(ctx, w, h, cell) { const a = cssvar('--checker-a'), b = cssvar('--checker-b'); for (let y=0;y*cell<h;y++) for (let x=0;x*cell<w;x++){ ctx.fillStyle=(x+y)%2?b:a; ctx.fillRect(x*cell,y*cell,cell,cell); } }
+  function measure(map) {
+    const ys = Object.keys(map).map(k => +k.split(',')[1]); if (!ys.length) return null;
+    const top = Math.min(...ys), bot = Math.max(...ys), span = Math.max(1, bot-top);
+    const topCut = top + span*0.28, botCut = bot - span*0.28; let tx=0,tn=0,bx=0,bn=0;
+    for (const k in map) { const [x,y] = k.split(',').map(Number); if (y<=topCut){tx+=x;tn++;} if (y>=botCut){bx+=x;bn++;} }
+    return { topRow:top, botRow:bot, headX: tn?tx/tn:0, feetX: bn?bx/bn:0 };
+  }
+  function drawAnchored(ctx, map, sx, sy, box, scale) { for (const k in map) { const [x,y] = k.split(',').map(Number); ctx.fillStyle = map[k]; ctx.fillRect(Math.round(sx+(x-box.feetX)*scale), Math.round(sy+(y-box.botRow)*scale), Math.ceil(scale), Math.ceil(scale)); } }
+  function fillMap(ctx, map, ox, oy, scale) { for (const k in map) { const [x,y] = k.split(',').map(Number); ctx.fillStyle = map[k]; ctx.fillRect(Math.round(ox+x*scale), Math.round(oy+y*scale), Math.ceil(scale), Math.ceil(scale)); } }
+
+  // ---------- editor ----------
+  const editor = document.getElementById('editor'), ectx = editor.getContext('2d');
+  function drawEditor() {
+    ectx.clearRect(0,0,editor.width,editor.height); checkers(ectx, editor.width, editor.height, CELL);
+    if (state.showRef && refImg[state.activeDir]) { ectx.globalAlpha = 0.16; ectx.imageSmoothingEnabled = false; ectx.drawImage(refImg[state.activeDir], 0, 0, editor.width, editor.height); ectx.globalAlpha = 1; }
+    const m = curFrame() ? curFrame().map : {};
+    for (const k in m) { const [x,y] = k.split(',').map(Number); ectx.fillStyle = m[k]; ectx.fillRect(x*CELL, y*CELL, CELL, CELL); }
+    if (state.showGrid) { ectx.strokeStyle = 'rgba(128,120,105,.22)'; ectx.lineWidth = 1;
+      for (let x=0;x<=W;x++){ ectx.beginPath(); ectx.moveTo(x*CELL+.5,0); ectx.lineTo(x*CELL+.5,editor.height); ectx.stroke(); }
+      for (let y=0;y<=H;y++){ ectx.beginPath(); ectx.moveTo(0,y*CELL+.5); ectx.lineTo(editor.width,y*CELL+.5); ectx.stroke(); } }
+  }
+  function thumb(cv, map) { const g = cv.getContext('2d'); const s = cv.width/W; g.clearRect(0,0,cv.width,cv.height); checkers(g,cv.width,cv.height,Math.max(4,s)); fillMap(g, map, 0, 0, s); }
+
+  // ---------- palette ----------
+  const paletteEl = document.getElementById('palette');
+  const toHex6 = h => { if (h[0]==='#'&&h.length===7) return h; const [r,g,b]=hex2rgb(h); return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); };
+  function renderPalette() {
+    paletteEl.innerHTML = '';
+    state.palette.forEach((p, i) => {
+      const b = document.createElement('div'); b.className='swatch'; b.setAttribute('role','button'); b.setAttribute('aria-pressed', state.tool==='paint' && state.swatch===i);
+      b.innerHTML = '<span class="chip" style="background:'+p.hex+'"></span><span class="nm">'+p.name+'</span>';
+      const col = document.createElement('input'); col.type='color'; col.value=toHex6(p.hex); col.title='recolour '+p.name;
+      col.addEventListener('input', e => { e.stopPropagation(); recolour(i, e.target.value); });
+      col.addEventListener('click', e => e.stopPropagation());
+      b.appendChild(col);
+      b.addEventListener('click', () => { state.tool='paint'; state.swatch=i; syncTools(); });
+      paletteEl.appendChild(b);
+    });
+    const er = document.createElement('div'); er.className='swatch erase'; er.setAttribute('aria-pressed', state.tool==='erase');
+    er.innerHTML = '<span class="chip"></span><span class="nm">erase</span>';
+    er.addEventListener('click', () => { state.tool='erase'; syncTools(); });
+    paletteEl.appendChild(er);
+  }
+  function recolour(i, newHex) { const old = state.palette[i].hex; state.palette[i].hex = newHex; const m = curFrame().map; for (const k in m) if (m[k]===old) m[k]=newHex; save(); renderPalette(); drawEditor(); renderFrames(); renderDirs(); }
+
+  const toolBtns = [...document.querySelectorAll('.seg [data-tool]')];
+  toolBtns.forEach(b => b.addEventListener('click', () => { state.tool = b.dataset.tool; syncTools(); }));
+  function syncTools() { toolBtns.forEach(b => b.setAttribute('aria-pressed', state.tool===b.dataset.tool)); renderPalette(); }
+
+  // ---------- painting ----------
+  let painting = false;
+  const cellFromEvent = e => { const r = editor.getBoundingClientRect(); const x = Math.floor((e.clientX-r.left)/(r.width/W)), y = Math.floor((e.clientY-r.top)/(r.height/H)); return (x>=0&&x<W&&y>=0&&y<H)?[x,y]:null; };
+  function apply(x, y) {
+    const m = curFrame().map;
+    if (state.tool==='erase') delete m[key(x,y)];
+    else if (state.tool==='pick') { const c = m[key(x,y)]; if (c) { let idx = state.palette.findIndex(p=>p.hex===c); if (idx<0){ state.palette.push({name:'lifted',hex:c}); idx=state.palette.length-1; } state.tool='paint'; state.swatch=idx; syncTools(); } return; }
+    else m[key(x,y)] = state.palette[state.swatch].hex;
+  }
+  editor.addEventListener('pointerdown', e => { const c = cellFromEvent(e); if (!c) return; painting = true; editor.setPointerCapture(e.pointerId); apply(...c); drawEditor(); });
+  editor.addEventListener('pointermove', e => { const c = cellFromEvent(e); document.getElementById('coord').textContent = c?(c[0]+','+c[1]):'—'; if (painting && c && state.tool!=='pick') { apply(...c); drawEditor(); } });
+  const stopPaint = () => { if (painting) { painting = false; save(); renderFrames(); renderDirs(); } };
+  editor.addEventListener('pointerup', stopPaint); editor.addEventListener('pointercancel', stopPaint);
+  editor.addEventListener('pointerleave', () => document.getElementById('coord').textContent = '—');
+
+  // ---------- direction picker ----------
+  const dirsEl = document.getElementById('dirs');
+  function renderDirs() {
+    dirsEl.innerHTML = '';
+    DIRS5.forEach(dir => {
+      const t = document.createElement('div'); t.className='dir-tab'; t.setAttribute('aria-pressed', dir===state.activeDir);
+      const cv = document.createElement('canvas'); cv.width=52; cv.height=52; const c = state.dirs[dir].frames[centerIdx(dir)]; thumb(cv, c?c.map:{});
+      t.appendChild(cv);
+      const dl = document.createElement('div'); dl.className='dl'; dl.textContent = DIR_LABEL[dir]; t.appendChild(dl);
+      t.addEventListener('click', () => { state.activeDir = dir; state.active = centerIdx(dir); afterDirChange(); });
+      dirsEl.appendChild(t);
+    });
+  }
+  function afterDirChange() {
+    document.getElementById('dirLabel').textContent = DIR_LABEL[state.activeDir];
+    document.getElementById('stackDirLabel').textContent = DIR_LABEL[state.activeDir];
+    document.getElementById('activeName').textContent = DIR_LABEL[state.activeDir] + ' · ' + (curFrame()?curFrame().name:'');
+    drawEditor(); renderFrames(); renderDirs();
+  }
+
+  // ---------- frame strip ----------
+  const framesEl = document.getElementById('frames');
+  function renderFrames() {
+    framesEl.innerHTML = '';
+    const frames = curDir().frames;
+    frames.forEach((f, i) => {
+      const t = document.createElement('div'); t.className='frame-tab'; t.setAttribute('aria-pressed', i===state.active);
+      const cv = document.createElement('canvas'); cv.width=64; cv.height=64; thumb(cv, f.map); t.appendChild(cv);
+      const nm = document.createElement('div'); nm.className='fname'; nm.textContent = f.name; t.appendChild(nm);
+      t.addEventListener('click', () => { state.active = i; document.getElementById('activeName').textContent = DIR_LABEL[state.activeDir]+' · '+f.name; drawEditor(); renderFrames(); });
+      if (frames.length > 1) { const kill = document.createElement('button'); kill.className='kill'; kill.textContent='✕'; kill.addEventListener('click', e => { e.stopPropagation(); frames.splice(i,1); state.active = Math.min(state.active, frames.length-1); save(); afterDirChange(); }); t.appendChild(kill); }
+      framesEl.appendChild(t);
+    });
+    const add = document.createElement('button'); add.className='add-frame'; add.textContent='+'; add.title='add a frame (copy of current)';
+    add.addEventListener('click', () => { frames.push({name:'frame '+frames.length, map:Object.assign({}, curFrame().map)}); state.active = frames.length-1; save(); afterDirChange(); });
+    framesEl.appendChild(add);
+    document.getElementById('frameCount').textContent = frames.length + ' frame' + (frames.length===1?'':'s');
+  }
+
+  // ---------- previews ----------
+  function playOrder(dir) {
+    const fr = state.dirs[dir].frames, idx = n => fr.findIndex(f => f.name===n);
+    const c = idx('center'), l = idx('lean L'), r = idx('lean R');
+    if (c>=0&&l>=0&&r>=0) return [c,r,c,l];
+    const n = fr.length; if (n<=1) return [0]; const seq=[]; for(let i=0;i<n;i++)seq.push(i); for(let i=n-2;i>0;i--)seq.push(i); return seq;
+  }
+  // compass of the 8 facings
+  const compassEl = document.getElementById('compass'); const compassCanvases = [];
+  function buildCompass() {
+    compassEl.innerHTML = ''; compassCanvases.length = 0;
+    COMPASS.forEach(entry => {
+      if (!entry) { const c = document.createElement('div'); c.className='cell hollow'; c.innerHTML='<span class="center-note">left side<br>= mirror</span>'; compassEl.appendChild(c); compassCanvases.push(null); return; }
+      const [label, dir, flip] = entry;
+      const cell = document.createElement('div'); cell.className='cell';
+      const cv = document.createElement('canvas'); cv.width=76; cv.height=76; cell.appendChild(cv);
+      const cl = document.createElement('div'); cl.className='cl'; cl.textContent = label; cell.appendChild(cl);
+      compassEl.appendChild(cell); compassCanvases.push({cv, dir, flip});
+    });
+  }
+  const prevStack = document.getElementById('prevStack'), sctx = prevStack.getContext('2d');
+  const prevSpin = document.getElementById('prevSpin'), spctx = prevSpin.getContext('2d');
+  function drawSpin(ts) {
+    // one seated panda cycling the 8 facings in rotational order (a spin) while it teeters
+    const fi = Math.floor(ts / state.spin) % SPIN.length, [label, sdir, sflip] = SPIN[fi];
+    const fr = state.dirs[sdir].frames, order = playOrder(sdir);
+    let map = fr[order[Math.floor(ts/state.speed)%order.length]]; map = map ? map.map : {};
+    if (sflip) map = mirror(map);
+    const sway = Math.sin(ts * 2*Math.PI / (state.spin*SPIN.length)) * (state.wob*0.6);  // teeter across a full turn
+    if (Math.abs(sway) >= 0.5) map = lean(map, sway);
+    spctx.clearRect(0,0,prevSpin.width,prevSpin.height); checkers(spctx, prevSpin.width, prevSpin.height, 11);
+    const ss = prevSpin.width / W, box = measure(map);
+    if (box) drawAnchored(spctx, map, prevSpin.width/2, prevSpin.height - 5, box, ss);
+    document.getElementById('spinFacing').textContent = label;
+  }
+  function animate(ts) {
+    drawSpin(ts);
+    // compass: each facing cycles its own wobble, left facings mirrored
+    COMPASS.forEach((entry, i) => {
+      const slot = compassCanvases[i]; if (!slot) return;
+      const g = slot.cv.getContext('2d'), s = slot.cv.width / W;
+      const order = playOrder(slot.dir); const fr = state.dirs[slot.dir].frames;
+      let map = fr[order[Math.floor(ts/state.speed)%order.length]]; map = map?map.map:{};
+      if (slot.flip) map = mirror(map);
+      g.clearRect(0,0,slot.cv.width,slot.cv.height); checkers(g, slot.cv.width, slot.cv.height, 10);
+      const box = measure(map); if (box) drawAnchored(g, map, slot.cv.width/2, slot.cv.height-4, box, s);
+    });
+    // head-linked tower in the active facing (mirror if it's a left facing — but active is always a drawn one)
+    const dir = state.activeDir, order = playOrder(dir), fr = state.dirs[dir].frames;
+    sctx.clearRect(0,0,prevStack.width,prevStack.height); checkers(sctx, prevStack.width, prevStack.height, 11);
+    const s2 = prevStack.width / W, w = 2*Math.PI/(state.speed*order.length), step = Math.floor(ts/state.speed), len = order.length;
+    let seatX = prevStack.width/2, seatY = prevStack.height - 5*s2;
+    for (let lvl = 0; lvl < 3; lvl++) {
+      const st = ((step - lvl) % len + len) % len;              // base leads, riders above lag → wobble travels up
+      let lm = fr[order[st]] ? fr[order[st]].map : {};
+      const sway = Math.sin(ts*w - lvl*0.9) * (state.wob*0.6);
+      if (Math.abs(sway) >= 0.5) lm = lean(lm, sway);
+      const box = measure(lm); if (!box) continue;
+      drawAnchored(sctx, lm, seatX, seatY, box, s2);
+      seatX += (box.headX - box.feetX) * s2; seatY -= (box.botRow - box.topRow) * s2;
+    }
+    requestAnimationFrame(animate);
+  }
+
+  // ---------- persistence ----------
+  function save() { try { localStorage.setItem(LS_KEY, JSON.stringify({dirs:state.dirs, palette:state.palette})); } catch(e){} }
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(LS_KEY));
+      if (s && s.dirs) { DIRS5.forEach(d => { if (s.dirs[d] && s.dirs[d].frames && s.dirs[d].frames.length) state.dirs[d] = s.dirs[d]; }); if (s.palette) state.palette = s.palette; return true; }
+    } catch(e){}
+    return false;
+  }
+
+  // ---------- export / import ----------
+  const io = document.getElementById('io'), ioStatus = document.getElementById('ioStatus');
+  document.getElementById('btnExport').addEventListener('click', () => {
+    const dirs = {}; DIRS5.forEach(d => { dirs[d] = { order: playOrder(d), frames: state.dirs[d].frames.map(f => ({name:f.name, pixels:f.map})) }; });
+    const out = { grid:{w:W,h:H}, riderRise:62,
+      mirror: { left:{cel:'side',flip:true}, upleft:{cel:'dUp',flip:true}, downleft:{cel:'dDown',flip:true} },
+      dirs };
+    const txt = 'const SIT_DIRS = ' + JSON.stringify(out) + ';';
+    io.value = txt; io.select();
+    try { document.execCommand('copy'); } catch(e){}
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(()=>{});
+    ioStatus.innerHTML = '<span class="flash">copied</span> — 5 facings, ' + W+'×'+H + ' grid. Left facings mirror per the map. Bake like the walk sprite.';
+  });
+  document.getElementById('btnImport').addEventListener('click', () => {
+    try {
+      const m = io.value.match(/\{[\s\S]*\}/); if (!m) throw 0; const obj = JSON.parse(m[0]);
+      if (obj.dirs) { DIRS5.forEach(d => { if (obj.dirs[d] && obj.dirs[d].frames) state.dirs[d] = { frames: obj.dirs[d].frames.map(f=>({name:f.name||'frame', map:f.pixels||f.map||{}})) }; }); }
+      else if (obj.frames) { state.dirs.down = { frames: obj.frames.map(f=>({name:f.name||'frame', map:f.pixels||f.map||{}})) }; }   // single-direction SIT_FRAMES → down
+      else throw 0;
+      state.activeDir='down'; state.active=centerIdx('down'); save(); afterDirChange(); ioStatus.textContent = 'imported.';
+    } catch(e) { ioStatus.textContent = 'could not parse — paste a SIT_DIRS (or a single SIT_FRAMES) export'; }
+  });
+
+  // ---------- buttons ----------
+  const redraw = () => { save(); drawEditor(); renderFrames(); renderDirs(); };
+  document.getElementById('btnClear').addEventListener('click', () => { curFrame().map = {}; redraw(); });
+  document.getElementById('btnSeed').addEventListener('click', () => { if (refSample[state.activeDir]) { curFrame().map = Object.assign({}, refSample[state.activeDir]); redraw(); } });
+  document.getElementById('btnSit').addEventListener('click', () => { curFrame().map = sitify(curFrame().map); redraw(); });
+  document.getElementById('btnMirror').addEventListener('click', () => { curFrame().map = mirror(curFrame().map); redraw(); });
+  document.getElementById('btnDerive').addEventListener('click', () => { deriveWobble(state.activeDir); redraw(); });
+  const nb = (id,dx,dy) => document.getElementById(id).addEventListener('click', () => { curFrame().map = nudge(curFrame().map,dx,dy); redraw(); });
+  nb('btnNudgeL',-1,0); nb('btnNudgeR',1,0); nb('btnNudgeU',0,-1); nb('btnNudgeD',0,1);
+  document.getElementById('tglGrid').addEventListener('change', e => { state.showGrid = e.target.checked; drawEditor(); });
+  document.getElementById('tglRef').addEventListener('change', e => { state.showRef = e.target.checked; drawEditor(); });
+  document.getElementById('speed').addEventListener('input', e => { state.speed = +e.target.value; });
+  document.getElementById('spin').addEventListener('input', e => { state.spin = +e.target.value; });
+  document.getElementById('wob').addEventListener('input', e => { state.wob = +e.target.value; document.getElementById('wobVal').textContent = e.target.value; });
+
+  const themeBtn = document.getElementById('themeBtn');
+  themeBtn.addEventListener('click', () => {
+    state.theme = state.theme==='auto'?'light':state.theme==='light'?'dark':'auto';
+    if (state.theme==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', state.theme);
+    themeBtn.textContent = 'theme: '+state.theme; drawEditor();
+  });
+
+  // ---------- boot ----------
+  buildReferences(() => {
+    const saved = load();
+    // no saved session → down starts from the drawn art, the other four from a sit-ified cel draft
+    if (!saved && DOWN_FRAMES && DOWN_FRAMES.length) state.dirs.down.frames = DOWN_FRAMES.map(f => ({name:f.name, map:Object.assign({}, f.pixels)}));
+    DIRS5.forEach(dir => { if (!state.dirs[dir].frames.length) state.dirs[dir].frames = seedDir(dir); });
+    state.active = centerIdx(state.activeDir);
+    save();
+    renderPalette(); syncTools(); buildCompass(); renderDirs(); renderFrames(); afterDirChange();
+    requestAnimationFrame(animate);
+  });
+})();
+</script>

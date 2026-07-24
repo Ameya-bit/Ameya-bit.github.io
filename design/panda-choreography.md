@@ -1,5 +1,7 @@
 # Panda hero choreography — the activation-patching troupe
 
+> **⚠ SUPERSEDED (2026-07-23) by [panda-chaos.md](panda-chaos.md) — "the overwhelmed interpreter."** Design review after all five phases shipped: the conga lines turned characters into notation (uniform, janky, suppressed the collision comedy), and the patch fired too rarely/late to be seen. The successor keeps the entrance, collisions, and the hat panda (self-insert), retires lines/patching/freeze, and replaces crowd choreography with a three-tier chaos economy the hat panda scrambles to study. This doc stays as the record of what was built and why it was retired.
+
 *Started 2026-07-23. This is the choreography spec for the homepage hero panda troupe — the concept that supersedes "roaming troupe with a hat" (Candidate 6 in [whimsy.md](whimsy.md)). Base engine, palette, fencing rules, and build history live in [whimsy.md](whimsy.md) and [direction.md](direction.md); this doc specifies only what the troupe **does**. Status (2026-07-23): **all five phases shipped**, built directly into the live site (`assets/pandas/pandas.js` + `styles.scss`), plus a Phase-3 observer refinement (navigation + scan). See **[What the troupe does today](#what-the-troupe-does-today-as-shipped)** just below for the current behaviour; per-phase as-built details and the build log follow. The durable facing/idle polish (finer sprite angles, drawn idle cels) is **parked permanently** — no AI art, and the cels can't be hand-drawn (see the Phase 3 heading).*
 
 ---
