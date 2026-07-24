@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://ameya-bit.github.io/posts/induction-head/index.html</loc>
-    <lastmod>2026-07-10T21:25:05.609Z</lastmod>
+    <loc>https://ameya-bit.github.io/posts/ioi-circuit/index.html</loc>
+    <lastmod>2026-07-22T21:04:22.182Z</lastmod>
   </url>
   <url>
     <loc>https://ameya-bit.github.io/index.html</loc>
-    <lastmod>2026-07-10T20:02:35.440Z</lastmod>
+    <lastmod>2026-07-23T13:53:44.617Z</lastmod>
+  </url>
+  <url>
+    <loc>https://ameya-bit.github.io/posts/induction-head/index.html</loc>
+    <lastmod>2026-07-11T15:45:03.186Z</lastmod>
   </url>
 </urlset>

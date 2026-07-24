@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/ioi-circuit/index.html",
       "/posts/induction-head/index.html"
     ]
   }

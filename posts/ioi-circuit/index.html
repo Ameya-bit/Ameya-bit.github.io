@@ -6,8 +6,10 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
+<meta name="dcterms.date" content="2026-07-22">
+<meta name="description" content="DLA finds the name movers, patching finds what feeds them, path patching finds the wire between — and each one is blind to exactly what the next reveals.">
 
-<title>Ameya Panchal</title>
+<title>Every Method Has a Blind Spot: Reading GPT-2’s IOI Circuit Three Ways – Ameya Panchal</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -26,21 +28,19 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/quarto-listing/list.min.js"></script>
-<script src="site_libs/quarto-listing/quarto-listing.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-7ddc3e6012a8aaf130881451f3c3a2a3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-eb06ef9d024dd71d00b849a0c484b6fd.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-7ddc3e6012a8aaf130881451f3c3a2a3.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-eb06ef9d024dd71d00b849a0c484b6fd.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "language": {
     "search-no-results-text": "No results",
@@ -56,35 +56,6 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
-<script>
-
-  window.document.addEventListener("DOMContentLoaded", function (_event) {
-    const listingTargetEl = window.document.querySelector('#listing-writing .list');
-    if (!listingTargetEl) {
-      // No listing discovered, do not attach.
-      return; 
-    }
-
-    const options = {
-      valueNames: ['listing-title','listing-description','listing-date','listing-reading-time',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
-      
-      searchColumns: ["listing-date","listing-title","listing-author","listing-image","listing-description"],
-    };
-
-    window['quarto-listings'] = window['quarto-listings'] || {};
-    window['quarto-listings']['listing-writing'] = new List('listing-writing', options);
-
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  });
-
-  window.addEventListener('hashchange',() => {
-    if (window['quarto-listing-loaded']) {
-      window['quarto-listing-loaded']();
-    }
-  })
-  </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&amp;display=swap">
@@ -133,7 +104,7 @@ window.Quarto = {
 };
 </script>
 
-<link rel="alternate" type="application/rss+xml" title="Ameya Panchal" href="index.xml" data-external="1"></head>
+</head>
 
 <body class="floating nav-fixed quarto-light">
 
@@ -142,7 +113,7 @@ window.Quarto = {
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../../index.html">
     <span class="navbar-title">Ameya Panchal</span>
     </a>
   </div>
@@ -152,81 +123,188 @@ window.Quarto = {
     </nav>
 </header>
 <!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
-  
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#the-task-and-the-metric" id="toc-the-task-and-the-metric" class="nav-link active" data-scroll-target="#the-task-and-the-metric">The task and the metric</a></li>
+  <li><a href="#direct-logit-attribution-who-writes-the-answer" id="toc-direct-logit-attribution-who-writes-the-answer" class="nav-link" data-scroll-target="#direct-logit-attribution-who-writes-the-answer">Direct logit attribution: who writes the answer</a></li>
+  <li><a href="#activation-patching-whats-necessary-and-when" id="toc-activation-patching-whats-necessary-and-when" class="nav-link" data-scroll-target="#activation-patching-whats-necessary-and-when">Activation patching: what’s necessary, and when</a></li>
+  <li><a href="#path-patching-the-wire-itself" id="toc-path-patching-the-wire-itself" class="nav-link" data-scroll-target="#path-patching-the-wire-itself">Path patching: the wire itself</a></li>
+  <li><a href="#verification-do-the-labels-hold" id="toc-verification-do-the-labels-hold" class="nav-link" data-scroll-target="#verification-do-the-labels-hold">Verification: do the labels hold?</a></li>
+  <li><a href="#four-views-one-circuit" id="toc-four-views-one-circuit" class="nav-link" data-scroll-target="#four-views-one-circuit">Four views, one circuit</a></li>
+  </ul>
+</nav>
+</nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
 <!-- main -->
-<main class="content column-page" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Every Method Has a Blind Spot: Reading GPT-2’s IOI Circuit Three Ways</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">mechanistic interpretability</div>
+    <div class="quarto-category">transformers</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    DLA finds the name movers, patching finds what feeds them, path patching finds the wire between — and each one is blind to exactly what the next reveals.
+  </div>
+</div>
 
 
+<div class="quarto-title-meta">
 
-
-<section class="hero-screen">
-  <div class="hero" aria-labelledby="hero-headline">
-    <div id="panda-stage" class="panda-stage" aria-hidden="true"></div>
-    <div class="hero-inner">
-      <p id="hero-headline" class="hero-headline" role="heading" aria-level="1">Right now, I'm trying to replicate Anthropic's global workspace paper</p>
-      <p class="hero-lede">Computer Science, Physics, and AI at Penn State (Schreyer Honors). I'm focused on AI interpretability, with a research background in physics-grade computation. This is where I write up what I find.</p>
-      <nav class="hero-links" aria-label="Profile links">
-        <a href="https://github.com/Ameya-bit">GitHub</a>
-        <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
-        <a href="mailto:ameyapanchal011@gmail.com">Email</a>
-        <a href="assets/Ameya_Panchal_Resume.pdf">Résumé</a>
-      </nav>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">July 22, 2026</p>
     </div>
   </div>
-  <p class="writing-cue">Writing</p>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><em>Confident in the measurements — logit differences, recovery grids, attention patterns, all reproducible from the four notebooks in the <a href="https://github.com/Ameya-bit/IOI">repo</a>. More exploratory where I read a circuit off a disagreement between methods. My second mechanistic interpretability post; corrections welcome.</em></p>
+<p>Stack three interpretability methods on the same circuit and the temptation is to read their agreement as confirmation. The agreement is real. But the sharper signal is in the disagreement — each method reads one part of the circuit cleanly and is blind to the part the next one is built to see. This post walks the same GPT-2 circuit through direct logit attribution, activation patching, and path patching, and the through-line isn’t “I replicated IOI.” It’s what each method saw, and what it couldn’t.</p>
+<p>The last post took a copying head apart from the <em>weights</em> — eigenvalues of an OV circuit, input-independent structure. This one works from the other side: activations, what a specific input actually produces. That seam between the two runs underneath everything here, and it shows up in the first result.</p>
+<section id="the-task-and-the-metric" class="level2">
+<h2 class="anchored" data-anchor-id="the-task-and-the-metric">The task and the metric</h2>
+<p>The vehicle is Indirect Object Identification. Given</p>
+<blockquote class="blockquote">
+<p>When Mary and John went to the store, John gave a drink to ___</p>
+</blockquote>
+<p>the model should predict the indirect object <code>Mary</code> over the repeated subject <code>John</code>. Every run is scored by one number, the <strong>logit difference</strong> at the answer position,</p>
+<p><span class="math display">\Delta = \operatorname{logit}(\text{IO}) - \operatorname{logit}(\text{S}) ,</span></p>
+<p>which is <span class="math inline">+3.36</span> on that prompt and averages <span class="math inline">+3.86</span> across a hundred templated prompts, at 100% accuracy. GPT-2 small solves this cleanly; the question is <em>how</em>.</p>
+<p>To get causal traction we need a corruption — a minimal edit that flips the answer. The one used throughout is the <strong>S2 swap</strong>: change the second <code>John</code> to <code>Mary</code> (<em>“…the store, Mary gave a drink to”</em>), which makes <code>John</code> the intended answer and drives <span class="math inline">\Delta</span> to <span class="math inline">-2.48</span>. Everything downstream is measured as <strong>normalized recovery</strong> against those two poles,</p>
+<p><span class="math display">\text{recovery} = \frac{\Delta_{\text{patched}} - \Delta_{\text{corrupted}}}{\Delta_{\text{clean}} - \Delta_{\text{corrupted}}} ,</span></p>
+<p>so <span class="math inline">0</span> means the intervention did nothing and <span class="math inline">1</span> means it fully restored clean behavior. One metric, three ways of attributing it.</p>
 </section>
-<script src="assets/pandas/pandas.js" defer=""></script>
-<div class="writing-section">
-<div id="listing-writing" class="quarto-listing quarto-listing-container-default">
-<div class="list quarto-listing-default">
-<div class="quarto-post image-right" data-index="0" data-categories="bWVjaGFuaXN0aWMlMjBpbnRlcnByZXRhYmlsaXR5JTJDdHJhbnNmb3JtZXJz" data-listing-date-sort="1784692800000" data-listing-file-modified-sort="1784754262182" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="10" data-listing-word-count-sort="1834">
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/ioi-circuit/index.html" class="no-external">Every Method Has a Blind Spot: Reading GPT-2’s IOI Circuit Three Ways</a>
-</h3>
-<div class="delink listing-description"><a href="./posts/ioi-circuit/index.html" class="no-external">
-<p>DLA finds the name movers, patching finds what feeds them, path patching finds the wire between — and each one is blind to exactly what the next reveals.</p>
-</a></div>
+<section id="direct-logit-attribution-who-writes-the-answer" class="level2">
+<h2 class="anchored" data-anchor-id="direct-logit-attribution-who-writes-the-answer">Direct logit attribution: who writes the answer</h2>
+<p>The cheapest question first. Which heads write <em>directly</em> into the logit difference? DLA decomposes the residual stream at the answer position into per-component contributions, maps each head’s output back through its <span class="math inline">W_O</span>, applies the final LayerNorm scaling, and projects onto the answer direction <span class="math inline">W_U[:,\text{IO}] - W_U[:,\text{S}]</span>. No interventions, one forward pass, and the per-head projections sum back to the total <span class="math inline">\Delta</span> — a clean ranking of direct responsibility.</p>
+<p><strong>The name-mover head L9H9 dominates, at <span class="math inline">+2.35</span>, with L9H6 a distant second at <span class="math inline">+0.96</span>.</strong> Everything else is noise by comparison.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fig1_dla_ranking.png" class="img-fluid figure-img"></p>
+<figcaption>Top-10 heads by direct logit attribution to the IO−S direction, averaged over 100 prompts. L9H9 carries more than twice the next head; the tail past L9H6 is a scatter of minor contributors. On a single prompt L9H6 and L9H9 are nearly tied (+2.11 vs +2.10) — averaging is what separates them, which is the first hint that one hand-written prompt is a shaky place to read a circuit.</figcaption>
+</figure>
 </div>
-<div class="metadata">
-<a href="./posts/ioi-circuit/index.html" class="no-external">
-<div class="listing-date">
-Jul 22, 2026
+<p>Here is the seam with the last post. In the weights-only view, a head’s copying strength is the copying score — and by that metric L9H9 scores <strong>0.26</strong>, near the bottom of all 144 heads, while genuine high-copiers like L11H3 sit at <span class="math inline">1.00</span>.</p>
+<p>The weight-only reading would have walked right past the single most important head in the circuit, because the copying score measures <em>copies what it attends to</em>, not <em>attends to the right thing</em>. DLA finds L9H9 precisely because it folds in the actual attention on this input. Structure in the weights is not the same as structure that gets used.</p>
+<p>What DLA cannot do is see anything that doesn’t write straight to the logits. It found the name movers and stopped, because the heads that <em>feed</em> the name movers contribute nothing directly to the answer direction — their effect is routed through L9. To see them, the measurement has to become causal.</p>
+</section>
+<section id="activation-patching-whats-necessary-and-when" class="level2">
+<h2 class="anchored" data-anchor-id="activation-patching-whats-necessary-and-when">Activation patching: what’s necessary, and when</h2>
+<p>Activation patching runs the corrupted prompt but splices a single clean activation back in, one location at a time, and scores the recovery. Where DLA sees only direct writes, this catches components whose effect is routed through later layers — the price is a forward pass per location instead of one.</p>
+<p>The first sweep patches the residual stream across every <code>(layer, position)</code>. It answers a question no static weight reading can even phrase: not just <em>where</em> the answer-relevant information lives, but <em>when</em>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fig2_resid_patching.png" class="img-fluid figure-img"></p>
+<figcaption>Residual-stream patching over (layer, position), mean normalized recovery over 100 prompts. Two bright bands and nothing else. The signal lives at position 10 — the second, repeated subject (S2) — through the early layers, then goes dark above layer 8. At the same depth it reappears at position 14, the END token, and stays lit to the top. Averaging over 100 prompts barely smears the map, which felt like a broken experiment until you realize that <em>is</em> the result: the circuit is stable enough that one prompt and a hundred draw the same picture.</figcaption>
+</figure>
 </div>
-<div class="listing-reading-time">10 min</div>
-</a>
+<p>The handoff is the whole story. Early layers carry the answer information at the repeated-name position; around <strong>layer 8 it migrates to the END position</strong> and rides the residual stream out to the logits. That is a <em>temporal</em> claim — information living in one place, then another — and it is the clearest thing patching buys over reading weights, which can only ever describe a static map of what a head <em>could</em> do.</p>
+<p>The second sweep localizes heads: patch each head’s output at END and measure recovery.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fig3_head_patching.png" class="img-fluid figure-img"></p>
+<figcaption>Attention-head patching at the END position, layers 8+, mean recovery over 100 prompts. The brightest cells are not the name movers. S-inhibition heads L8H6 and L8H10 light up hardest; the name mover L9H9 is positive but dimmer; L10H7 goes strongly negative and L11H10 mildly so — the negative name movers, heads that push <em>against</em> the answer. The name mover reading dimmer than the S-inhibition heads is not it mattering less. Denoising one of several redundant name movers understates it, because the others cover for it (self-repair); the S-inhibition signal, by contrast, is exactly what the S2 corruption flips, so patching reads it at full strength.</figcaption>
+</figure>
 </div>
+<p>This is where the methods start to disagree in a way that’s informative rather than annoying. DLA read the name movers cleanly and barely registered L8. Patching reads L8 cleanly and <em>understates</em> the name movers. Neither is wrong — each is bright exactly where its own machinery is sensitive. Put them side by side and you get the roster the paper predicts: <strong>S-inhibition at L8H6 / L8H10, name movers around L9H9, negative name movers at L10H7 / L11H10.</strong></p>
+<p>But patching localizes <em>nodes</em>. It tells you L8 matters and L9 matters. It does not tell you that L8 matters <em>by talking to L9</em> — that the edge between them is real and not two independent contributions that happen to co-occur. For that you need to hold everything else still.</p>
+</section>
+<section id="path-patching-the-wire-itself" class="level2">
+<h2 class="anchored" data-anchor-id="path-patching-the-wire-itself">Path patching: the wire itself</h2>
+<p>Path patching isolates a single <strong>sender → receiver</strong> edge. The hypothesis, handed up by the previous two sweeps, is that the S-inhibition heads feed the name mover. Testing it took the most care of anything here — my first attempt quietly rebuilt plain activation patching, because patching the sender and reading the output lets its effect flow down <em>every</em> path, not the one edge I wanted.</p>
+<p>The real construction freezes everything. Run clean and corrupted, caching both. Then re-run with <strong>every head and MLP frozen to its clean value except the sender</strong> (L8H6, set to corrupted), so the sender’s effect propagates but nothing else moves.</p>
+<p>Grab the resulting input to the receiver — the query into the L9 name movers — and stash it. In a final run, patch <em>only that stashed query</em> into <code>blocks.9.attn.hook_q</code> and score. Freezing everything but the sender is what turns a node measurement into an edge measurement.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fig6_path_patching.png" class="img-fluid figure-img"></p>
+<figcaption>Path patching the S-inhibition → name-mover edge, as a fraction of the full clean→corrupted swing. Routing the sender’s effect into the entire block-9 query input recovers 0.24; restricting it to L9H9’s query alone recovers 0.10. The gap between them is the rest of the name-mover family carrying the other half of the composition.</figcaption>
+</figure>
 </div>
-<div class="quarto-post image-right" data-index="1" data-categories="bWVjaGFuaXN0aWMlMjBpbnRlcnByZXRhYmlsaXR5JTJDdHJhbnNmb3JtZXJz" data-listing-date-sort="1783656000000" data-listing-file-modified-sort="1783784703186" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="7" data-listing-word-count-sort="1371">
-<div class="body">
-<h3 class="no-anchor listing-title">
-<a href="./posts/induction-head/index.html" class="no-external">An Induction Head in Disguise: Chasing Grammar in a Character-Level Transformer</a>
-</h3>
-<div class="delink listing-description"><a href="./posts/induction-head/index.html" class="no-external">
-<p>A copying head with the OV half of a bracket-completion mechanism, but a QK circuit that never learned to route it.</p>
-</a></div>
+<p><strong>Patching the whole block-9 query input recovers ~0.24 of the effect; restricting the path to L9H9’s query alone recovers ~0.10.</strong> So roughly a tenth of the entire clean→corrupted swing flows specifically along the L8H6 → L9H9 query edge, and about a quarter along the full S-inhibition → name-mover family. This is the thing DLA had to ignore and node-patching could only assume: a measured edge, not a co-occurrence.</p>
+</section>
+<section id="verification-do-the-labels-hold" class="level2">
+<h2 class="anchored" data-anchor-id="verification-do-the-labels-hold">Verification: do the labels hold?</h2>
+<p>Head numbers matching a paper’s head numbers proves nothing on its own. If the labels are right, the attention patterns should show each head reading what its name claims.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fig4_l8h6_sinhibition.png" class="img-fluid figure-img"></p>
+<figcaption>L8H6 attention. Read past the bright BOS column first — the attention sink soaks up most of the mass on every row and says nothing about the task. Behind it, the END row and the “gave” row put their real weight on <code>John</code>, the repeated subject. An S-inhibition head reads the duplicated name; that is what it is for.</figcaption>
+</figure>
 </div>
-<div class="metadata">
-<a href="./posts/induction-head/index.html" class="no-external">
-<div class="listing-date">
-Jul 10, 2026
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figures/fig5_l9h9_namemover.png" class="img-fluid figure-img"></p>
+<figcaption>L9H9 attention, same BOS caveat. Behind the sink, the END row attends to <code>Mary</code> — the indirect object, the answer. The name mover copies the correct name to the output position. Together the two panels trace the edge path patching measured: L8H6 reads the repeat, L9H9 writes the answer.</figcaption>
+</figure>
 </div>
-<div class="listing-reading-time">7 min</div>
-</a>
-</div>
-</div>
-</div>
-<div class="listing-no-matching d-none">No matching items</div>
-</div>
-</div>
+<p>The BOS column is the honest caveat here. It dominates both maps, and reading these patterns means deliberately looking underneath it — an easy way to see a signal that isn’t there, or miss one that is. With that discount applied, the labels hold: 8.6 reads the subject, 9.9 writes the object, and the circuit the three methods reconstructed is the circuit the attention shows.</p>
+</section>
+<section id="four-views-one-circuit" class="level2">
+<h2 class="anchored" data-anchor-id="four-views-one-circuit">Four views, one circuit</h2>
+<p>Nothing here contradicts anything else. The methods agree on the answer. What they don’t share is their blind spots, and lining those up is the actual result:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Gives you</th>
+<th>Blind to</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Weights</strong> (last post)</td>
+<td>input-independent structure</td>
+<td>what a given input actually uses</td>
+</tr>
+<tr class="even">
+<td><strong>Direct logit attribution</strong></td>
+<td>direct contribution to the logits</td>
+<td>anything routed through later layers</td>
+</tr>
+<tr class="odd">
+<td><strong>Activation patching</strong></td>
+<td>causal importance, and a <em>temporal</em> story</td>
+<td>the wiring between components</td>
+</tr>
+<tr class="even">
+<td><strong>Path patching</strong></td>
+<td>the sender → receiver edge</td>
+<td>— but needs the most careful construction</td>
+</tr>
+</tbody>
+</table>
+<p>Read top to bottom, each row’s blind spot is the next row’s headline. Weights miss what’s used; DLA finds what’s used but only at the output; patching finds the upstream heads but not their wiring; path patching supplies the wiring. The copying score buried L9H9; DLA surfaced it but couldn’t see L8; patching surfaced L8 but couldn’t prove it feeds L9; path patching drew the edge. You don’t get the circuit from any single method. You get it from knowing what each one can’t tell you, and reaching for the one that can.</p>
+<p><em>The four notebooks — DLA, activation patching, path patching, and the attention-pattern checks — are in the <a href="https://github.com/Ameya-bit/IOI">repo</a>; everything above is reproducible from them on CPU.</em></p>
 
 
-
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
