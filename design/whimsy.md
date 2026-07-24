@@ -183,7 +183,7 @@ One photon at a time: exponential free paths, scatter, absorb/escape, fading 1px
 ## Candidate 3 — Niche quotes (CUT 2026-07-22 with the mascot retirement)
 
 - **3A — 404 oracle**: 404 = Niche's room; one bad Nietzsche quote (real samples generated offline from `niche_model.pt`, curated ~30, static JSON), "ask again" instant swap. Static text, ~0 bytes JS.
-- **3B — colophon whisper** (optional): last line of the homepage; drop it if it reads as a footer creeping back.
+- **3B — colophon whisper** (optional): last line of the homepage; drop it if it reads as a footer creeping back. **✅ shipped 2026-07-24** — but as a *credit*, not a Niche quote: a faint centred `.site-colophon` line attributing the ma5a panda sprite/engine (MIT). Bare text, homepage-only, no chrome, so it stays a signature rather than a footer.
 - Synergy: if the visitor already loaded Ask Niche, "ask again" could sample live; otherwise static JSON.
 
 ---

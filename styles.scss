@@ -360,6 +360,25 @@ main.content > :last-child {
   margin-bottom: 96px;
 }
 
+// A single faint centred line at the foot of the homepage — a colophon whisper, not a footer:
+// no border, no fill, no nav chrome, and homepage-only (posts carry no troupe, so the credit
+// lives where the pandas actually are). The no-footer stance holds; this is a signature, not a bar.
+.site-colophon {
+  max-width: var(--shell);
+  margin-inline: auto;
+  margin-top: clamp(2.5rem, 1.5rem + 5vw, 5.5rem);   // extra air above → it sits well down the page
+  padding-inline: clamp(1.25rem, 5vw, 2rem);
+  text-align: center;
+  font-size: 0.75rem;            // a hair under the caption scale — a quiet whisper
+  letter-spacing: 0.01em;
+  color: var(--gray-1000);       // the same tertiary gray as each post's date
+  a {
+    color: inherit;
+    text-decoration-color: var(--gray-800);
+    &:hover { text-decoration-color: var(--gray-900); }
+  }
+}
+
 // ---- Home-page hero pandas (engine: assets/pandas/pandas.js) ---------------
 // A troupe wanders the hero; one wears the straw hat and watches the rest. The
 // stage overlays only the .hero region (which sits above the Writing cue), so they

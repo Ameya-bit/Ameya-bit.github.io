@@ -43,7 +43,7 @@ No accent color exists yet — reserved for the minimap TOC layer (open decision
 - **Posts**: Quarto page grid intact and symmetric — `$grid-body-width: 692px`, `$grid-sidebar-width: 300px`, `$grid-margin-width: 300px`. Equal sidebar/margin keeps the article column truly centered. `main.content` gets 24px inline padding → ~644px measure.
 - **Homepage only** breaks the narrow column (`page-layout: full`): full-viewport hero (`min-height: calc(100svh - 9.5rem)` so the "Writing" cue peeks above the fold) inside a `--shell: 1160px` container, then the wide writing list. Everything still built from Emil materials.
 - **Masthead** = the Quarto navbar stripped to just the name: transparent, borderless, no search, no icons, `padding-block: 2rem 0`. Its container is 692px-centered on posts and tracks `--shell` on the homepage via `body:has(.hero-screen)`.
-- No footer (`.nav-footer { display: none }`, no `page-footer` in yml). Social links live in the hero.
+- No footer (`.nav-footer { display: none }`, no `page-footer` in yml). Social links live in the hero. **Exception (2026-07-24): one faint centred colophon line (`.site-colophon`) at the foot of the homepage only**, crediting the ma5a panda sprite/engine now that the hero has a real thing to attribute. It is bare text — no border, fill, or nav chrome — so it reads as a signature, not the footer returning. The no-footer stance otherwise holds; posts stay footerless.
 
 ### Links
 Ink-colored text, always underlined; only the underline is tinted (`--gray-800`, hover → `--gray-900`), `text-decoration-thickness: 0.08em`, `text-underline-position: from-font`, offset 2px. **No transition** — hovers are instant.
