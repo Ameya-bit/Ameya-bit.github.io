@@ -41,5 +41,5 @@ listing:
 :::
 
 ```{=html}
-<p class="site-colophon">Hero pandas after <a href="https://codepen.io/Ma5a/pen/WNEBqPO">ma5a&rsquo;s <em>panda collision</em></a> (MIT). The straw hat is mine.</p>
+<p class="site-colophon">Hero pandas after <a href="https://codepen.io/Ma5a/pen/WNEBqPO">ma5a&rsquo;s <em>panda collision</em></a> (MIT).</p>
 ```
