@@ -1744,11 +1744,11 @@
     // a troupe this size would pile onto the headline.
     if (W < MOBILE_MIN) return;
     computeForbid();                                          // fence the hero card
-    // Viewport-aware headcount. Held low (10/7) through Phases 0–5 so each new anomaly kind
-    // could be read against a calm baseline; now all three tiers are in, raised to a full field
-    // (Ameya's call, 2026-07-24) to see what the chaos economy carries at density — a busier
-    // troupe, longer cascade chains, more for the watcher to miss.
-    PANDA_COUNT = W >= 1200 ? 20 : 12;
+    // Viewport-aware headcount, held deliberately low. All three tiers are in, and 20 was tried
+    // (2026-07-24) but read as too busy at rest — the baseline floor churned rather than staying
+    // calm, burying the variety-over-frequency principle. Back to 10/7: a quiet field where one
+    // odd thing reads as odd, and the rare stack / cascade land against stillness.
+    PANDA_COUNT = W >= 1200 ? 10 : 7;
 
     const place = () => {                                     // a clear spot off the fence
       let x, y, tries = 0;
