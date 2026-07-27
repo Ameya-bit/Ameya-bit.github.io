@@ -12,6 +12,28 @@ import { Rng } from '../rng.js';
 import { isStep, ACTION } from '../actions.js';
 import { hypot } from '../mathx.js';
 
+// The skit is presentation, so it is allowed the one thing the engine is not:
+// `Math.random` (where the hat lands when it comes off). That makes a test of it
+// nondeterministic — and it *was* flaky, about one run in three, because an unlucky
+// toss plus a re-knock mid-fetch (he cannot dodge while the skit owns him) can push
+// the fetch past the loop's tick budget. So the tests pin the toss for their
+// duration rather than widening the budget and hoping.
+function withPinnedRandom(seed, fn) {
+  const real = Math.random;
+  let a = seed >>> 0;
+  Math.random = () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  try {
+    return fn();
+  } finally {
+    Math.random = real;
+  }
+}
+
 // A DOM small enough to satisfy the loose hat's element, and nothing more.
 function stubDom() {
   const el = () => ({
@@ -42,31 +64,33 @@ test('the skit drops the hat on a knock and walks him back to it', async () => {
   const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 8 });
   const flourish = makeFlourish(stage);
 
-  let state = engine.init(42);
-  for (let i = 0; i < 40; i++) state = engine.step(state, flourish.action(state));
-  assert.equal(flourish.skit, 'worn', 'nothing dropped while he is upright');
+  withPinnedRandom(20260727, () => {
+    let state = engine.init(42);
+    for (let i = 0; i < 40; i++) state = engine.step(state, flourish.action(state));
+    assert.equal(flourish.skit, 'worn', 'nothing dropped while he is upright');
 
-  // Shove him over.
-  const hat = state.entities.find((e) => e.hasHat);
-  beginKnock(hat, state.cfg, new Rng(state.rng), { faceDir: hat.dir, slideVx: 40, slideVy: 20 });
-  state = engine.step(state, flourish.action(state));
-  assert.equal(flourish.skit, 'dropped', 'the hat comes off on the way down');
+    // Shove him over.
+    const hat = state.entities.find((e) => e.hasHat);
+    beginKnock(hat, state.cfg, new Rng(state.rng), { faceDir: hat.dir, slideVx: 40, slideVy: 20 });
+    state = engine.step(state, flourish.action(state));
+    assert.equal(flourish.skit, 'dropped', 'the hat comes off on the way down');
 
-  // Run until the skit hands him back, collecting what it did with the seam.
-  const steps = [];
-  let fetched = false;
-  for (let i = 0; i < 1200 && !fetched; i++) {
-    const a = flourish.action(state);
-    if (a != null && isStep(a)) steps.push(a);
-    state = engine.step(state, a);
-    if (flourish.skit === 'worn') fetched = true;
-  }
-  assert.ok(fetched, 'the skit finishes and gives him back to the expert');
-  assert.ok(steps.length > 0, 'he actually walked there');
-  // Everything it emitted was a legal action, and never the dive-roll (he is
-  // fetching a hat, not escaping).
-  for (const a of steps) assert.ok(a >= ACTION.STEP_BASE && a < ACTION.ROLL_BASE);
-  assert.equal(flourish.action(state), null, 'control is released, not held');
+    // Run until the skit hands him back, collecting what it did with the seam.
+    const steps = [];
+    let fetched = false;
+    for (let i = 0; i < 1200 && !fetched; i++) {
+      const a = flourish.action(state);
+      if (a != null && isStep(a)) steps.push(a);
+      state = engine.step(state, a);
+      if (flourish.skit === 'worn') fetched = true;
+    }
+    assert.ok(fetched, 'the skit finishes and gives him back to the expert');
+    assert.ok(steps.length > 0, 'he actually walked there');
+    // Everything it emitted was a legal action, and never the dive-roll (he is
+    // fetching a hat, not escaping).
+    for (const a of steps) assert.ok(a >= ACTION.STEP_BASE && a < ACTION.ROLL_BASE);
+    assert.equal(flourish.action(state), null, 'control is released, not held');
+  });
 });
 
 test('the fetch heads toward the hat, not away from it', async () => {
@@ -75,32 +99,34 @@ test('the fetch heads toward the hat, not away from it', async () => {
   const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 8 });
   const flourish = makeFlourish(stage);
 
-  let state = engine.init(9);
-  const hat = state.entities.find((e) => e.hasHat);
-  beginKnock(hat, state.cfg, new Rng(state.rng), { faceDir: hat.dir, slideVx: 0, slideVy: 0 });
+  withPinnedRandom(1979, () => {
+    let state = engine.init(9);
+    const hat = state.entities.find((e) => e.hasHat);
+    beginKnock(hat, state.cfg, new Rng(state.rng), { faceDir: hat.dir, slideVx: 0, slideVy: 0 });
 
-  // He walks to a spot beside the hat (so his body ends up over it), not to the
-  // hat's own top-left corner — that offset is what the gap is measured against.
-  const gapTo = (h, rest) => hypot(h.lx - (rest.x - FETCH_GRAB_X), h.ly - (rest.y - FETCH_GRAB_Y));
+    // He walks to a spot beside the hat (so his body ends up over it), not to the
+    // hat's own top-left corner — that offset is what the gap is measured against.
+    const gapTo = (h, rest) => hypot(h.lx - (rest.x - FETCH_GRAB_X), h.ly - (rest.y - FETCH_GRAB_Y));
 
-  let closing = 0;
-  let opening = 0;
-  let firstGap = null;
-  let lastGap = null;
-  for (let i = 0; i < 1200; i++) {
-    const a = flourish.action(state);
-    const rest = flourish.hatRest;
-    const before = rest ? gapTo(state.entities.find((e) => e.hasHat), rest) : null;
-    state = engine.step(state, a);
-    if (rest && a != null && isStep(a)) {
-      const after = gapTo(state.entities.find((e) => e.hasHat), rest);
-      if (after < before) closing++;
-      else opening++;
-      if (firstGap === null) firstGap = before;
-      lastGap = after;
+    let closing = 0;
+    let opening = 0;
+    let firstGap = null;
+    let lastGap = null;
+    for (let i = 0; i < 1200; i++) {
+      const a = flourish.action(state);
+      const rest = flourish.hatRest;
+      const before = rest ? gapTo(state.entities.find((e) => e.hasHat), rest) : null;
+      state = engine.step(state, a);
+      if (rest && a != null && isStep(a)) {
+        const after = gapTo(state.entities.find((e) => e.hasHat), rest);
+        if (after < before) closing++;
+        else opening++;
+        if (firstGap === null) firstGap = before;
+        lastGap = after;
+      }
+      if (flourish.skit === 'worn' && closing > 0) break;
     }
-    if (flourish.skit === 'worn' && closing > 0) break;
-  }
-  assert.ok(closing > opening, `strides closed the gap (${closing} closing / ${opening} opening)`);
-  assert.ok(lastGap < firstGap, `he ended up nearer the hat (${firstGap} -> ${lastGap})`);
+    assert.ok(closing > opening, `strides closed the gap (${closing} closing / ${opening} opening)`);
+    assert.ok(lastGap < firstGap, `he ended up nearer the hat (${firstGap} -> ${lastGap})`);
+  });
 });

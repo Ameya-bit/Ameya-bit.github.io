@@ -37,6 +37,15 @@ export const DEFAULT_CONFIG = Object.freeze({
   bodyW: 44,
   bodyH: 54,
   collideTol: 20,
+  // A `.stop` panda's box is shorter from the top: the original's
+  // `.panda_wrapper.stop .hit_area { margin-top: 8px; height: 46px }` inside a
+  // flex-centered wrapper, so the 8px margin and the 46px box centre as one 54px
+  // margin box — same bottom edge, top edge 8px lower. Since contacts compare corner
+  // top-lefts, that costs 8px of reach upward and gains 4px downward (collision.js).
+  // Anything grounded or driven tick-by-tick wears it (the entity's `stopped` flag)
+  // — the one behaviour-dependent hit box in the sim.
+  stopBodyH: 46,
+  stopBodyMargin: 8,
 
   // Movement.
   step: 50, // one wander stride (px)

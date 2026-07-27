@@ -243,8 +243,9 @@ export function makeEngine(userConfig = {}) {
         e.g0x, e.g0y, e.gtx, e.gty, e.gT,
         e.knockPhase, e.knockTimer, e.slideVx, e.slideVy,
         e.aPhase, e.aTimer, e.aCount, e.aHeading, e.aLie, e.aStep,
-        // set-piece roles: the collision flags and the tower tier
-        e.solid ? 1 : 0, e.flying ? 1 : 0, e.riding ? 1 : 0, e.stackLevel,
+        // set-piece roles: the collision flags and the tower tier. `stopped` is here
+        // because it picks the hit box (collision.js), so it is physics, not style.
+        e.solid ? 1 : 0, e.flying ? 1 : 0, e.riding ? 1 : 0, e.stopped ? 1 : 0, e.stackLevel,
         e.cascadeFall ? 1 : 0,
       );
     }

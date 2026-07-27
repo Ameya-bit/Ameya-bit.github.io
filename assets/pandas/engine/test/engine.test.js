@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeEngine, init, step, encode } from '../engine.js';
-import { MODE, KNOCK, ANIM } from '../state.js';
+import { MODE, MODE_NAME, KNOCK, ANIM } from '../state.js';
 import { inBounds } from '../geometry.js';
 import { detectCollisions } from '../collision.js';
 import { makeConfig } from '../config.js';
@@ -70,6 +70,13 @@ test('pandas respect the hero-card fence', () => {
   for (let i = 0; i < 2000; i++) {
     s = engine.step(s);
     for (const e of s.entities) {
+      // A stack member off the ground is not fenced, in either engine: a rider is
+      // pinned to `base.y - level * riderRise` and a mounter flies a parabola, both
+      // written straight to the position without the fence test the walk goes
+      // through (pandas.js Stack.tick / throwArc). A tall tower walking just below
+      // the card therefore holds its riders over it — which is what the z-order is
+      // for. The fence is a floor-level rule.
+      if (e.riding || e.flying) continue;
       // The fence constrains the LOGICAL position (the stride grid); the visual
       // position may graze a card corner mid-glide, exactly as the original's CSS
       // transition did. Assert the real invariant.
@@ -114,6 +121,53 @@ test('overlapping pandas collide and get knocked in opposite directions', () => 
   const b = { id: 1, x: 320, y: 300, solid: false, flying: false, riding: false, entering: false, defaultFallDir: 0 };
   const hits = detectCollisions([a, b], cfg);
   assert.equal(hits.length, 2, 'both register a contact');
+});
+
+test('a stopped panda cedes reach upward and gains a little downward', () => {
+  // The `.stop` box is 46px under an 8px margin, flex-centred as one 54px margin
+  // box: same bottom edge, top edge 8px lower. But the contact test compares corner
+  // *top-lefts*, and a shorter box packs its two corner rows closer — so the upper
+  // row drops 8px and the lower row drops 4. Reach up shortens by 8, reach down
+  // grows by 4. That asymmetry is the whole behavioural content of the divergence,
+  // and both halves are pinned here.
+  const cfg = makeConfig();
+  const ghost = { solid: false, flying: false, riding: false, entering: false, defaultFallDir: 0 };
+  const reach = (stopped, dy) => {
+    const a = { ...ghost, id: 0, x: 300, y: 300, stopped };
+    const b = { ...ghost, id: 1, x: 300, y: 300 + dy, stopped: false };
+    return detectCollisions([a, b], cfg).length > 0;
+  };
+  // From above (rows 19px apart standing, 27 apart stopped; tol is 20):
+  assert.ok(reach(false, -46), 'standing: a contact from above lands');
+  assert.ok(!reach(true, -46), 'stopped: the same contact from above misses');
+  // From below (21px apart standing, 17 stopped):
+  assert.ok(reach(true, 48), 'stopped: a contact from below lands');
+  assert.ok(!reach(false, 48), 'standing: the same contact from below misses');
+});
+
+test('`stopped` mirrors the modes it stands for, and never lingers', () => {
+  // The flag is carried, not derived (the parading base and a toppled rider are not
+  // modes of their own), so it can drift. For every panda that is not a stack member
+  // it must equal exactly what pandas.js's `.stop` class meant: a knock, a dive-roll,
+  // a tumbler skid, a zoomies dash, or any grounded phase.
+  const STOP_MODES = new Set([MODE.KNOCKED, MODE.ROLLING, MODE.SLEEPER, MODE.TUMBLER, MODE.ZOOMIES]);
+  const engine = makeEngine({ entrance: false, pandaCount: 12, anomalyGap: 20 });
+  let s = engine.init(90210);
+  const seen = new Set();
+  for (let i = 0; i < 20000; i++) {
+    s = engine.step(s);
+    for (const e of s.entities) {
+      if (e.solid || e.riding || e.flying || e.stackLevel) continue; // the two carried cases
+      seen.add(e.mode);
+      assert.equal(
+        e.stopped,
+        STOP_MODES.has(e.mode),
+        `stopped=${e.stopped} in mode ${MODE_NAME[e.mode]} at tick ${s.tick}`,
+      );
+    }
+  }
+  // …and the run actually visited the interesting modes, or the assert proved nothing.
+  for (const m of STOP_MODES) assert.ok(seen.has(m), `never saw mode ${MODE_NAME[m]}`);
 });
 
 test('a collision runs the full knock cycle and recovers', () => {

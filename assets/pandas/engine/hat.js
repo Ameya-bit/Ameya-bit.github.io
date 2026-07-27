@@ -100,6 +100,7 @@ export function startRoll(hat, dir, cfg, tick) {
   hat.aHeading = dir;
   hat.aCount = cfg.rollCels * cfg.rollFrameTicks; // ticks of roll travel
   hat.rollReadyAt = tick + cfg.rollCooldownTicks;
+  hat.stopped = true;
   snapVisual(hat);
 }
 
@@ -115,6 +116,7 @@ function advanceRoll(hat, cfg) {
   if (--hat.aCount <= 0) {
     hat.mode = MODE.OBSERVING;
     hat.anim = ANIM.WALK;
+    hat.stopped = false; // pops straight up — `.stop` off, the glide resumes
     hat.aCount = 0;
     hat.aHeading = 0;
     hat.moveTimer = 1; // stride again promptly

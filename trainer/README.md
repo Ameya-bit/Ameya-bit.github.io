@@ -22,6 +22,12 @@ Zero dependencies, `node --test`.
 | **B5 — worker_threads fan-out** | ⬜ (see throughput below — still not needed for the cut) |
 | **B6 — cut the corpora, freeze the roster** | ⬜ next |
 
+The engine change owed before B6 — the `.stop` hit box, the last known divergence
+from `pandas.js` — landed 2026-07-27, so the sim under the cut is settled. It moved
+the golden digests (`d4a2d47b` @ 32×10k, `bfbc8a5c` @ 60k) and the observation
+fixture, and `format-demo` was re-cut against it. Its own `--verify` flagged the
+staleness before the re-cut, which is the guard doing its job rather than a scare.
+
 **Throughput, with the whole pipeline in the loop** (`npm run bench`):
 
 | spec | mean pandas | ticks/s | + encoder | + ground truth | + shard | faster than real time |

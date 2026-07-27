@@ -178,6 +178,17 @@ export function makeEntity(id, x, y, opts = {}) {
     aLie: 0, // grounded lie duration (ticks), for anomalies that end face-down
     aStep: 0, // in-cycle counter (hiccup strides before a pop)
 
+    // The original's `.stop` class, which is a physics fact and not a style: it kills
+    // the CSS glide (so travel is driven tick by tick) AND shortens the hit box from
+    // the top (`cfg.stopBodyH`, see collision.js). Set for exactly what pandas.js set
+    // it for — a knock, a dive-roll, a tumbler skid, a zoomies dash, every grounded
+    // phase, the parading stack base, and the riders a topple drops — and cleared
+    // where pandas.js removed it: knock recovery, endAnomaly, the roll popping up, a
+    // topple. It is carried rather than derived from `mode` because two of those cases
+    // are not modes of their own (the base parades in STACK_BASE from mount onward; a
+    // dropped rider is already WANDER). A test pins the mode cases anyway.
+    stopped: false,
+
     // Collision role flags. `solid` = an unstoppable force (the stack's base: knocks
     // non-solids, is never knocked, passes through other solids); `flying` = mid-arc;
     // `riding` = pinned above a base; `entering` = still walking in. The last three
@@ -241,6 +252,7 @@ export function beginKnock(e, cfg, rng, { faceDir, slideVx, slideVy, cascade = f
   e.dir = faceDir; // faces the impact
   e.anim = ANIM.FALL;
   e.cascadeFall = cascade;
+  e.stopped = true; // pandas.js knock()/cascadeKnock(): `.stop` on, until it stands
   // The slide starts from where the panda visually is; logical snaps to it.
   e.lx = e.x;
   e.ly = e.y;
@@ -282,6 +294,7 @@ export function advanceKnock(e, cfg) {
       // Recovered — common resets; the caller sets mode + anim.
       e.knockPhase = KNOCK.NONE;
       e.knockTimer = 0;
+      e.stopped = false; // `.stop` comes off with the get-up; the glide resumes
       e.slideVx = 0;
       e.slideVy = 0;
       e.hit = -1;

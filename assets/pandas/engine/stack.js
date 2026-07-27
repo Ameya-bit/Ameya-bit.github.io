@@ -210,6 +210,7 @@ function beginParade(state, cfg, rng) {
   const base = byId(state, s.baseId);
   s.phase = PHASE.PARADE;
   base.anim = ANIM.WALK;
+  base.stopped = true; // pandas.js parade(): `.stop` from here, not from the mount
   snapVisual(base); // driven tick-by-tick (no glide) so the riders track it exactly
   s.born = state.tick;
   s.life = rng.intBetween(cfg.paradeMin, cfg.paradeMax);
@@ -287,6 +288,7 @@ function topple(state, cfg, rng) {
   base.solid = false;
   base.mode = MODE.WANDER;
   base.anim = ANIM.WALK;
+  base.stopped = false; // the parade is over; the base glides again (until it is knocked)
   base.moveTimer = 1;
 
   s.riders.forEach((id, idx) => {
@@ -296,6 +298,7 @@ function topple(state, cfg, rng) {
     r.flying = false;
     r.mode = MODE.WANDER;
     r.anim = ANIM.WALK;
+    r.stopped = true; // dropped straight onto the base, no glide — the pile then knocks itself apart
     r.stackLevel = 0;
     r.moveTimer = 1;
     r.lx = base.lx + (idx ? 8 : -8); // a hair apart so the knocks fan them out

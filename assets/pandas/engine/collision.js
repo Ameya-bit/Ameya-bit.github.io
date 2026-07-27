@@ -2,7 +2,12 @@
 // getBoundingClientRect / hit-corner DOM reads (map §6, §10).
 //
 // Each panda carries a 44x54 hit area centered in its 100px cell, split into four
-// 22x27 corner quadrants. Two corners "touch" when their top-lefts are within
+// 22x27 corner quadrants — except while it is `stopped`, where the original's CSS
+// shortened the box to 46px from the top (`.panda_wrapper.stop .hit_area`). Its two
+// corner rows then sit 8px and 4px lower, so a grounded, skidding, dashing or
+// parading panda cedes 8px of reach upward and gains 4px downward: the asymmetry
+// falls out of comparing corner top-lefts rather than box edges, exactly as the
+// original's DOM reads did. Two corners "touch" when their top-lefts are within
 // `collideTol` (20px) on both axes — the exact proximity test the original ran on
 // the DOM corners. Which of a panda's corners are touched resolves to the knock
 // direction via the same precedence ladder pandas.js used (later rules override
@@ -17,18 +22,22 @@ import { dirIndex } from './dirs.js';
 
 const LABELS = ['upleft', 'upright', 'downleft', 'downright'];
 
-// Corner top-left offsets from an entity's (x, y), given config geometry.
-function cornerOffsets(cfg) {
+// Corner top-left offsets from an entity's (x, y), given a box height and the
+// margin above it. The wrapper is flex-centered on the 100px cell and centres the
+// box's *margin* box, so the margin pushes the box down by its full height rather
+// than half of it — with the original's 8/46 that puts the bottom edge exactly
+// where the standing box's is, and only the top edge moves.
+function cornerOffsets(cfg, boxH, marginTop = 0) {
   const ox = (cfg.cell - cfg.bodyW) / 2;
-  const oy = (cfg.cell - cfg.bodyH) / 2;
+  const oy = (cfg.cell - (boxH + marginTop)) / 2 + marginTop;
   const hw = cfg.bodyW / 2;
-  const hh = cfg.bodyH / 2;
-  return {
-    upleft: [ox, oy],
-    upright: [ox + hw, oy],
-    downleft: [ox, oy + hh],
-    downright: [ox + hw, oy + hh],
-  };
+  const hh = boxH / 2;
+  return [
+    [ox, oy], // upleft
+    [ox + hw, oy], // upright
+    [ox, oy + hh], // downleft
+    [ox + hw, oy + hh], // downright
+  ];
 }
 
 const isGhost = (e) => e.entering || e.flying || e.riding;
@@ -55,14 +64,16 @@ function resolveHitDir(touched, defaultFallDir) {
 // decides which land. Solid pandas never appear in the result (they aren't
 // knockable) but still deliver hits to others.
 export function detectCollisions(entities, cfg) {
-  const off = cornerOffsets(cfg);
+  const standing = cornerOffsets(cfg, cfg.bodyH);
+  const stopped = cornerOffsets(cfg, cfg.stopBodyH, cfg.stopBodyMargin);
   const tol = cfg.collideTol;
   const touched = new Map(); // id -> Set<label>
 
-  // Precompute absolute corner coords once per entity.
-  const corners = entities.map((e) =>
-    LABELS.map((l) => [e.x + off[l][0], e.y + off[l][1]]),
-  );
+  // Precompute absolute corner coords once per entity, from whichever box it wears.
+  const corners = entities.map((e) => {
+    const off = e.stopped ? stopped : standing;
+    return off.map(([dx, dy]) => [e.x + dx, e.y + dy]);
+  });
 
   for (let i = 0; i < entities.length; i++) {
     const a = entities[i];

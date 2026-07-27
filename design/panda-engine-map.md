@@ -132,7 +132,7 @@ Common entry `beginAnomaly(tag, ttl)` (728): sets `anomaly=tag`, drops queued mo
 
 ## 6. Collision & knock
 
-**Detection** `collisionCheck()` (934–987) every 50 ms: pairwise `getBoundingClientRect` overlap (`|a−b|<20`) on hit-corners. Ghost exclusions: `entering`,`flying`,`riding`. `solid`+`solid` never collide; a `solid` knocks non-solids without being knocked (the base asymmetry). **→ replace with model-space AABB/circle test on `x,y`+body dims; the 20 px tolerance + corner hitboxes reproduce exactly in model space.**
+**Detection** `collisionCheck()` (934–987) every 50 ms: pairwise `getBoundingClientRect` overlap (`|a−b|<20`) on hit-corners. Ghost exclusions: `entering`,`flying`,`riding`. `solid`+`solid` never collide; a `solid` knocks non-solids without being knocked (the base asymmetry). **→ replace with model-space AABB/circle test on `x,y`+body dims; the 20 px tolerance + corner hitboxes reproduce exactly in model space.** *(Ported; and note the box is behaviour-dependent — `.panda_wrapper.stop .hit_area` is `margin-top: 8px; height: 46px`, so anything grounded/skidding/dashing or parading carries corner rows 8px and 4px lower. `collision.js` reads it off the entity's `stopped` flag, added 2026-07-27.)*
 
 **knock()** (589): `anomaly=null` (real knock outranks all), `knocked`, `.stop` class, `fall`, `slide()` (knockback `IMPACT`=80 px over the fall's cels), drops hat if worn. Timeline: fall 6 cels → `fallen`; +`1000·(rand(4)+1)` ms lie → `standUp`; +6 cels → recover (resume retrieveHat / walk).
 

@@ -27,12 +27,13 @@ reference the port is judged against.
 | **M6 — the entrance (`cfg.entrance`): the troupe walks on from off-stage** | ✅ done |
 | **B2 — `policy/obs.js`: the observation encoder (Phase B, no site impact yet)** | ✅ done |
 
-168 unit tests green, determinism lint clean, and the **browser-vs-Node parity
-gate passes**: batch `f557d268` at 32 seeds × 10k ticks and `26907de6` at 32 × 60k
+170 unit tests green, determinism lint clean, and the **browser-vs-Node parity
+gate passes**: batch `d4a2d47b` at 32 seeds × 10k ticks and `bfbc8a5c` at 32 × 60k
 (≈27 hours of simulated field), identical in Node and in Chrome. Re-run it with
 `npm run serve` in one shell and `node tools/parity.mjs` in another. (Digests moved
-from `916ea37b`/`24a89cd2` when the glide was fixed — the trace covers the glide's
-own state, so it had to.)
+from `f557d268`/`26907de6` when the `.stop` hit box landed, and from
+`916ea37b`/`24a89cd2` before that when the glide was fixed — the trace covers both,
+so it had to.)
 
 > **The gate earned its keep on the first real run.** Node 25 and Chrome disagree
 > on `Math.sin` by one ULP. It surfaced at seed `-626627309`, tick 5189 — a stack
@@ -113,6 +114,13 @@ yanking a rider out of mid-air.
   the visual position; wander/fence logic uses the logical one. `.stop` behaviours
   (knock slide, tumbler skid, zoomies dash, any grounded phase) snap visual to
   logical.
+- **`.stop` is physics, not style.** Besides killing the glide it shortened the
+  original's hit box (`margin-top: 8px; height: 46px`), so a grounded, skidding,
+  dashing or parading panda collides with a different box than a standing one. The
+  entity carries it as `stopped` — set and cleared exactly where pandas.js added and
+  removed the class — and `collision.js` picks the box off it. Contacts compare
+  corner top-lefts rather than box edges, so a stopped panda cedes 8px of reach
+  upward and gains 4px downward.
 - **The glide is a port of the CSS transition, restart and all.** `transition:
   transform 2s` with the default `ease` curve, and the original writes the
   transform *only when the logical position changes* — so each stride starts a
@@ -319,6 +327,14 @@ npm run serve                            # dev server -> /tools/stage.html (real
                                          #            -> /tools/preview.html (schematic + set-piece buttons)
 ```
 
+The suite is deterministic and should be green every time. It was not, until
+2026-07-27: `flourish.test.js` failed about one run in three, because the skit is
+presentation and so is *allowed* `Math.random` (where the hat lands when it comes
+off), and an unlucky toss plus a re-knock mid-fetch — he cannot dodge while the skit
+owns him — pushed the fetch past the test's tick budget. Those two tests now pin
+`Math.random` for their duration instead of widening the budget and hoping. A test
+that fails one run in three teaches you to ignore red, which is the actual damage.
+
 Browser-vs-Node parity gate — with `npm run serve` running, either:
 
 ```sh
@@ -327,7 +343,8 @@ node tools/parity.mjs --ticks 10000      # automated (drives your installed Chro
 
 …or by hand: open `/tools/golden.html?ticks=10000` and confirm its batch digest
 equals `node tools/golden.js --engine ./engine.js --ticks 10000`. Current values:
-`f557d268` at 10k ticks, `26907de6` at 60k.
+`d4a2d47b` at 10k ticks, `bfbc8a5c` at 60k. (Without `--engine ./engine.js` the CLI
+digests the *toy demo* engine, which never changes — an easy way to fool yourself.)
 
 **Use `npm run serve`, not `python3 -m http.server`.** Python's server sends only
 `Last-Modified` — no `Cache-Control`, no `ETag` — so browsers apply heuristic caching to
@@ -353,13 +370,12 @@ real module graph. If you do end up on a cached page, Cmd/Ctrl+Shift+R clears it
 ## Picking up from here
 
 Phase A is closed. What follows is Phase B, in [`trainer/`](../../../trainer/README.md)
-— except the observation encoder, which lives here (see above): B1 (rollout harness
-+ corpus specs) and B2 (the encoder) are done, B3–B6 open, and the roster freezes at
-the exit.
+— except the observation encoder, which lives here (see above): B1–B4 are done, B5–B6
+open, and the roster freezes at the exit.
 
-**One engine change is still owed before the corpus is cut**, because a sim change
-after the cut forces a retrain: the `.stop` hitbox divergence in the character-gate
-record below. Everything else here is settled.
+**The engine change that was owed before the corpus cut has landed** (the `.stop`
+hit box — see the character-gate record below), so nothing here is outstanding. The
+next sim change costs a retrain rather than a day, so it needs a reason worth that.
 
 ### The character gate (passed 2026-07-27, on round two)
 
@@ -396,14 +412,29 @@ watcher. The page wins over the number, always.
      11 on a 2560×1343 monitor's hero region against the original's 10. The "≈15" that
      pick was made against was in `tools/preview.html`, whose stage is the whole window
      rather than the shorter hero strip — the density is the same, the count is not.
-   - **Known divergence, unfixed — and now on a clock:** the original shrinks a
-     `.stop` panda's hitbox (`.panda_wrapper.stop .hit_area { margin-top: 8px;
-     height: 46px }` — zoomies, skids, anything grounded, the stack base).
-     `collision.js` uses the 44×54 box for everyone. Net reach differs by ~±12 px
-     vertically. Cheap to port; it was deferred so that one change was being judged
-     at a time. **It must land before the corpus cut (B6)** — after that, a sim
-     change costs a retrain, and it will move the golden digests and the obs fixture
-     with it.
+   - **The one known divergence is now closed (2026-07-27):** the original shrinks a
+     `.stop` panda's hit box (`.panda_wrapper.stop .hit_area { margin-top: 8px;
+     height: 46px }` — zoomies, skids, anything grounded, the parading stack base),
+     where `collision.js` used the 44×54 box for everyone. It was deferred so that
+     one change was being judged at a time, and it had to land before the corpus cut
+     (after that a sim change costs a retrain). It moved the golden digests and the
+     obs fixture with it, as expected.
+
+     **What it does to the economy, measured headless over 24 episodes × 20 min at
+     1600×900 (and 40 × 20 min at 1200×520), before vs after:**
+
+     | | knocks/min (hat) | grounded |
+     |---|---|---|
+     | 1600×900 | 1.53 → **1.77** | 13.2% → **15.0%** |
+     | 1200×520 | 2.63 → **2.89** | 22.9% → **24.9%** |
+
+     So the watcher goes down **10–16% more often** — the port moves *toward* the
+     original's hotter economy, which is the direction fidelity predicted. The
+     mechanism is the asymmetry: the box a *fallen* panda wears reaches 4px further
+     down, and the watcher's whole job is standing next to fallen pandas. (These are
+     headless numbers on a bare rectangle; they are not comparable to the in-browser
+     rates in the table above, which were measured on the real hero strip. Only the
+     before/after delta is.) **The motion is Ameya's call, as always.**
 
 Everything the trainer needs is already in place: `step(state, action)` takes the
 17-way action, the applied action is logged on `hat.action`, and the parity gate

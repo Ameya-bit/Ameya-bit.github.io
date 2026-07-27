@@ -53,16 +53,20 @@ export function endAnomaly(e) {
   e.mode = MODE.WANDER;
   e.anim = ANIM.WALK;
   e.hit = -1;
+  e.stopped = false; // pandas.js endAnomaly(): the `.stop` class comes off here
   resetScratch(e);
   e.moveTimer = 1; // stride again promptly
 }
 
-// Drop into the grounded tail with a given lie duration.
+// Drop into the grounded tail with a given lie duration. This is pandas.js's
+// lieDown(), which set `.stop` — the tumbler and the crashed zoomies already carry
+// it from their skid/dash, the sleeper picks it up here.
 function enterGrounded(e, lieTicks, cfg) {
   e.aPhase = G_FALL;
   e.anim = ANIM.FALL;
   e.aTimer = cfg.fallTicks;
   e.aLie = lieTicks;
+  e.stopped = true;
   snapVisual(e);
 }
 
@@ -114,6 +118,7 @@ export function startAnomaly(e, kindIdx, cfg, rng) {
       e.aCount = cfg.tripSkids;
       e.aHeading = e.dir; // skid along the current heading
       e.anim = ANIM.STOP; // hold one cel; the facing-flips are the motion
+      e.stopped = true; // the skid is driven tick by tick, not glided
       return cfg.tripSkids * cfg.tripEvery + cfg.fallTicks + cfg.tripDownTicks + cfg.standTicks + linger;
     }
     case MODE.SPINNER: {
@@ -143,6 +148,7 @@ export function startAnomaly(e, kindIdx, cfg, rng) {
       e.aTimer = cfg.zoomEvery;
       e.aCount = cfg.zoomFuseTicks;
       e.anim = ANIM.WALK;
+      e.stopped = true; // the dash is driven crisply tick by tick
       return cfg.zoomFuseTicks * cfg.zoomEvery + cfg.fallTicks + cfg.zoomTumbleTicks + cfg.standTicks + linger;
     }
     case MODE.MOONWALK: {
