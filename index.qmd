@@ -30,7 +30,29 @@ listing:
   </div>
   <p class="writing-cue">Writing</p>
 </section>
-<script src="assets/pandas/pandas.js" defer></script>
+<script>
+  // Which hero engine runs. `old` (the default) is the shipped pandas.js; `new`
+  // is the fixed-tick engine under assets/pandas/engine/ — the Phase-A rewrite,
+  // opt-in via ?engine=new until it has passed the character gate.
+  (function () {
+    var wanted = new URLSearchParams(location.search).get('engine');
+    if (wanted === 'new') {
+      var css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = 'assets/pandas/engine/render/pandas.css';
+      document.head.appendChild(css);
+      var mod = document.createElement('script');
+      mod.type = 'module';
+      mod.src = 'assets/pandas/engine/render/site.js';
+      document.head.appendChild(mod);
+    } else {
+      var legacy = document.createElement('script');
+      legacy.src = 'assets/pandas/pandas.js';
+      legacy.defer = true;
+      document.head.appendChild(legacy);
+    }
+  })();
+</script>
 ```
 
 ::: {.writing-section}

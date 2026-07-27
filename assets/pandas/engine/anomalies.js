@@ -342,6 +342,17 @@ function hiccupStride(e, cfg, rng) {
   easeVisual(e, cfg);
 }
 
+// How high off the ground a hiccupping panda is drawn right now (px, 0 when it is
+// not mid-pop). The pop moves nothing in the sim — it is a pocket parabola over
+// `hiccupHopTicks`, peaking at `hiccupRise` — but the phase and its clock ARE
+// state, so the renderer reads the height from here rather than inventing its own
+// hop (the same arrangement as stack.js's `riderSway`).
+export function hiccupLift(e, cfg) {
+  if (e.mode !== MODE.HICCUP || e.aPhase !== H_POP) return 0;
+  const k = 1 - e.aTimer / cfg.hiccupHopTicks; // 0 at take-off, 1 at landing
+  return cfg.hiccupRise * 4 * k * (1 - k);
+}
+
 function hiccupPop(e, cfg) {
   easeVisual(e, cfg); // the vertical hop is a presentation flourish; no horizontal move
   if (--e.aTimer > 0) return;

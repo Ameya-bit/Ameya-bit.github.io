@@ -1,0 +1,220 @@
+// The host — everything the engine deliberately doesn't know about.
+//
+// The engine is a pure `step(state, action) -> state` with no clock and no DOM.
+// Something has to own the parts that are genuinely of the browser: how often to
+// call step, where the hero card is, how many pandas fit on this screen, when to
+// stop because nobody is looking, and what a visit's seed is. That is this file.
+//
+// The loop is a fixed-timestep accumulator: real time goes in, whole 50 ms ticks
+// come out, and the leftover fraction becomes the renderer's interpolation alpha.
+// A slow frame is capped (never a spiral of death) rather than skipped, so the sim
+// stays at exactly 20 Hz regardless of display refresh rate.
+
+import { makeEngine } from '../engine.js';
+import { TICK_MS } from '../tick.js';
+import { pandaCountForViewport } from '../layout.js';
+import { makeRenderer } from './renderer.js';
+import { makeFlourish } from './flourish.js';
+import { buildTableau } from './tableau.js';
+
+// Below this stage width the hero copy owns the space — a troupe this size would
+// pile onto the headline, so the stage stays empty (pandas.js's MOBILE_MIN).
+const MOBILE_MIN = 800;
+
+// Fence padding: the hero card plus breathing room, and the body inset used to
+// test whether a 100px wrapper is actually inside it (pandas.js's GAP / FOOT).
+const FENCE_GAP = 12;
+
+// A frame longer than this (a background tab waking, a long GC) is clamped rather
+// than replayed — better a hitch than a burst of 200 ticks.
+const MAX_FRAME_MS = 250;
+
+// Recompute layout at most this often while a resize is in flight.
+const RESIZE_DEBOUNCE_MS = 150;
+
+// The fenced hero card in stage-local pixels, or null when there is no card.
+function computeFence(stage, cardSelector) {
+  const card = cardSelector ? document.querySelector(cardSelector) : null;
+  if (!card) return null;
+  const c = card.getBoundingClientRect();
+  const s = stage.getBoundingClientRect();
+  return {
+    l: c.left - s.left - FENCE_GAP,
+    t: c.top - s.top - FENCE_GAP,
+    r: c.right - s.left + FENCE_GAP,
+    b: c.bottom - s.top + FENCE_GAP,
+  };
+}
+
+/**
+ * Run the hero pandas inside `stage`.
+ *
+ * @param {HTMLElement} stage   the stage element (`#panda-stage`)
+ * @param {object} [opts]
+ * @param {string} [opts.cardSelector] the element to fence off ('.hero-inner')
+ * @param {number} [opts.seed]         pin the seed (dev/preview); default per-visit
+ * @param {boolean} [opts.reduced]     force the static tableau
+ * @param {number} [opts.areaPerPanda] density override (dev slider)
+ * @param {object} [opts.config]       extra engine config overrides
+ * @returns {{destroy: () => void, get state(): object}}
+ */
+export function mountPandas(stage, opts = {}) {
+  const cardSelector = opts.cardSelector ?? '.hero-inner';
+  const reduced =
+    opts.reduced ?? matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let engine = null;
+  let state = null;
+  let prevState = null;
+  let renderer = null;
+  let flourish = null;
+  let rafId = 0;
+  let lastFrame = 0;
+  let acc = 0;
+  let onScreen = true;
+  let destroyed = false;
+  let resizeTimer = 0;
+
+  // ---- world construction ----
+
+  function buildConfig() {
+    const width = Math.round(stage.clientWidth);
+    const height = Math.round(stage.clientHeight);
+    const forbid = computeFence(stage, cardSelector);
+    const pandaCount = pandaCountForViewport(width, height, forbid, {
+      ...(opts.areaPerPanda ? { areaPerPanda: opts.areaPerPanda } : {}),
+    });
+    return { width, height, forbid, pandaCount, reduced, ...(opts.config ?? {}) };
+  }
+
+  // The seed for this visit. Deliberately fresh each load (a returning visitor
+  // shouldn't watch the same 20 minutes again) — the wall clock is legitimate
+  // *here*, in the host, and never inside the sim: whatever seed lands is threaded
+  // through state, so the run remains perfectly reproducible from it.
+  const seedForVisit = () => (opts.seed ?? Date.now()) | 0;
+
+  function build() {
+    renderer?.clear();
+    const config = buildConfig();
+    if (config.width < MOBILE_MIN) {
+      // Too narrow for a troupe: leave the stage empty rather than crowd the copy.
+      engine = null;
+      state = null;
+      prevState = null;
+      return false;
+    }
+    engine = makeEngine(config);
+    state = engine.init(seedForVisit());
+    if (config.reduced) state = buildTableau(state, engine.cfg);
+    prevState = state;
+    renderer = renderer ?? makeRenderer(stage);
+    flourish = flourish ?? makeFlourish(stage);
+    acc = 0;
+    return true;
+  }
+
+  // A resize keeps the world and re-frames it: new stage bounds and a new fence
+  // land in a fresh config object (state is never mutated in place), so pandas
+  // walk out of a shrunken area rather than being re-spawned mid-scene. Headcount
+  // is deliberately NOT re-derived — adding or vanishing pandas mid-view reads as
+  // a glitch, and a page load is a cheap way to get the new density.
+  function reframe() {
+    if (!state) {
+      // Grown back past the floor: build the world it should have had all along.
+      if (build()) syncPaused();
+      return;
+    }
+    const { width, height, forbid } = buildConfig();
+    if (width < MOBILE_MIN) {
+      // Shrunk below it: hand the space back to the hero copy.
+      stop();
+      renderer.clear();
+      flourish.destroy();
+      state = null;
+      prevState = null;
+      return;
+    }
+    engine = makeEngine({ ...state.cfg, width, height, forbid });
+    state = { ...state, cfg: engine.cfg };
+    prevState = { ...prevState, cfg: engine.cfg };
+  }
+
+  // ---- the loop ----
+
+  function frame(now) {
+    rafId = requestAnimationFrame(frame);
+    const dt = Math.min(MAX_FRAME_MS, lastFrame ? now - lastFrame : 0);
+    lastFrame = now;
+
+    if (!state) return;
+    acc += dt;
+    while (acc >= TICK_MS) {
+      prevState = state;
+      state = engine.step(state, flourish.action(state));
+      acc -= TICK_MS;
+    }
+    renderer.sync(prevState, state, acc / TICK_MS, dt, flourish.sync(state, dt));
+  }
+
+  function start() {
+    if (destroyed || rafId || !state) return;
+    // The tableau is a still: draw it once and never schedule anything.
+    if (state.cfg.reduced) {
+      renderer.sync(state, state, 1, 0, flourish.sync(state, 0));
+      return;
+    }
+    lastFrame = 0;
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function stop() {
+    if (!rafId) return;
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+
+  // Pause is simply "stop calling step". Nothing is torn down and state is a plain
+  // snapshot, so resuming is free — the tick after the pause is the tick after the
+  // one before it. A reduced-motion tableau renders once and then idles here too.
+  function syncPaused() {
+    if (document.hidden || !onScreen) stop();
+    else start();
+  }
+
+  // ---- wiring ----
+
+  const observer = new IntersectionObserver(([entry]) => {
+    onScreen = entry.isIntersecting;
+    syncPaused();
+  });
+  observer.observe(stage);
+  document.addEventListener('visibilitychange', syncPaused);
+
+  const onResize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(reframe, RESIZE_DEBOUNCE_MS);
+  };
+  addEventListener('resize', onResize);
+
+  if (build()) syncPaused();
+
+  return {
+    destroy() {
+      destroyed = true;
+      stop();
+      clearTimeout(resizeTimer);
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', syncPaused);
+      removeEventListener('resize', onResize);
+      renderer?.clear();
+      flourish?.destroy();
+    },
+    get state() {
+      return state;
+    },
+    rebuild() {
+      stop();
+      if (build()) syncPaused();
+    },
+  };
+}

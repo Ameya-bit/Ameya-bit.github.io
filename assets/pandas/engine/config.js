@@ -21,8 +21,11 @@ export const DEFAULT_CONFIG = Object.freeze({
   // null = no fence (headless tests). The host recomputes it from layout.
   forbid: null,
 
-  // Reduced-motion mode builds the static tableau instead of the live sim.
+  // Reduced-motion mode builds the static tableau instead of the live sim, with
+  // nothing closer than `tableauGap` — the whole point of a composed still is that
+  // nothing lands on anything else (render/tableau.js).
   reduced: false,
+  tableauGap: 118,
 
   // Headcount. The live site picks 10 (wide) / 7 (mid) by viewport; the engine
   // takes it as config.

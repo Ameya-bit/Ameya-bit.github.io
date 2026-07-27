@@ -1,0 +1,106 @@
+/* Presentation styles for the engine-rendered pandas.
+ *
+ * The engine-era counterpart of the `.panda_*` block in styles.scss. It is a
+ * separate file, not an edit of that one, because both renderers have to be able
+ * to run side by side while the site is flipped between them (?engine=old|new).
+ *
+ * The important difference from the old sheet: NO transform transition. In the
+ * original the 2 s CSS glide *was* the movement model — collision read the lagging
+ * animated position. The engine now owns that glide (a visual position easing
+ * toward the logical one every tick) and the renderer interpolates between ticks,
+ * so a CSS transition on top would double-smooth every stride and put what you see
+ * out of step with what the sim thinks is true.
+ */
+
+.panda_wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  cursor: pointer;
+  pointer-events: auto;
+  will-change: transform;
+}
+
+.panda_wrapper svg {
+  fill: #21201c;
+  display: block;
+}
+
+.panda_inner_wrapper {
+  height: 100%;
+  width: 100%;
+}
+
+/* Three of the eight headings are the mirror of a drawn row. */
+.facing_upleft,
+.facing_left,
+.facing_downleft {
+  transform: scale(-1, 1);
+}
+
+.panda_sprite {
+  position: absolute;
+  height: 500px;             /* 5 rows */
+  width: calc(13 * 100px);   /* 13 cels */
+  pointer-events: none;
+}
+
+/* The watcher's idle: a soft breathing bob while he stands and studies, so a
+ * planted panda reads as alive rather than stopped. On the sprite, so it rides
+ * above the facing flip and carries the worn hat with it. */
+@keyframes panda-watch {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panda_wrapper.observing .panda_sprite {
+    animation: panda-watch 2.6s ease-in-out infinite;
+  }
+}
+
+/* Bare-headed: the hat is on the ground and the skit is running. */
+.panda_wrapper.hatless .wornhat { display: none; }
+
+/* Mid-hop — over everything until it lands. */
+.panda_wrapper.flying { z-index: 9999; }
+
+/* A stack rider: the walk sprite is swapped for the seated drawing, and the
+ * wrapper's rotate pivots about the feet so the sway reads as a lean rather than
+ * a spin. */
+.panda_wrapper.riding {
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+
+.panda_wrapper.riding .panda_inner_wrapper { visibility: hidden; }
+
+.panda_wrapper .sit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.panda_wrapper .sit > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.panda_wrapper .sit.flip { transform: scaleX(-1); }
+
+/* The knocked-off hat, lying where it landed. This one keeps a transition: the
+ * toss is a presentation beat with no sim behind it. */
+.hat_loose {
+  position: absolute;
+  pointer-events: none;
+  transition: transform 0.75s cubic-bezier(0.22, 0.9, 0.24, 1), opacity 0.15s;
+}
+
+.hat_loose svg {
+  display: block;
+  fill: #7c5322;
+}

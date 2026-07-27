@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>panda engine — the shipped picture (M5)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../render/pandas.css" />
+<style>
+  /* A stand-in for the home page: a full-bleed stage with a hero card fenced off
+     in it, so the fence, the density and the depth sorting are the real ones. */
+  :root { color-scheme: light dark; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #1a1a1a; background: #faf8f3;
+  }
+  @media (prefers-color-scheme: dark) { body { color: #e8e4da; background: #16150f; } }
+  .hero { position: relative; height: 100%; overflow: hidden; }
+  .panda-stage { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+  .hero-inner {
+    position: relative; z-index: 1;
+    width: min(560px, 40vw); margin: 0 0 0 8vw; top: 30%;
+    padding: 1.25rem 1.5rem;
+    background: color-mix(in srgb, Canvas 88%, transparent);
+    border: 1px solid rgba(128,128,128,.3); border-radius: 10px;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 .4rem; }
+  p { margin: 0; opacity: .75; }
+  #hud {
+    position: fixed; right: .6rem; top: .6rem; z-index: 10;
+    padding: .45rem .6rem; border-radius: 8px;
+    background: color-mix(in srgb, Canvas 82%, transparent);
+    border: 1px solid rgba(128,128,128,.3);
+    display: flex; flex-direction: column; gap: .35rem; align-items: flex-end;
+  }
+  #hud button { font: inherit; cursor: pointer; }
+  .muted { opacity: .7; }
+</style>
+
+<div class="hero">
+  <div id="panda-stage" class="panda-stage" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <h1>the fenced card</h1>
+    <p>Pandas route around this box, exactly as they do on the home page.</p>
+  </div>
+</div>
+
+<div id="hud">
+  <div><button id="knock">knock his hat off</button> <button id="reload">reseed</button></div>
+  <div id="stats" class="muted">…</div>
+</div>
+
+<script type="module">
+  import { mountPandas } from '../render/host.js';
+  import { MODE, MODE_NAME, isDown, beginKnock } from '../state.js';
+  import { Rng } from '../rng.js';
+
+  const params = new URLSearchParams(location.search);
+  const stage = document.getElementById('panda-stage');
+  let run = mountPandas(stage, {
+    cardSelector: '.hero-inner',
+    seed: params.has('seed') ? Number(params.get('seed')) : undefined,
+    reduced: params.has('reduced') ? params.get('reduced') !== '0' : undefined,
+    areaPerPanda: params.has('density') ? Number(params.get('density')) : undefined,
+  });
+
+  // Shove the watcher over, so the hat-drop + fetch skit is watchable on demand
+  // rather than whenever the field happens to catch him.
+  document.getElementById('knock').onclick = () => {
+    const s = run.state;
+    if (!s) return;
+    const hat = s.entities.find((e) => e.hasHat);
+    if (!hat || hat.mode === MODE.KNOCKED) return;
+    beginKnock(hat, s.cfg, new Rng(s.rng), { faceDir: hat.dir, slideVx: 40, slideVy: 20 });
+  };
+  document.getElementById('reload').onclick = () => { run.rebuild(); };
+
+  setInterval(() => {
+    const s = run.state;
+    if (!s) { document.getElementById('stats').textContent = 'stage too narrow — no pandas'; return; }
+    const hat = s.entities.find((e) => e.hasHat);
+    const down = s.entities.filter(isDown).length;
+    document.getElementById('stats').innerHTML =
+      `tick ${s.tick} · ${s.entities.length} pandas · ${down} down · ` +
+      `hat: ${hat ? MODE_NAME[hat.mode] : '—'} · stack ${s.stack.baseId < 0 ? '—' : s.stack.riders.length + 1 + '-high'} · ` +
+      `cascade ${s.cascade.active ? 'sweeping' : s.cascade.armed ? 'armed' : 'idle'}`;
+  }, 250);
+</script>

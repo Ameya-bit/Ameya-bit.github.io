@@ -4,7 +4,7 @@
 
 **Base tick is settled: 50 ms (20 Hz).** Both `STACK_TICK_MS` and the collision `setInterval` already run at 50 ms, and the header comment calls the collision cadence "20 Hz". So the engine's fixed tick = 50 ms, and every `*_MS` constant below converts by `msToTicks(ms) = max(1, round(ms/50))`. Feel drift from rounding is expected and gated on Ameya's preview.
 
-Art/data blobs (skip when reading): `pandaSvg` decoder table L108–112; `HAT_PIXELS` L148; `SIT_CELS` L1340.
+Art/data blobs (skip when reading): `pandaSvg` decoder table L108–112; `HAT_PIXELS` L148; `SIT_CELS` L1340. *(2026-07-27: these four literals are now lifted verbatim into `assets/pandas/engine/render/art-data.js` by `tools/bake-art.js`, and a unit test fails if the two copies drift — `pandas.js` remains the authoring side, per the hat pipeline.)*
 
 ---
 
@@ -162,6 +162,8 @@ Common entry `beginAnomaly(tag, ttl)` (728): sets `anomaly=tag`, drops queued mo
 
 **Entrance** `spawn()` (1774) + `walkIn` (342): `PANDA_COUNT` from viewport (1785); hat panda first via `enterOne(true)` with `LEAD_GAP`=1800 ms head start; then waves of `WAVE_SIZE`=2 every `WAVE_GAP`=1050 ms. `pickEntry()` (1801) random edge, `OFF`=100 off-stage, `TARGET_IN`=110 in, fence-avoid retry ≤40. `walkIn` straight strides (unclamped `setPos`) → hands off to observe/moveAbout within one `STEP`.
 
+**Entrance: NOT ported (2026-07-27).** The engine places the troupe at clear spots at tick 0 rather than walking them on. It is sim work (an `ENTERING` mode; the `entering` flag and its collision/director exemptions already exist) and it moves the training corpora's initial conditions, so it is an explicit open decision, not an oversight.
+
 **Reduced-motion tableau** `tableau(place)` (1713): no scheduling — one static composition: a fallen panda (`clearSpot`, frozen `fallen`), hat panda planted at `INSPECT_NEAR` facing it, a static 3-high stack (manual z-order), rest standing (`stop`) at `clearSpot`s ≥`TABLEAU_GAP`=118 apart (60-try farthest-point).
 
 ---
@@ -173,6 +175,8 @@ Common entry `beginAnomaly(tag, ttl)` (728): sets `anomaly=tag`, drops queued mo
 ---
 
 ## 10. DOM / presentation touchpoints (the cut line)
+
+*Ported 2026-07-27 (M5) into `assets/pandas/engine/render/` — `renderer.js` for the first three bullets, `host.js` for the events/bounds/`matchMedia` inputs, `art.js` for the DOM/SVG construction, `collision.js`+`geometry.js` (already) for the two rect reads. The one change of substance: the wrapper's `transition: transform 2s` is gone, because the engine now owns the glide and the renderer interpolates between ticks — which also demotes `.stop` from a physics-mode toggle to a bare CSS hook.*
 
 Everything here moves to the presentation layer:
 
