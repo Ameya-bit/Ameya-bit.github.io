@@ -238,6 +238,9 @@ export function makeEngine(userConfig = {}) {
     for (const e of state.entities) {
       out.push(
         e.x, e.y, e.lx, e.ly, e.dir, e.mode, e.anim, e.moveTimer,
+        // The running glide (state.js easeVisual) — it feeds every following tick's
+        // visual position, and the visual position is what collides.
+        e.g0x, e.g0y, e.gtx, e.gty, e.gT,
         e.knockPhase, e.knockTimer, e.slideVx, e.slideVy,
         e.aPhase, e.aTimer, e.aCount, e.aHeading, e.aLie, e.aStep,
         // set-piece roles: the collision flags and the tower tier

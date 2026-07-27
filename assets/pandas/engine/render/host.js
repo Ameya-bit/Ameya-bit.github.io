@@ -59,6 +59,12 @@ function computeFence(stage, cardSelector) {
  * @returns {{destroy: () => void, get state(): object}}
  */
 export function mountPandas(stage, opts = {}) {
+  // Marks this stage as engine-rendered, which is what lets render/pandas.css
+  // outrank the old sheet's `.panda_wrapper { transition: transform 2s }`. That
+  // rule ships alongside us for as long as ?engine=old does, and inheriting it
+  // double-smooths every stride — see the header of pandas.css.
+  stage.classList.add('panda_engine');
+
   const cardSelector = opts.cardSelector ?? '.hero-inner';
   const reduced =
     opts.reduced ?? matchMedia('(prefers-reduced-motion: reduce)').matches;

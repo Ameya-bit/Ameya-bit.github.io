@@ -76,3 +76,36 @@ test('re-exported helpers match Math', () => {
   assert.equal(mathx.sqrt(144), 12);
   assert.equal(mathx.PI, Math.PI);
 });
+
+// ---- the CSS `ease` curve ----
+// The original's glide was `transition: transform 2s`, whose default timing
+// function is cubic-bezier(0.25, 0.1, 0.25, 1). These pin the curve to the one
+// the browser drew, since the shape of every stride depends on it.
+
+test('cssEase hits the endpoints exactly and clamps outside [0,1]', () => {
+  assert.equal(mathx.cssEase(0), 0);
+  assert.equal(mathx.cssEase(1), 1);
+  assert.equal(mathx.cssEase(-0.5), 0);
+  assert.equal(mathx.cssEase(1.5), 1);
+});
+
+test('cssEase matches cubic-bezier(0.25, 0.1, 0.25, 1) at a known point', () => {
+  // At curve parameter t = 0.5 the bezier is (x, y) = (0.3125, 0.5375) — worked
+  // out from the Bernstein form, independent of the Newton inversion under test.
+  assert.ok(Math.abs(mathx.cssEase(0.3125) - 0.5375) < 1e-12);
+});
+
+test('cssEase is strictly increasing and starts at 0.4x average speed', () => {
+  let prev = 0;
+  for (let i = 1; i <= 200; i++) {
+    const y = mathx.cssEase(i / 200);
+    assert.ok(y > prev, `not increasing at ${i / 200}`);
+    prev = y;
+  }
+  // The curve's initial slope is cy/cx = 0.3/0.75: a stride commits immediately
+  // rather than easing in from a standstill — that is what makes a turn read as
+  // a turn. And it finishes flat, which is the settle at the end of a step.
+  const eps = 1e-7;
+  assert.ok(Math.abs(mathx.cssEase(eps) / eps - 0.4) < 1e-3);
+  assert.ok((1 - mathx.cssEase(1 - eps)) / eps < 1e-3);
+});

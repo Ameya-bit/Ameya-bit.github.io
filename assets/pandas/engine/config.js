@@ -9,7 +9,7 @@
 // callers can tweak one field without restating the rest.
 
 import { msToTicks, pxPerMsToPerTick } from './tick.js';
-import { cos, PI } from './mathx.js';
+import { cos, cssEase, PI } from './mathx.js';
 
 export const DEFAULT_CONFIG = Object.freeze({
   // Stage — the host passes real pixel dimensions; these are headless/preview
@@ -65,12 +65,19 @@ export const DEFAULT_CONFIG = Object.freeze({
   entranceTries: 40, // attempts to find an entry lane clear of the hero card
 
   // The glide. The original moved logically in 50px hops but rendered them through
-  // a 2s CSS transition, and — critically — collision read that lagging *visual*
-  // position, which softens contacts (bodies glide past instead of snapping into
-  // each other). The engine owns this: a visual position eases toward the logical
-  // stride target each tick by `glideK`. ~0.08/tick ≈ the 2s ease at 20 Hz.
-  // Collision and rendering use the visual position; wander/fence use the logical.
-  glideK: 0.08,
+  // `transition: transform 2s`, and — critically — collision read that lagging
+  // *visual* position, which softens contacts (bodies glide past instead of
+  // snapping into each other). Collision and rendering use the visual position;
+  // wander/fence use the logical one.
+  //
+  // The engine owns the transition now, and owns it *literally*: the original set
+  // the transform only when the logical position changed (`applyTransform` is
+  // called from `applyPos`), so each stride RESTARTS the curve from wherever the
+  // body had glided to. That restart is the whole feel of the walk — a stride
+  // surges then settles, and a turn commits immediately instead of drifting on.
+  // An exponential chase reproduces the average lag but none of that shape.
+  glideTicks: msToTicks(2000), // 40 — the CSS transition's duration
+
 
   // The oblivious one — keeps to a patch, idles often.
   obliviousRadius: 110,
@@ -224,5 +231,15 @@ export const DEFAULT_CONFIG = Object.freeze({
 
 // Shallow merge is enough — config is a flat object of scalars/arrays.
 export function makeConfig(overrides = {}) {
-  return { ...DEFAULT_CONFIG, ...overrides };
+  const cfg = { ...DEFAULT_CONFIG, ...overrides };
+  // The glide curve, sampled once per config rather than per entity per tick: a
+  // transition only ever advances in whole ticks, so `cssEase` has exactly
+  // `glideTicks + 1` possible arguments. Same arithmetic, same values, no Newton
+  // in the hot path — which matters at the trainer's tens of thousands of ticks
+  // per second, where this runs for every panda on every tick.
+  cfg.glideCurve = Array.from(
+    { length: cfg.glideTicks + 1 },
+    (_, i) => cssEase(i / cfg.glideTicks),
+  );
+  return cfg;
 }

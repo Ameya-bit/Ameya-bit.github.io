@@ -31,12 +31,14 @@ listing:
   <p class="writing-cue">Writing</p>
 </section>
 <script>
-  // Which hero engine runs. `old` (the default) is the shipped pandas.js; `new`
-  // is the fixed-tick engine under assets/pandas/engine/ — the Phase-A rewrite,
-  // opt-in via ?engine=new until it has passed the character gate.
+  // Which hero engine runs. The default is now the fixed-tick engine under
+  // assets/pandas/engine/ — the Phase-A rewrite — which passed the character gate
+  // on 2026-07-27. The original pandas.js is kept, unmodified, behind ?engine=old:
+  // it is the reference the port is judged against, so it stays until the learned
+  // policy ships.
   (function () {
     var wanted = new URLSearchParams(location.search).get('engine');
-    if (wanted === 'new') {
+    if (wanted !== 'old') {
       var css = document.createElement('link');
       css.rel = 'stylesheet';
       css.href = 'assets/pandas/engine/render/pandas.css';

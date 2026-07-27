@@ -90,17 +90,45 @@ export function isDown(e) {
 
 // The glide: the visual position eases toward the logical one (used by wander and
 // the glided anomalies — loop, moonwalk, spinner's stagger, hiccup strides).
+//
+// This is a port of a CSS transition, so it behaves like one. The browser starts a
+// fresh `transition: transform 2s` every time the transform is written, animating
+// from wherever the element currently *is* to the new value on the `ease` curve —
+// and the original only writes the transform when the logical position changes.
+// So a stride does not adjust a running chase; it REPLACES it, from here, with a
+// full curve. That restart is why the walk reads as steps rather than a slide, and
+// why a turn commits at once instead of coasting through the old heading.
+//
+// `gtx/gty` is the target the running transition was aimed at — comparing it to the
+// logical position is how a write is detected without every mover having to
+// announce one, exactly as the browser detects a changed computed value.
 export function easeVisual(e, cfg) {
-  e.x += (e.lx - e.x) * cfg.glideK;
-  e.y += (e.ly - e.y) * cfg.glideK;
+  if (e.lx !== e.gtx || e.ly !== e.gty) {
+    e.g0x = e.x;
+    e.g0y = e.y;
+    e.gtx = e.lx;
+    e.gty = e.ly;
+    e.gT = 0;
+  }
+  if (e.gT >= cfg.glideTicks) return; // arrived; the transition has finished
+  e.gT += 1;
+  const p = cfg.glideCurve[e.gT];
+  e.x = e.g0x + (e.gtx - e.g0x) * p;
+  e.y = e.g0y + (e.gty - e.g0y) * p;
 }
 
 // The snap: `.stop` behaviours (knock slide, tumbler skid, zoomies dash, and any
 // grounded phase) kill the glide, so the visual position tracks the logical one
-// exactly.
+// exactly. Any running transition is discarded with it — when `.stop` comes off,
+// the next stride starts a new one from where the panda is standing.
 export function snapVisual(e) {
   e.x = e.lx;
   e.y = e.ly;
+  e.g0x = e.lx;
+  e.g0y = e.ly;
+  e.gtx = e.lx;
+  e.gty = e.ly;
+  e.gT = 0;
 }
 
 export function makeEntity(id, x, y, opts = {}) {
@@ -114,6 +142,14 @@ export function makeEntity(id, x, y, opts = {}) {
     // this; the visual position chases it.
     lx: x,
     ly: y,
+    // The running glide — the state of one CSS transition: where it started
+    // (`g0`), what it is aimed at (`gt`), and how many ticks of its duration have
+    // elapsed (`gT`). See easeVisual.
+    g0x: x,
+    g0y: y,
+    gtx: x,
+    gty: y,
+    gT: 0,
     dir: opts.dir ?? 0,
     anim: opts.hasHat ? ANIM.IDLE : ANIM.WALK,
     mode: MODE.WANDER,

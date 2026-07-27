@@ -10,7 +10,21 @@
  * toward the logical one every tick) and the renderer interpolates between ticks,
  * so a CSS transition on top would double-smooth every stride and put what you see
  * out of step with what the sim thinks is true.
+ *
+ * ⚠️ Omitting the transition here is NOT enough, and shipped broken for it. The page
+ * always loads styles.scss too — the old engine still has to work on ?engine=old —
+ * and that sheet says `.panda_wrapper { transition: transform 2s }`. The cascade
+ * resolves conflicting declarations, not absent ones, so with nothing to override it
+ * the browser went on animating our transforms over 2 s: the walk read as sliding on
+ * ice, and the drawn body sat tens of pixels from the hitbox that actually collides,
+ * so pandas appeared to pass straight through each other. `.panda_engine` (set on the
+ * stage by host.js) outranks the legacy rule regardless of sheet order, which is what
+ * makes the override real rather than a coincidence of load order.
  */
+
+.panda_engine .panda_wrapper {
+  transition: none;
+}
 
 .panda_wrapper {
   position: absolute;

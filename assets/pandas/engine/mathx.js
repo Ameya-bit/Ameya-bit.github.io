@@ -109,3 +109,33 @@ export const hypot = (x, y) => sqrt(x * x + y * y);
 // Clamp v to [lo, hi]. Ubiquitous in movement/boundary code; kept here so the
 // engine has a single import surface for math helpers.
 export const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+// CSS's default `ease` timing function — cubic-bezier(0.25, 0.1, 0.25, 1). The
+// original's glide was `transition: transform 2s`, whose default curve this is,
+// so the shape of every stride in the shipped hero depends on getting it right:
+// a brisk start (initial slope 0.4x average), a long settle, zero velocity at the
+// end. An exponential filter has none of that shape — it holds a constant lag and
+// has to decelerate through zero to reverse, which reads as sliding on ice.
+//
+// Progress p (elapsed / duration) is the curve's *x*; the returned eased fraction
+// is its *y*, so x must be inverted first. With x1 = x2 = 0.25 the x polynomial is
+// t^3 - 0.75t^2 + 0.75t, whose derivative bottoms out at 0.5625 — comfortably away
+// from zero — so plain Newton from t = p converges to float precision in a few
+// steps and needs no bisection guard. The iteration count is FIXED (no early exit)
+// and every operation is +-*/ on doubles, which IEEE-754 specifies exactly: the
+// result is bit-identical in Node and in the browser, like everything else here.
+const EASE_ITERS = 6;
+const AX = 1, BX = -0.75, CX = 0.75; // x(t) = ((AX*t + BX)*t + CX)*t
+const AY = -1.7, BY = 2.4, CY = 0.3; // y(t) = ((AY*t + BY)*t + CY)*t
+
+export function cssEase(p) {
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  let t = p;
+  for (let i = 0; i < EASE_ITERS; i++) {
+    const err = ((AX * t + BX) * t + CX) * t - p;
+    const slope = (3 * AX * t + 2 * BX) * t + CX;
+    t -= err / slope;
+  }
+  return ((AY * t + BY) * t + CY) * t;
+}
