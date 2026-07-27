@@ -26,9 +26,9 @@ untouched**, and stays that way until Ameya's character gate passes.
 | **M6 — the entrance (`cfg.entrance`): the troupe walks on from off-stage** | ✅ done |
 
 135 unit tests green, determinism lint clean, and the **browser-vs-Node parity
-gate passes**: batch `916ea37b` at 32 seeds × 10k ticks, identical in Node and in
-Chrome. Re-run it with `npm run serve` in one shell and `node tools/parity.mjs` in
-another.
+gate passes**: batch `916ea37b` at 32 seeds × 10k ticks and `24a89cd2` at 32 × 60k
+(≈27 hours of simulated field), identical in Node and in Chrome. Re-run it with
+`npm run serve` in one shell and `node tools/parity.mjs` in another.
 
 > **The gate earned its keep on the first real run.** Node 25 and Chrome disagree
 > on `Math.sin` by one ULP. It surfaced at seed `-626627309`, tick 5189 — a stack
@@ -239,7 +239,7 @@ node tools/parity.mjs --ticks 10000      # automated (drives your installed Chro
 
 …or by hand: open `/tools/golden.html?ticks=10000` and confirm its batch digest
 equals `node tools/golden.js --engine ./engine.js --ticks 10000`. Current values:
-`6acd01f7` at 10k ticks, `711c07e4` at 60k.
+`916ea37b` at 10k ticks, `24a89cd2` at 60k.
 
 **Use `npm run serve`, not `python3 -m http.server`.** Python's server sends only
 `Last-Modified` — no `Cache-Control`, no `ETag` — so browsers apply heuristic caching to
