@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>panda engine — golden trace (browser side)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 2rem; color: #222; }
+  h1 { font-size: 1rem; }
+  #batch { font-size: 1.1rem; font-weight: 700; }
+  .ok { color: #0a7d2c; }
+  table { border-collapse: collapse; margin-top: 1rem; }
+  td { padding: 1px 12px 1px 0; }
+  .muted { color: #888; }
+</style>
+<h1>Golden trace — browser side</h1>
+<p class="muted">
+  Runs the same engine + harness ES modules the Node CLI runs. The batch digest
+  below must equal <code>node tools/golden.js</code>'s. This is the browser half
+  of Phase A's "byte-identical Node vs browser" gate. Serve this file over http
+  (ES modules need it): <code>python3 -m http.server</code> from the engine dir,
+  then open <code>/tools/golden.html?ticks=10000</code>.
+</p>
+<p>batch digest: <span id="batch">running…</span></p>
+<div id="seeds"></div>
+
+<script type="module">
+  import { runTrace, PHASE_A_SEEDS } from './trace.js';
+  import { hex } from './checksum.js';
+  import { demoEngine } from './demo-engine.js';
+
+  const ticks = Number(new URLSearchParams(location.search).get('ticks')) || 10000;
+  const t0 = performance.now();
+  const { batch, seeds } = runTrace({ engine: demoEngine, seeds: PHASE_A_SEEDS, ticks });
+  const ms = Math.round(performance.now() - t0);
+
+  document.getElementById('batch').textContent = `${hex(batch)}  (${ticks} ticks, ${ms} ms)`;
+  document.getElementById('batch').classList.add('ok');
+  document.getElementById('seeds').innerHTML =
+    '<table>' +
+    seeds.map((s) => `<tr><td class="muted">seed ${s.seed}</td><td>${hex(s.digest)}</td></tr>`).join('') +
+    '</table>';
+
+  // Expose for automated (Playwright) parity checks.
+  window.__goldenBatch = hex(batch);
+</script>

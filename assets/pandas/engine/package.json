@@ -1,0 +1,11 @@
+{
+  "name": "panda-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic fixed-tick simulation engine for the home-page hero pandas. Pure, DOM-free step(state, actions) -> state. Runs identically in Node (golden traces + trainer) and the browser (shipped site). See design/panda-policy-net.md, Phase A.",
+  "scripts": {
+    "test": "node --test",
+    "lint:determinism": "node tools/lint-determinism.js"
+  }
+}
