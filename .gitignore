@@ -4,3 +4,11 @@
 
 **/*.quarto_ipynb
 /test-results/
+
+# Training corpora — binary shards, gigabytes, and re-cuttable from their manifest
+# (trainer/corpus.js is deterministic given the corpus seed). The manifest itself
+# IS committed; the shards are not.
+/trainer/corpora/*
+!/trainer/corpora/*.manifest.json
+!/trainer/corpora/*.sample.jsonl
+/trainer/node_modules/

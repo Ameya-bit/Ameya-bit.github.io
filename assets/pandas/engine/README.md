@@ -12,9 +12,10 @@ behavioral map of the original `../pandas.js`.
 
 ## Status (2026-07-27)
 
-**The port is complete and the Phase-A gates are green.** The homepage now loads
-this engine on `?engine=new`; **the default is still the original `../pandas.js`,
-untouched**, and stays that way until Ameya's character gate passes.
+**Phase A is complete and this engine is the homepage default** — the character
+gate passed 2026-07-27, on its second round (see below for what round one caught).
+The original `../pandas.js` stays, unmodified, behind `?engine=old`: it is the
+reference the port is judged against.
 
 | Milestone | State |
 |---|---|
@@ -24,11 +25,14 @@ untouched**, and stays that way until Ameya's character gate passes.
 | **M4 — stack (tier 2) + cascade (tier 3)** | ✅ done |
 | **M5 — presentation: real sprites/cels/CSS, tick interpolation, seated riders, the two deferred beats, the reduced-motion tableau, `?engine=old\|new`** | ✅ done |
 | **M6 — the entrance (`cfg.entrance`): the troupe walks on from off-stage** | ✅ done |
+| **B2 — `policy/obs.js`: the observation encoder (Phase B, no site impact yet)** | ✅ done |
 
-135 unit tests green, determinism lint clean, and the **browser-vs-Node parity
-gate passes**: batch `916ea37b` at 32 seeds × 10k ticks and `24a89cd2` at 32 × 60k
+168 unit tests green, determinism lint clean, and the **browser-vs-Node parity
+gate passes**: batch `f557d268` at 32 seeds × 10k ticks and `26907de6` at 32 × 60k
 (≈27 hours of simulated field), identical in Node and in Chrome. Re-run it with
-`npm run serve` in one shell and `node tools/parity.mjs` in another.
+`npm run serve` in one shell and `node tools/parity.mjs` in another. (Digests moved
+from `916ea37b`/`24a89cd2` when the glide was fixed — the trace covers the glide's
+own state, so it had to.)
 
 > **The gate earned its keep on the first real run.** Node 25 and Chrome disagree
 > on `Math.sin` by one ULP. It surfaced at seed `-626627309`, tick 5189 — a stack
@@ -105,10 +109,37 @@ yanking a rider out of mid-air.
 - **Two-position movement.** The original's collision read the smooth 2 s CSS-glide
   position, not the logical step — the glide is a collision softener. So each
   entity carries a **logical** position (`lx, ly` — the stride grid, fenced) and a
-  **visual** position (`x, y`) that eases toward it (`config.glideK`). Collision
-  and rendering use the visual position; wander/fence logic uses the logical one.
-  `.stop` behaviours (knock slide, tumbler skid, zoomies dash, any grounded phase)
-  snap visual to logical.
+  **visual** position (`x, y`) that glides toward it. Collision and rendering use
+  the visual position; wander/fence logic uses the logical one. `.stop` behaviours
+  (knock slide, tumbler skid, zoomies dash, any grounded phase) snap visual to
+  logical.
+- **The glide is a port of the CSS transition, restart and all.** `transition:
+  transform 2s` with the default `ease` curve, and the original writes the
+  transform *only when the logical position changes* — so each stride starts a
+  **fresh** curve from wherever the body had glided to. `cfg.glideTicks = 40` is
+  that duration; `mathx.cssEase` is that curve (cubic-bezier(0.25, 0.1, 0.25, 1),
+  Newton-inverted with a fixed iteration count, sampled once per config into
+  `cfg.glideCurve`). ⚠️ The first port used an exponential chase
+  (`x += (lx - x) * 0.08`) instead. It has the same average lag and none of the
+  shape: constant velocity instead of a stride that surges and settles, and a
+  reversal that has to decelerate through zero before it turns. On the page that
+  reads as **sliding on ice with momentum to overturn** — caught by Ameya at the
+  character gate, 2026-07-27, and not by any test, which is why `test/glide.test.js`
+  now pins the restart, the settle and the turn.
+- **…and the browser was smoothing it a second time.** Fixing the engine did not fix
+  the page, because `styles.scss` — which loads on every visit, since `?engine=old`
+  still has to work — sets `.panda_wrapper { transition: transform 2s }`, and
+  `render/pandas.css` merely *omitted* a transition. The cascade resolves conflicting
+  declarations, not absent ones, so the browser went on animating the engine's
+  transforms over 2 s. Measured on the page: **22 px/s drawn against the engine's
+  ~44 px/s** — over half of every stride eaten. Worse, the drawn body then sat tens of
+  pixels from the hitbox that collides, which is why pandas appeared to **walk through
+  each other and through the hat panda, "but sometimes" collide**. Both of the
+  character gate's findings were this one bug. The fix is a specificity one:
+  `host.js` puts `.panda_engine` on the stage and `pandas.css` overrides through it,
+  so it cannot silently depend on sheet load order. **The dev pages never showed it —
+  `tools/stage.html` and `tools/preview.html` don't load `styles.scss`.** Anything
+  about how the engine looks has to be judged on the real page.
 - **`mode` tag** drives each panda (WANDER / KNOCKED / the 8 anomalies / the hat's
   OBSERVING + ROLLING); the original's loose `anomaly`/`solid`/`riding`/`flying`/
   `entering` flags collapse into it. `isDown(e)` (grounded animation) gates
@@ -133,8 +164,11 @@ the trainer) never loads any of it.
   display at whatever the monitor does, so each frame interpolates the previous
   tick toward the current one. A position change larger than `JUMP_PX` is a
   teleport (a knock snap, a hop landing, a topple drop), taken whole rather than
-  smeared. Note the CSS transition is **gone**: in the original the 2 s glide *was*
-  the movement model, and the engine now owns it.
+  smeared. Note the CSS transition is **gone** — in the original the 2 s glide *was*
+  the movement model, and the engine now owns it — but "gone" takes an explicit
+  `transition: none` through `.panda_engine`, because the old sheet still declares it
+  for `?engine=old`. See the glide note above; this was a shipped bug, not a
+  hypothetical.
 - **Cels free-run at the original's 140 ms**, except where the sim owns the
   progress — the dive-roll's 5 cels span exactly its 5 ticks, and a mount hop or a
   hiccup pop freezes the stance because the panda is being thrown, not walking.
@@ -175,17 +209,67 @@ optional action for it; everything else is autonomous.
   between, so it moves at the right speed. A learned policy sets its own rhythm the
   same way. This is why the interface is 17 discrete actions rather than a velocity.
 
+## The observation encoder (`policy/obs.js`, B2)
+
+The other half of the policy seam: the action interface is what the policy *does*,
+this is what it *sees*. One `Float32Array` frame per decision tick — a self token
+of proprioception plus `slots` neighbour tokens — built by `makeObserver(params)`,
+which mirrors `makeEngine`: `init()` mints the slot memory, `observe(state, mem)`
+advances it and fills a frame.
+
+It lives here rather than in `trainer/` because **Phase D ships it**: the
+in-browser policy has to encode its own observations from the same state the
+renderer draws. One implementation, imported by the trainer and by the page, the
+same way the trainer imports the engine instead of vendoring it — and it is inside
+the determinism lint's reach, which matters, because an encoder that rounds
+differently in Chrome than in Node would move actions the trainer never saw.
+
+- **Vision is a heading cone** (D1, variant (b)): `coneDeg` about his facing out to
+  `sightRange`, plus a short omnidirectional `peripheralR` stub, and the hero card
+  is opaque (`occludeFence`, via the same `crossesFence` the watcher routes by).
+  Measured over four 10-minute episodes per corpus spec: he sees a mean of 1.7
+  (natural) to 3.7 (wild) pandas at once out of 7–17 on the field, holds 0.6–1.4
+  more from memory alone, and is looking at nobody at all in 3–12% of frames. Those
+  are the numbers D1 exists to produce, and the knobs Phase C will turn to move the
+  memory gap.
+- **What a neighbour token carries is what a bystander could see**: egocentric
+  position, distance, drawn facing and drawn animation, whether it is airborne in a
+  hiccup pop, and where it sits in a tower. The operational rule is stricter than a
+  list — *the encoder may read of another panda only what `render/renderer.js`
+  reads* — and a read-tracking proxy in `test/obs.test.js` enforces it. Hence the
+  flagship property, pinned as its own test: **a sleeper and a freshly-knocked panda
+  encode to identical bytes.** Telling them apart is memory's job.
+- **Slots are sticky, and that is the only memory in here.** A slot stays bound to
+  its panda through `holdTicks` out of sight, so the network is not made to solve
+  identity binding before it can infer anything (a confound, not the study). But an
+  unseen panda's token drops to `present = 1` and *zeros* — no stale position, no
+  last-known pose. A decaying estimate in the sensor would be the belief we are
+  trying to watch emerge, pre-built.
+- **Positions are the visual ones** (`x, y`) — the drawn body, which is also the one
+  that collides. The rules expert reasons on the logical stride grid and so sees a
+  step into the future; the policy does not get that, deliberately. It sees the
+  picture.
+- **Frozen, and checkably so.** The arithmetic is +,-,*,/ and `sqrt` into a
+  `Float32Array` (whose store is the same round-to-nearest-even `Math.fround`
+  performs), plus one `mathx.cos` at construction — so cross-engine bit-identity
+  holds by construction. `policy/obs-fixture.json` makes it *testable*: four
+  (world, slot memory) → (frame, slot memory) cases carrying only the observable
+  projection of a real state, so a Python or WASM port can be held to them without
+  a simulator. `node tools/obs-fixture.js --check` (a unit test runs it) fails if
+  the encoder drifts from the fixture; the layout freezes with the roster at the
+  exit of Phase B, because changing it invalidates a cut corpus.
+
 ## Layout
 
 | File | Role |
 |---|---|
 | `rng.js` | Seeded PRNG (mulberry32); state is one uint32 threaded through `step`. Replaces `Math.random`. |
-| `mathx.js` | `sin`/`cos` computed from IEEE-754-pinned arithmetic (NOT `Math`'s — they differ across engines), plus `sq`/`hypot`/`clamp`. The one sanctioned home for anything transcendental. |
+| `mathx.js` | `sin`/`cos` computed from IEEE-754-pinned arithmetic (NOT `Math`'s — they differ across engines), plus `cssEase` (the glide's `ease` curve) and `sq`/`hypot`/`clamp`. The one sanctioned home for anything transcendental. |
 | `tick.js` | Fixed-tick clock (`TICK_HZ=20`/`TICK_MS=50`, 10 Hz action cadence) + ms→tick / pxPerMs→perTick converters. |
 | `config.js` | Every tunable, defaults = live values, timing in ticks. `makeConfig(overrides)` for training corpora. |
 | `dirs.js` | 8 headings: `DX/DY` (full STEP/axis, for strides), `AX/AY` (normalized, for zoomies/tumbler), `eightWay`. |
 | `geometry.js` | Pure bounds / hero-card fence / `applyPos` (per-axis, x commits before the y-check, like the original). |
-| `state.js` | Entity factory, `MODE`/`ANIM`/`KNOCK` enums, `isDown`, `easeVisual`/`snapVisual`, `spawnEntities` + the entrance's off-stage placement and `advanceEntrance`. |
+| `state.js` | Entity factory, `MODE`/`ANIM`/`KNOCK` enums, `isDown`, `easeVisual`/`snapVisual` (the CSS transition, restart semantics and all), `spawnEntities` + the entrance's off-stage placement and `advanceEntrance`. |
 | `collision.js` | Model-space corner-proximity collision (replaces `getBoundingClientRect`); i-frames while the hat rolls. |
 | `anomalies.js` | The 8 tier-1 FSMs (`startAnomaly`/`updateAnomaly`) + shared grounded fall→lie→stand tail. |
 | `director.js` | Tier-1 scheduler (pick kind≠last + eligible candidate), the shared `isFreeRoamer` pool test, and the incident queue (`emitIncident`/`pruneIncidents`). |
@@ -196,6 +280,8 @@ optional action for it; everything else is autonomous.
 | `hat.js` | The engine side of the seam: executes an action (`updateHat`), runs the roll + knock mechanics. |
 | `engine.js` | `makeEngine(config)` factory + default `init`/`step(state, action)`/`encode`; per-entity dispatch, director, hat, collisions. Re-exports `ACTION` + `rulesAction`. |
 | `layout.js` | Host-side `pandaCountForViewport` — density scaling. Not engine core. |
+| `policy/obs.js` | The observation encoder (B2): heading-cone FOV, sticky per-panda slots, one Float32 frame per decision tick. The other half of the seam. |
+| `policy/obs-fixture.json` | **Generated.** The encoder's cross-language contract — (world, slot memory) → frame cases another implementation must reproduce. Re-bake, never hand-edit. |
 | `render/art-data.js` | **Generated.** The art lifted verbatim from `../pandas.js`: sprite rows, hat pixels + seats, seated cels. Never hand-edit — re-bake. |
 | `render/art.js` | Builds the SVG: sprite blocks (with/without the worn hat), the loose hat, the five seated drawings + their measured seat heights. |
 | `render/cels.js` | Cel tables — which of the 13 columns and 5 rows an `(anim, dir)` draws, and the 140 ms frame cadence. |
@@ -212,6 +298,7 @@ optional action for it; everything else is autonomous.
 | `tools/preview.html` | Dev preview: full-window stage, hero-card fence, density slider, anomaly/role tags, stack + cascade readouts, and buttons that nudge the tier-2/3 clocks so the rare set pieces are watchable. **Schematic shapes, not the shipped sprites.** |
 | `tools/stage.html` | Dev preview with the **real** sprites: a hero-card stand-in, the fence, and a "knock his hat off" button so the fetch skit is watchable on demand. |
 | `tools/bake-art.js` | Lifts the art literals out of `../pandas.js` into `render/art-data.js`. `--check` fails if they have drifted (a unit test runs it). |
+| `tools/obs-fixture.js` | Bakes `policy/obs-fixture.json`. `--check` fails if the encoder no longer produces it (a unit test runs it). |
 | `tools/parity.mjs` | The browser-vs-Node gate, automated: compares batch digests and bisects a mismatch to the seed, tick and encode slot. Needs Playwright (deliberately not a dependency). |
 | `tools/demo-engine.js` | A toy engine that proved the harness before the real engine existed. Deletable. |
 | `tools/lint-determinism.js` | Fails if engine code reaches for `Math.random` / clock / timers / rAF / raw transcendentals. |
@@ -226,6 +313,7 @@ Run from this directory:
 node --test                              # unit tests
 npm run lint:determinism                 # ban check on engine sources
 node tools/bake-art.js --check           # the baked art still matches pandas.js
+node tools/obs-fixture.js --check        # the observation encoder still matches its fixture
 node tools/golden.js --engine ./engine.js --ticks 10000   # deterministic trace digest
 npm run serve                            # dev server -> /tools/stage.html (real sprites)
                                          #            -> /tools/preview.html (schematic + set-piece buttons)
@@ -239,7 +327,7 @@ node tools/parity.mjs --ticks 10000      # automated (drives your installed Chro
 
 …or by hand: open `/tools/golden.html?ticks=10000` and confirm its batch digest
 equals `node tools/golden.js --engine ./engine.js --ticks 10000`. Current values:
-`916ea37b` at 10k ticks, `24a89cd2` at 60k.
+`f557d268` at 10k ticks, `26907de6` at 60k.
 
 **Use `npm run serve`, not `python3 -m http.server`.** Python's server sends only
 `Last-Modified` — no `Cache-Control`, no `ETag` — so browsers apply heuristic caching to
@@ -264,16 +352,58 @@ real module graph. If you do end up on a cached page, Cmd/Ctrl+Shift+R clears it
 
 ## Picking up from here
 
-Phase A is done bar one judgment call.
+Phase A is closed. What follows is Phase B, in [`trainer/`](../../../trainer/README.md)
+— except the observation encoder, which lives here (see above): B1 (rollout harness
++ corpus specs) and B2 (the encoder) are done, B3–B6 open, and the roster freezes at
+the exit.
 
-1. **The character gate.** Open the homepage with `?engine=new` and compare it to
-   the default. Everything about *how it moves* is Ameya's call: the glide
-   (`cfg.glideK`), the knock rate, the density, the interpolation, whether the
-   watcher still reads as a watcher. The page wins over the number, always. Only
-   after that does the default flip from `old` to `new`.
-2. **Then Phase B** (design/panda-policy-net.md): the Node rollout harness,
-   per-tick ground-truth logging, the observation encoder, and the corpus cut —
-   at which point the anomaly roster freezes.
+**One engine change is still owed before the corpus is cut**, because a sim change
+after the cut forces a retrain: the `.stop` hitbox divergence in the character-gate
+record below. Everything else here is settled.
+
+### The character gate (passed 2026-07-27, on round two)
+
+Everything about *how it moves* is Ameya's call: the glide (`cfg.glideTicks`), the
+knock rate, the density, the interpolation, whether the watcher still reads as a
+watcher. The page wins over the number, always.
+
+   - **Round 1 found two symptoms with one cause** — ice, and pandas
+     passing through each other. Both were the double transition above: the engine's
+     exponential-chase glide *and* the legacy CSS animating the result again. Both
+     fixed; round two passed and the homepage default flipped to this engine.
+   - **The collision economy was then measured against the original**, by polling both
+     pages in a real browser for 10 minutes each (the original is DOM/timer-driven, so
+     a browser is its only clock):
+
+     | | old | new |
+     |---|---|---|
+     | 1600×900, 10 pandas both | 4.00 knocks/min, 40.1% grounded | 3.20 knocks/min, 33.2% grounded |
+     | 2560×1343 (a real monitor) | 10 pandas, 1.70/min, 14.9% | 11 pandas, 0.80/min, 7.4% |
+     | median knock | 5.6 s | 5.6 s |
+
+     **The port is not hotter than the original — it is gentler**, consistently, which
+     is the dive-roll's i-frames (a deliberate M3 addition) doing exactly what they
+     were added to do. The identical median knock says the recovery FSM is faithful.
+     Note also how violently knock rate depends on stage *area*: the same 10 pandas
+     go from 4.0/min to 1.7/min between those two viewports.
+   - Two windows exist where a contact legitimately does nothing, in both engines: the
+     entrance (~12 s of collision ghosts) and any grounded panda, which cannot be
+     re-knocked. Otherwise a standing hat panda is knocked by *every* contact — no
+     exclusion ever fires in 160k ticks of instrumented sim.
+   - **Density differs by design.** The original spawns a flat 10 pandas on any desktop
+     (`W >= 1200 ? 10 : 7`); the port scales with free area (`layout.js`,
+     `areaPerPanda = 217000`, Ameya's 2026-07-26 pick). Same density, different counts:
+     11 on a 2560×1343 monitor's hero region against the original's 10. The "≈15" that
+     pick was made against was in `tools/preview.html`, whose stage is the whole window
+     rather than the shorter hero strip — the density is the same, the count is not.
+   - **Known divergence, unfixed — and now on a clock:** the original shrinks a
+     `.stop` panda's hitbox (`.panda_wrapper.stop .hit_area { margin-top: 8px;
+     height: 46px }` — zoomies, skids, anything grounded, the stack base).
+     `collision.js` uses the 44×54 box for everyone. Net reach differs by ~±12 px
+     vertically. Cheap to port; it was deferred so that one change was being judged
+     at a time. **It must land before the corpus cut (B6)** — after that, a sim
+     change costs a retrain, and it will move the golden digests and the obs fixture
+     with it.
 
 Everything the trainer needs is already in place: `step(state, action)` takes the
 17-way action, the applied action is logged on `hat.action`, and the parity gate
