@@ -12,7 +12,7 @@
 
 import { Rng } from './rng.js';
 import { hypot } from './mathx.js';
-import { inBounds, applyPos } from './geometry.js';
+import { inBounds, inForbid, applyPos } from './geometry.js';
 
 // Entity modes. The mutual-exclusion "what drives this panda" tag. Stack/cascade
 // modes slot in here in later milestones.
@@ -36,11 +36,16 @@ export const MODE = Object.freeze({
   STACK_BASE: 12, // the bottom panda: `solid`, carries the tower
   MOUNTING: 13, // climbing: walking up to the base, then mid-hop (`flying` ghost)
   RIDING: 14, // seated above the base, pinned (`riding` ghost)
+  // The entrance: walking on from off-stage, not yet part of the field. A ghost
+  // (`entering`), excluded from every director's pool, and — uniquely — moving
+  // with the bounds/fence clamp bypassed, since its whole corridor starts outside
+  // the stage. Cleared for good on arrival; nothing ever re-enters.
+  ENTERING: 15,
 });
 export const MODE_NAME = [
   'wander', 'knocked', 'sleeper', 'tumbler', 'spinner',
   'loop', 'starer', 'zoomies', 'moonwalk', 'hiccup',
-  'observing', 'rolling', 'stackBase', 'mounting', 'riding',
+  'observing', 'rolling', 'stackBase', 'mounting', 'riding', 'entering',
 ];
 
 // Sentinel for the watcher's "distance to vantage last stride" when a relocate has
@@ -294,8 +299,55 @@ export function clearSpot(rng, cfg, placed, minSep, tries = 60) {
   return best ?? { x: cfg.width / 2, y: cfg.height / 2 };
 }
 
+// An off-stage start and the inward target it walks to, on a random edge whose
+// lane is clear of the hero card. Entry runs perpendicular to the edge, so the
+// straight transit never crosses the centred card. Falls back to an ordinary clear
+// spot (i.e. simply appearing) if 40 tries can't find a lane — the original's
+// behaviour, and only reachable on a stage the card nearly fills.
+function pickEntry(rng, cfg, placed) {
+  const off = cfg.entranceOff;
+  const inset = cfg.entranceTargetIn;
+  const w = cfg.width;
+  const h = cfg.height;
+  for (let i = 0; i < cfg.entranceTries; i++) {
+    switch (rng.int(4)) {
+      case 0: { // from the left, walking right
+        const y = rng.float(0, Math.max(1, h - cfg.cell));
+        const t = { x: inset, y };
+        if (!inForbid(cfg.forbid, cfg.foot, cfg.cell, t.x, t.y)) return { sx: -off, sy: y, dir: 2, ...t };
+        break;
+      }
+      case 1: { // from the right, walking left
+        const y = rng.float(0, Math.max(1, h - cfg.cell));
+        const t = { x: w - cfg.cell - inset, y };
+        if (!inForbid(cfg.forbid, cfg.foot, cfg.cell, t.x, t.y)) return { sx: w + off - cfg.cell, sy: y, dir: 6, ...t };
+        break;
+      }
+      case 2: { // from the top, walking down
+        const x = rng.float(0, Math.max(1, w - cfg.cell));
+        const t = { x, y: inset };
+        if (!inForbid(cfg.forbid, cfg.foot, cfg.cell, t.x, t.y)) return { sx: x, sy: -off, dir: 4, ...t };
+        break;
+      }
+      default: { // from the bottom, walking up
+        const x = rng.float(0, Math.max(1, w - cfg.cell));
+        const t = { x, y: h - cfg.cell - inset };
+        if (!inForbid(cfg.forbid, cfg.foot, cfg.cell, t.x, t.y)) return { sx: x, sy: h + off - cfg.cell, dir: 0, ...t };
+        break;
+      }
+    }
+  }
+  const spot = clearSpot(rng, cfg, placed, 90);
+  return { sx: spot.x, sy: spot.y, dir: rng.int(8), x: spot.x, y: spot.y };
+}
+
 // Placement helper reused by init: build the starting roster. index 0 is the hat
 // panda; one roamer (never the hat) is the oblivious one.
+//
+// With `cfg.entrance` the troupe starts off-stage and walks on — the hat panda
+// alone first, then waves of `entranceWaveSize`. Everyone's arrival target doubles
+// as their `home` (the oblivious one's patch is where it walked in to), exactly as
+// the original had it. Without it, everyone simply starts at a clear spot.
 export function spawnEntities(rng, cfg) {
   const n = cfg.pandaCount;
   const obliviousAt = n > 1 ? 1 + rng.int(n - 1) : -1;
@@ -303,23 +355,70 @@ export function spawnEntities(rng, cfg) {
   for (let i = 0; i < n; i++) {
     const hasHat = i === 0;
     const oblivious = i === obliviousAt;
-    const spot = clearSpot(rng, cfg, entities, 90);
     const moveSpeed = hasHat ? cfg.hatMove : rng.pick(cfg.moveSpeeds);
-    const e = makeEntity(i, Math.round(spot.x), Math.round(spot.y), {
+    const entry = cfg.entrance ? pickEntry(rng, cfg, entities) : null;
+    const spot = entry ?? clearSpot(rng, cfg, entities, 90);
+    const e = makeEntity(i, Math.round(entry ? entry.sx : spot.x), Math.round(entry ? entry.sy : spot.y), {
       hasHat,
       oblivious,
       moveSpeed,
-      dir: rng.int(7), // original quirk: initial facing is 0..6, not 0..7
+      dir: entry ? entry.dir : rng.int(7), // original quirk: initial facing is 0..6, not 0..7
       defaultFallDir: rng.int(8),
     });
-    if (oblivious) e.home = [e.x, e.y];
-    e.moveTimer = rng.intBetween(1, moveSpeed); // stagger first strides
-    if (hasHat) {
-      // The hat panda starts in its watcher loop, hunting an ambient subject.
-      e.mode = MODE.OBSERVING;
-      resetObserveBrain(e, cfg);
+    if (entry) {
+      // Walking on: park off-stage until this panda's wave is due, then stride to
+      // the target. `home` carries the target, which is also the oblivious one's
+      // patch once it arrives.
+      e.mode = MODE.ENTERING;
+      e.entering = true;
+      e.anim = ANIM.WALK;
+      e.home = [Math.round(entry.x), Math.round(entry.y)];
+      e.aTimer = hasHat ? 0 : cfg.entranceLead + Math.floor((i - 1) / cfg.entranceWaveSize) * cfg.entranceWaveGap;
+      e.moveTimer = 1;
+    } else {
+      if (oblivious) e.home = [e.x, e.y];
+      e.moveTimer = rng.intBetween(1, moveSpeed); // stagger first strides
+      if (hasHat) {
+        // The hat panda starts in its watcher loop, hunting an ambient subject.
+        e.mode = MODE.OBSERVING;
+        resetObserveBrain(e, cfg);
+      }
     }
     entities.push(e);
   }
   return entities;
+}
+
+// One tick of the walk-in: hold off-stage until this panda's wave is due, then
+// stride toward the target at its own cadence. Movement here is UNCLAMPED — the
+// corridor begins outside the stage, so the usual bounds/fence check would refuse
+// the first step. Returns true on the tick it arrives; the caller decides what the
+// panda becomes (a roamer, or the watcher).
+export function advanceEntrance(e, cfg) {
+  if (e.aTimer > 0) {
+    e.aTimer -= 1;
+    snapVisual(e); // parked off-stage, not drifting
+    return false;
+  }
+  if (--e.moveTimer > 0) {
+    easeVisual(e, cfg); // between strides — the glide, as for any other walk
+    return false;
+  }
+  e.moveTimer = e.moveSpeed;
+
+  const dx = e.home[0] - e.lx;
+  const dy = e.home[1] - e.ly;
+  if (Math.abs(dx) <= cfg.step && Math.abs(dy) <= cfg.step) {
+    e.lx = e.home[0];
+    e.ly = e.home[1];
+    e.entering = false;
+    e.aTimer = 0;
+    e.moveTimer = 1;
+    easeVisual(e, cfg);
+    return true;
+  }
+  e.lx += dx > cfg.step ? cfg.step : dx < -cfg.step ? -cfg.step : 0;
+  e.ly += dy > cfg.step ? cfg.step : dy < -cfg.step ? -cfg.step : 0;
+  easeVisual(e, cfg);
+  return false;
 }

@@ -160,7 +160,7 @@ test('an on-feet anomaly is knockable; a grounded one is not', () => {
 // ---- the director, in the full engine ----
 
 test('the director starts anomalies over time, never the hat or oblivious one', () => {
-  const engine = makeEngine({ width: 2600, height: 1400, pandaCount: 15, forbid: null });
+  const engine = makeEngine({ entrance: false, width: 2600, height: 1400, pandaCount: 15, forbid: null });
   let s = engine.init(20260726);
   const kindStarts = [];
   const prevMode = new Map(s.entities.map((e) => [e.id, e.mode]));
@@ -180,7 +180,7 @@ test('the director starts anomalies over time, never the hat or oblivious one', 
 });
 
 test('the director never runs the same kind twice in a row', () => {
-  const engine = makeEngine({ width: 2600, height: 1400, pandaCount: 15, forbid: null });
+  const engine = makeEngine({ entrance: false, width: 2600, height: 1400, pandaCount: 15, forbid: null });
   let s = engine.init(42);
   let lastLast = s.director.last;
   const seq = [];
@@ -196,7 +196,7 @@ test('the director never runs the same kind twice in a row', () => {
 });
 
 test('anomalies post incidents to the queue', () => {
-  const engine = makeEngine({ width: 2600, height: 1400, pandaCount: 15, forbid: null });
+  const engine = makeEngine({ entrance: false, width: 2600, height: 1400, pandaCount: 15, forbid: null });
   let s = engine.init(5);
   let sawIncident = false;
   for (let i = 0; i < 3000 && !sawIncident; i++) {
@@ -207,7 +207,7 @@ test('anomalies post incidents to the queue', () => {
 });
 
 test('the engine stays deterministic with anomalies + director', () => {
-  const engine = makeEngine({ width: 2600, height: 1400, pandaCount: 15, forbid: null });
+  const engine = makeEngine({ entrance: false, width: 2600, height: 1400, pandaCount: 15, forbid: null });
   const eng = { init: engine.init, step: engine.step, encode: engine.encode };
   const a = runSeed({ engine: eng, seed: 314, ticks: 2000 });
   const b = runSeed({ engine: eng, seed: 314, ticks: 2000 });

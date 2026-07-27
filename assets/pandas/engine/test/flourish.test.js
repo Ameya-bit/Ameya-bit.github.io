@@ -39,7 +39,7 @@ async function loadFlourish() {
 test('the skit drops the hat on a knock and walks him back to it', async () => {
   const stage = stubDom();
   const makeFlourish = await loadFlourish();
-  const engine = makeEngine({ width: 1400, height: 620, pandaCount: 8 });
+  const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 8 });
   const flourish = makeFlourish(stage);
 
   let state = engine.init(42);
@@ -72,7 +72,7 @@ test('the skit drops the hat on a knock and walks him back to it', async () => {
 test('the fetch heads toward the hat, not away from it', async () => {
   const stage = stubDom();
   const makeFlourish = await loadFlourish();
-  const engine = makeEngine({ width: 1400, height: 620, pandaCount: 8 });
+  const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 8 });
   const flourish = makeFlourish(stage);
 
   let state = engine.init(9);

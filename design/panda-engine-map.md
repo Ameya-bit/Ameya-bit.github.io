@@ -162,7 +162,7 @@ Common entry `beginAnomaly(tag, ttl)` (728): sets `anomaly=tag`, drops queued mo
 
 **Entrance** `spawn()` (1774) + `walkIn` (342): `PANDA_COUNT` from viewport (1785); hat panda first via `enterOne(true)` with `LEAD_GAP`=1800 ms head start; then waves of `WAVE_SIZE`=2 every `WAVE_GAP`=1050 ms. `pickEntry()` (1801) random edge, `OFF`=100 off-stage, `TARGET_IN`=110 in, fence-avoid retry ≤40. `walkIn` straight strides (unclamped `setPos`) → hands off to observe/moveAbout within one `STEP`.
 
-**Entrance: NOT ported (2026-07-27).** The engine places the troupe at clear spots at tick 0 rather than walking them on. It is sim work (an `ENTERING` mode; the `entering` flag and its collision/director exemptions already exist) and it moves the training corpora's initial conditions, so it is an explicit open decision, not an oversight.
+**Entrance: ported 2026-07-27 (M6)** as `MODE.ENTERING` behind `cfg.entrance` (default on = today's live behaviour). Waves become per-entity countdowns drawn at spawn (`aTimer`), the walk-in is one stride per `moveSpeed` ticks toward a target carried in `home` (which then doubles as the oblivious one's patch, exactly as here), and arrival hands off to WANDER — or, for the hat, straight into OBSERVING. It stays a config flag rather than a host-side script because training corpora need both: most episodes opening mid-scene, some on the walk-in.
 
 **Reduced-motion tableau** `tableau(place)` (1713): no scheduling — one static composition: a fallen panda (`clearSpot`, frozen `fallen`), hat panda planted at `INSPECT_NEAR` facing it, a static 3-high stack (manual z-order), rest standing (`stop`) at `clearSpot`s ≥`TABLEAU_GAP`=118 apart (60-try farthest-point).
 

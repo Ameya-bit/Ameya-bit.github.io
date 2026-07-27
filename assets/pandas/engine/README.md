@@ -23,11 +23,12 @@ untouched**, and stays that way until Ameya's character gate passes.
 | **M3 — hat panda (observe / reflex / dive-roll) + 17-action seam + i-frames** | ✅ done |
 | **M4 — stack (tier 2) + cascade (tier 3)** | ✅ done |
 | **M5 — presentation: real sprites/cels/CSS, tick interpolation, seated riders, the two deferred beats, the reduced-motion tableau, `?engine=old\|new`** | ✅ done |
+| **M6 — the entrance (`cfg.entrance`): the troupe walks on from off-stage** | ✅ done |
 
-129 unit tests green, determinism lint clean, and the **browser-vs-Node parity
-gate passes**: batch `6acd01f7` at 32 seeds × 10k ticks, and `711c07e4` at 32 ×
-60k (≈27 hours of simulated field), identical in Node and in Chrome. Re-run it
-with `npm run serve` in one shell and `node tools/parity.mjs` in another.
+135 unit tests green, determinism lint clean, and the **browser-vs-Node parity
+gate passes**: batch `916ea37b` at 32 seeds × 10k ticks, identical in Node and in
+Chrome. Re-run it with `npm run serve` in one shell and `node tools/parity.mjs` in
+another.
 
 > **The gate earned its keep on the first real run.** Node 25 and Chrome disagree
 > on `Math.sin` by one ULP. It surfaced at seed `-626627309`, tick 5189 — a stack
@@ -37,13 +38,17 @@ with `npm run serve` in one shell and `node tools/parity.mjs` in another.
 > which is specified in terms of `Math.pow`, the same hazard — is banned by the
 > lint in favour of `mathx.sq`. Digests moved once as a result; nothing else did.
 
-**What is still open:** the entrance. The original walks the troupe on from
-off-stage (hat panda first, then waves of two — map §8); the engine places
-everyone at a clear spot at tick 0 instead. That is movement, so it is sim work,
-not presentation — and it changes initial conditions for the training corpora, so
-it is Ameya's call whether to add an `ENTERING` mode (the `entering` flag and its
-collision/director exemptions are already in place) or to let the new engine open
-on a field already in motion.
+**The entrance is in** (M6, Ameya's call, built before Phase B on purpose: any sim
+change after the corpora are cut forces a retrain). `MODE.ENTERING` — the troupe
+starts off-stage and walks on, the hat panda alone first with his lead, then waves
+of two, everyone's arrival target doubling as their `home` (so the oblivious one's
+patch is where it walked in to, as in the original). An entering panda is a ghost,
+is invisible to all three directors, and is the one thing in the sim that moves
+with the bounds/fence clamp bypassed — its corridor starts outside the stage.
+It is `cfg.entrance` rather than a host-side script precisely because the corpora
+need it: it is the first ~20 s of every episode a deployed policy meets, and it is
+the calmest one (no anomaly fires for 9 s), which is where relax beats and camping
+exploits live. Training can open mid-scene by turning it off.
 
 **M3 scope note.** M3 ships the sim-critical watcher: the attention picker
 (`pickWatchTarget` over the incident queue, with stickiness + abandonment), the
@@ -180,7 +185,7 @@ optional action for it; everything else is autonomous.
 | `config.js` | Every tunable, defaults = live values, timing in ticks. `makeConfig(overrides)` for training corpora. |
 | `dirs.js` | 8 headings: `DX/DY` (full STEP/axis, for strides), `AX/AY` (normalized, for zoomies/tumbler), `eightWay`. |
 | `geometry.js` | Pure bounds / hero-card fence / `applyPos` (per-axis, x commits before the y-check, like the original). |
-| `state.js` | Entity factory, `MODE`/`ANIM`/`KNOCK` enums, `isDown`, `easeVisual`/`snapVisual`, `spawnEntities`. |
+| `state.js` | Entity factory, `MODE`/`ANIM`/`KNOCK` enums, `isDown`, `easeVisual`/`snapVisual`, `spawnEntities` + the entrance's off-stage placement and `advanceEntrance`. |
 | `collision.js` | Model-space corner-proximity collision (replaces `getBoundingClientRect`); i-frames while the hat rolls. |
 | `anomalies.js` | The 8 tier-1 FSMs (`startAnomaly`/`updateAnomaly`) + shared grounded fall→lie→stand tail. |
 | `director.js` | Tier-1 scheduler (pick kind≠last + eligible candidate), the shared `isFreeRoamer` pool test, and the incident queue (`emitIncident`/`pruneIncidents`). |
@@ -259,17 +264,14 @@ real module graph. If you do end up on a cached page, Cmd/Ctrl+Shift+R clears it
 
 ## Picking up from here
 
-Phase A is done bar one judgment call and one deliberate omission.
+Phase A is done bar one judgment call.
 
 1. **The character gate.** Open the homepage with `?engine=new` and compare it to
    the default. Everything about *how it moves* is Ameya's call: the glide
    (`cfg.glideK`), the knock rate, the density, the interpolation, whether the
    watcher still reads as a watcher. The page wins over the number, always. Only
    after that does the default flip from `old` to `new`.
-2. **The entrance** (map §8), the one behaviour not ported — see Status above.
-   Ameya's call, because it is sim work and it moves the training corpora's
-   initial conditions.
-3. **Then Phase B** (design/panda-policy-net.md): the Node rollout harness,
+2. **Then Phase B** (design/panda-policy-net.md): the Node rollout harness,
    per-tick ground-truth logging, the observation encoder, and the corpus cut —
    at which point the anomaly roster freezes.
 

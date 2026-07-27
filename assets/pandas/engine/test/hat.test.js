@@ -7,7 +7,7 @@ import { ACTION, stepAction, rollAction, stepDirOf } from '../actions.js';
 import { runSeed } from '../tools/trace.js';
 
 // A wide-open engine so a roll/stride is never clamped by an edge.
-const openEngine = (over = {}) => makeEngine({ width: 6000, height: 6000, forbid: null, pandaCount: 2, ...over });
+const openEngine = (over = {}) => makeEngine({ entrance: false, width: 6000, height: 6000, forbid: null, pandaCount: 2, ...over });
 const hatOf = (s) => s.entities.find((e) => e.hasHat);
 
 // Step to the next decision tick (tick % 2 === 0) so a supplied action lands, then

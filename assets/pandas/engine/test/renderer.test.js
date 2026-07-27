@@ -62,7 +62,7 @@ async function loadRenderer() {
 test('one element per panda, positioned and depth-sorted from state', async () => {
   const stage = stubDom();
   const makeRenderer = await loadRenderer();
-  const engine = makeEngine({ width: 1400, height: 620, pandaCount: 6 });
+  const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 6 });
   const renderer = makeRenderer(stage);
 
   let state = engine.init(3);
@@ -84,7 +84,7 @@ test('one element per panda, positioned and depth-sorted from state', async () =
 test('positions interpolate between the two held ticks', async () => {
   const stage = stubDom();
   const makeRenderer = await loadRenderer();
-  const engine = makeEngine({ width: 1400, height: 620, pandaCount: 4 });
+  const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 4 });
   const renderer = makeRenderer(stage);
 
   // Run on until somebody's first stride is actually gliding.
@@ -110,7 +110,7 @@ test('positions interpolate between the two held ticks', async () => {
 test('the drawn cel and row follow the sim\'s anim and facing', async () => {
   const stage = stubDom();
   const makeRenderer = await loadRenderer();
-  const engine = makeEngine({ width: 1400, height: 620, pandaCount: 3 });
+  const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 3 });
   const renderer = makeRenderer(stage);
 
   const state = engine.init(5);
@@ -129,7 +129,7 @@ test('the drawn cel and row follow the sim\'s anim and facing', async () => {
 test('a rider sits on the drawn head, not on the engine\'s flat stand-in', async () => {
   const stage = stubDom();
   const makeRenderer = await loadRenderer();
-  const engine = makeEngine({ width: 1400, height: 620, pandaCount: 5 });
+  const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 5 });
   const renderer = makeRenderer(stage);
 
   // Hand-build a two-high tower rather than waiting ~60s of sim for one.
@@ -162,7 +162,7 @@ test('a rider sits on the drawn head, not on the engine\'s flat stand-in', async
 test('rendering never writes back into sim state', async () => {
   const stage = stubDom();
   const makeRenderer = await loadRenderer();
-  const engine = makeEngine({ width: 1400, height: 620, pandaCount: 6 });
+  const engine = makeEngine({ entrance: false, width: 1400, height: 620, pandaCount: 6 });
   const renderer = makeRenderer(stage);
 
   let plain = engine.init(23);

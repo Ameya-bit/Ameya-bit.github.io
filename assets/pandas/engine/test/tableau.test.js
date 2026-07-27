@@ -10,7 +10,7 @@ import { buildTableau } from '../render/tableau.js';
 import { hypot } from '../mathx.js';
 
 const build = (seed = 7) => {
-  const engine = makeEngine({ width: 1600, height: 700, pandaCount: 12, reduced: true });
+  const engine = makeEngine({ entrance: false, width: 1600, height: 700, pandaCount: 12, reduced: true });
   return { cfg: engine.cfg, state: buildTableau(engine.init(seed), engine.cfg) };
 };
 

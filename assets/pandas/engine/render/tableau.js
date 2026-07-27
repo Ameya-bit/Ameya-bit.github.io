@@ -41,6 +41,7 @@ export function buildTableau(state, cfg) {
     e.mode = MODE.WANDER;
     e.knockPhase = KNOCK.NONE;
     e.solid = false;
+    e.entering = false;
     e.flying = false;
     e.riding = false;
     e.stackLevel = 0;

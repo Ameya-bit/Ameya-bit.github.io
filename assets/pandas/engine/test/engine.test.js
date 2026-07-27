@@ -47,6 +47,9 @@ test('wandering pandas stay within bounds over a long run', () => {
   for (let i = 0; i < 2000; i++) {
     s = step(s);
     for (const e of s.entities) {
+      // A panda still walking on is *meant* to be off-stage — that corridor is the
+      // one place the bounds clamp is bypassed. Everything else is fenced.
+      if (e.mode === MODE.ENTERING) continue;
       // Knocked pandas can be shoved to the very edge, but never off-stage.
       assert.ok(
         e.x > s.cfg.boundLower - 1 && e.x < s.cfg.width - s.cfg.boundUpper + 1,
@@ -61,7 +64,7 @@ test('wandering pandas stay within bounds over a long run', () => {
 });
 
 test('pandas respect the hero-card fence', () => {
-  const cfg = makeConfig({ forbid: { l: 500, t: 200, r: 800, b: 380 } });
+  const cfg = makeConfig({ entrance: false, forbid: { l: 500, t: 200, r: 800, b: 380 } });
   const engine = makeEngine(cfg);
   let s = engine.init(4242);
   for (let i = 0; i < 2000; i++) {
@@ -79,6 +82,9 @@ test('pandas respect the hero-card fence', () => {
 
 test('the oblivious one stays more local than the roamers', () => {
   let s = init(55);
+  // Let the troupe finish walking on: until then everyone is crossing the stage on
+  // purpose, which says nothing about how local they keep afterwards.
+  while (s.entities.some((e) => e.entering)) s = step(s);
   const ob = s.entities.find((e) => e.oblivious);
   const roamers = s.entities
     .filter((e) => !e.oblivious && !e.hasHat)
@@ -94,7 +100,11 @@ test('the oblivious one stays more local than the roamers', () => {
   const roamerMean = roamers.reduce((a, r) => a + r.sum / 3000, 0) / roamers.length;
   // The patch-keeper drifts markedly less than the free wanderers.
   assert.ok(obMean < roamerMean, `oblivious mean ${obMean.toFixed(0)} !< roamer mean ${roamerMean.toFixed(0)}`);
-  assert.ok(obMean < s.cfg.obliviousRadius * 1.5, `oblivious mean stray too large: ${obMean.toFixed(0)}`);
+  // …though not tightly: with the entrance on, its patch is wherever it walked in
+  // to, which is 110px from a stage edge (as in the original). Half the disc around
+  // an edge-anchored home is off-stage, so excursions run longer than they would
+  // around a mid-field one — a real consequence of the entrance, not slack.
+  assert.ok(obMean < s.cfg.obliviousRadius * 2, `oblivious mean stray too large: ${obMean.toFixed(0)}`);
 });
 
 test('overlapping pandas collide and get knocked in opposite directions', () => {
@@ -108,7 +118,7 @@ test('overlapping pandas collide and get knocked in opposite directions', () => 
 
 test('a collision runs the full knock cycle and recovers', () => {
   // Engine with two pandas spawned overlapping so they knock immediately.
-  const cfg = makeConfig({ pandaCount: 2, width: 600, height: 400 });
+  const cfg = makeConfig({ entrance: false, pandaCount: 2, width: 600, height: 400 });
   const engine = makeEngine(cfg);
   let s = engine.init(3);
   // Force an overlap to guarantee a knock regardless of spawn spread.
@@ -142,7 +152,7 @@ test('a collision runs the full knock cycle and recovers', () => {
 });
 
 test('makeEngine config overrides take effect (config plumbing)', () => {
-  const engine = makeEngine({ pandaCount: 5 });
+  const engine = makeEngine({ entrance: false, pandaCount: 5 });
   const s = engine.init(1);
   assert.equal(s.entities.length, 5);
 });

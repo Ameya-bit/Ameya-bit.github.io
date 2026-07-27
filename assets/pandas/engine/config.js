@@ -51,6 +51,19 @@ export const DEFAULT_CONFIG = Object.freeze({
   // Turn-delta pool for each wander stride (mostly ±1, sometimes straight).
   turnOptions: [1, 1, -1, -1, 0],
 
+  // ---- the entrance ----
+  // The troupe walks on from off-stage rather than appearing: the hat panda alone
+  // first (his solo beat), then the rest a couple at a time. Config-gated because
+  // training corpora want both — most episodes opening mid-scene, some on the
+  // walk-in, so the policy has seen the filling field it meets on a page load.
+  entrance: true,
+  entranceOff: 100, // start one wrapper-width off-stage, fully clipped
+  entranceTargetIn: 110, // …and settle this far in before wandering
+  entranceLead: msToTicks(1800), // 36 — the hat panda's head start
+  entranceWaveGap: msToTicks(1050), // 21 — then a wave every so often
+  entranceWaveSize: 2, // "a couple at a time"
+  entranceTries: 40, // attempts to find an entry lane clear of the hero card
+
   // The glide. The original moved logically in 50px hops but rendered them through
   // a 2s CSS transition, and — critically — collision read that lagging *visual*
   // position, which softens contacts (bodies glide past instead of snapping into

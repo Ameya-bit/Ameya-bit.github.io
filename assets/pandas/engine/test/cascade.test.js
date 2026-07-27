@@ -11,6 +11,7 @@ import { runSeed } from '../tools/trace.js';
 // actually propagate. The arming clock is pushed out of the way; tests arm by hand.
 const fieldEngine = (over = {}) =>
   makeEngine({
+    entrance: false,
     width: 1400, height: 700, forbid: null, pandaCount: 10,
     stackKick: 1e9, cascadeKick: 1e9, anomKick: 1e9, // no set pieces unless asked for
     ...over,
@@ -219,6 +220,7 @@ test('the machinery resets after cascadeDuration and can re-arm', () => {
 test('a stack topple ignites a cascade only while armed (the coupling rule)', () => {
   const towerEngine = (over) =>
     makeEngine({
+    entrance: false,
       width: 1400, height: 700, forbid: null, pandaCount: 10,
       anomKick: 1e9, cascadeKick: 1e9,
       stackKick: 1, stackGapMin: 1e9, stackGapMax: 1e9,

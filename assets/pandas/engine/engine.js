@@ -18,7 +18,9 @@ import { DX, DY, wrapDir, opposite, dirName, eightWay } from './dirs.js';
 import { applyPos } from './geometry.js';
 import { sq } from './mathx.js';
 import { detectCollisions } from './collision.js';
-import { MODE, ANIM, spawnEntities, isDown, easeVisual, advanceKnock, beginKnock } from './state.js';
+import {
+  MODE, ANIM, spawnEntities, isDown, easeVisual, advanceKnock, beginKnock, advanceEntrance,
+} from './state.js';
 import { updateAnomaly } from './anomalies.js';
 import { initDirector, runDirector, pruneIncidents } from './director.js';
 import { updateHat } from './hat.js';
@@ -36,6 +38,7 @@ import {
 function updateEntity(e, cfg, rng, state) {
   if (e.mode === MODE.WANDER) return updateWander(e, cfg, rng);
   if (e.mode === MODE.KNOCKED) return updateKnocked(e, cfg, state);
+  if (e.mode === MODE.ENTERING) return updateEntering(e, cfg);
   // Stack roles are driven wholesale by runStack (one machine owns the tower), and
   // the hat panda by updateHat — both only need a clone here.
   if (e.mode === MODE.STACK_BASE || e.mode === MODE.MOUNTING || e.mode === MODE.RIDING) {
@@ -44,6 +47,17 @@ function updateEntity(e, cfg, rng, state) {
   // An anomaly mode: advance its FSM on a clone.
   const next = { ...e };
   updateAnomaly(next, cfg, rng);
+  return next;
+}
+
+// Walking on from off-stage. On arrival it simply joins the wander — no fanfare,
+// which is the point: by the time you notice it, it is one of the troupe.
+function updateEntering(e, cfg) {
+  const next = { ...e };
+  if (advanceEntrance(next, cfg)) {
+    next.mode = MODE.WANDER;
+    next.anim = ANIM.WALK;
+  }
   return next;
 }
 

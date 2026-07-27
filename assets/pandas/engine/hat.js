@@ -12,7 +12,9 @@
 
 import { AX, AY, opposite } from './dirs.js';
 import { applyPos, strideTo } from './geometry.js';
-import { MODE, ANIM, advanceKnock, resetObserveBrain, easeVisual, snapVisual } from './state.js';
+import {
+  MODE, ANIM, advanceKnock, resetObserveBrain, easeVisual, snapVisual, advanceEntrance,
+} from './state.js';
 import { ACTION, isRoll, isStep, isValidAction, stepDirOf, rollDirOf } from './actions.js';
 import { rulesAction } from './watcher.js';
 import { TICKS_PER_ACTION } from './tick.js';
@@ -29,6 +31,17 @@ export function updateHat(state, cfg, rng, action = null) {
       hat.mode = MODE.OBSERVING;
       hat.anim = ANIM.WALK;
       resetObserveBrain(hat, cfg); // re-hunt a subject from scratch, as the original did
+    }
+    return;
+  }
+
+  if (hat.mode === MODE.ENTERING) {
+    // His solo beat: he walks on alone, ahead of the troupe, and starts watching
+    // the moment he arrives — there is nothing to watch yet, which is the joke.
+    if (advanceEntrance(hat, cfg)) {
+      hat.mode = MODE.OBSERVING;
+      hat.anim = ANIM.WALK;
+      resetObserveBrain(hat, cfg);
     }
     return;
   }

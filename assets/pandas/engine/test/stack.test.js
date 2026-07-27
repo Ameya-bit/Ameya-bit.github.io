@@ -11,6 +11,7 @@ import { runSeed } from '../tools/trace.js';
 // always has headroom for a 3-high tower and nothing is clamped by an edge.
 const stackEngine = (over = {}) =>
   makeEngine({
+    entrance: false,
     width: 2400, height: 1200, forbid: null, pandaCount: 8,
     stackKick: 1, stackGapMin: 100000, stackGapMax: 100000, // one tower, then never again
     ...over,
@@ -165,7 +166,7 @@ test('at most one tower at a time, and none at all without a pool of three', () 
   assert.equal(bases.size, 1, 'exactly one tower over the whole run');
 
   // Too few free roamers (hat + oblivious + one) — the set piece never fires.
-  const tiny = makeEngine({ width: 2400, height: 1200, forbid: null, pandaCount: 3, stackKick: 1, stackGapMin: 1, stackGapMax: 1 });
+  const tiny = makeEngine({ entrance: false, width: 2400, height: 1200, forbid: null, pandaCount: 3, stackKick: 1, stackGapMin: 1, stackGapMax: 1 });
   let t = tiny.init(18);
   for (let i = 0; i < 200; i++) t = tiny.step(t);
   assert.equal(t.stack.baseId, -1, 'no tower without a field to leave behind');
