@@ -19,7 +19,7 @@
 import { AX, AY, headingDir } from './dirs.js';
 import { MODE, POINT_SUBJECT, isDown, beginKnock } from './state.js';
 import { emitIncident } from './director.js';
-import { round, max } from './mathx.js';
+import { round, max, sq } from './mathx.js';
 
 export function initCascade(cfg) {
   return {
@@ -54,7 +54,7 @@ export function nearestStandingNeighbour(state, from, cfg) {
   let bd = cfg.chainRange * cfg.chainRange;
   for (const q of state.entities) {
     if (q.id === from.id || !isRoamer(q) || isDown(q) || isLocked(c, q.id)) continue;
-    const d = (q.lx - from.lx) ** 2 + (q.ly - from.ly) ** 2;
+    const d = sq(q.lx - from.lx) + sq(q.ly - from.ly);
     if (d < bd) {
       bd = d;
       best = q;
@@ -164,12 +164,12 @@ export function igniteCascade(state, seedIds, cfg, rng) {
 export function cascadeElsewhere(state, seedIds, cfg) {
   const hat = state.entities.find((e) => e.hasHat);
   if (!hat) return true;
-  const r2 = (cfg.inspectNear * cfg.cascadeStageSlack) ** 2;
+  const r2 = sq(cfg.inspectNear * cfg.cascadeStageSlack);
   for (const id of seedIds) {
     if (id === hat.subject) return false;
     const s = byId(state, id);
     if (!s) continue;
-    if ((s.lx - hat.lx) ** 2 + (s.ly - hat.ly) ** 2 < r2) return false;
+    if (sq(s.lx - hat.lx) + sq(s.ly - hat.ly) < r2) return false;
   }
   return true;
 }
@@ -188,7 +188,7 @@ function forceIgnite(state, cfg, rng) {
   const hat = state.entities.find((e) => e.hasHat);
   let seed = uni[0];
   if (hat) {
-    const far = (q) => (q.lx - hat.lx) ** 2 + (q.ly - hat.ly) ** 2;
+    const far = (q) => sq(q.lx - hat.lx) + sq(q.ly - hat.ly);
     for (const q of uni) if (far(q) > far(seed)) seed = q;
   }
   igniteCascade(state, [seed.id], cfg, rng);

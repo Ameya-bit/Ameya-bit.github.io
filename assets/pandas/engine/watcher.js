@@ -13,7 +13,7 @@
 // he reasons a step ahead of where the glide has actually carried everyone.
 
 import { AX, AY, DX, DY, wrapDir, headingDir } from './dirs.js';
-import { hypot } from './mathx.js';
+import { hypot, sq } from './mathx.js';
 import { inBounds, crossesFence, detourCorner, strideTo } from './geometry.js';
 import { MODE, ANIM, UNSET_GAP, POINT_SUBJECT } from './state.js';
 import { ACTION, stepAction, rollAction } from './actions.js';
@@ -124,7 +124,7 @@ export function bestAxis(subject, hat, td, avoid, entities, cfg) {
     if (i === avoid) continue;
     const vx = lx + AX[i] * td;
     const vy = ly + AY[i] * td;
-    const s = (vx - hat.lx) ** 2 + (vy - hat.ly) ** 2 + cfg.axisCrowdW * crowdAt(vx, vy, hat, entities, cfg);
+    const s = sq(vx - hat.lx) + sq(vy - hat.ly) + cfg.axisCrowdW * crowdAt(vx, vy, hat, entities, cfg);
     if (s < fs) {
       fs = s;
       fi = i;
@@ -200,7 +200,7 @@ export function topIncident(state, hat) {
     if (!isLive(inc, state.tick)) continue;
     const pos = incidentPos(state, inc);
     if (!pos) continue;
-    const d = (pos.lx - hat.lx) ** 2 + (pos.ly - hat.ly) ** 2;
+    const d = sq(pos.lx - hat.lx) + sq(pos.ly - hat.ly);
     if (
       !best ||
       inc.tier > best.tier ||
@@ -218,8 +218,8 @@ export function topIncident(state, hat) {
 // already standing on top of. Returns an id, or -1 if the field is empty.
 export function pickSubject(hat, entities, cfg, rng) {
   const free = entities.filter((q) => !q.hasHat && !q.entering && q.mode !== MODE.KNOCKED);
-  const half = (cfg.ambientStandoff * 0.5) ** 2;
-  const pool = free.filter((q) => (q.lx - hat.lx) ** 2 + (q.ly - hat.ly) ** 2 > half);
+  const half = sq(cfg.ambientStandoff * 0.5);
+  const pool = free.filter((q) => sq(q.lx - hat.lx) + sq(q.ly - hat.ly) > half);
   if (pool.length) return rng.pick(pool).id;
   return free.length ? free[0].id : -1;
 }
@@ -361,7 +361,7 @@ function relocateStep(state, hat, s, cfg, ctx) {
   const rx = tx - land.x;
   const ry = ty - land.y;
   const gd2 = rx * rx + ry * ry;
-  const reached = gd2 <= (cfg.step * 1.3) ** 2;
+  const reached = gd2 <= sq(cfg.step * 1.3);
   const settled = !ctx.losBlocked && !ctx.angleOff && ctx.dist >= ctx.near && ctx.dist <= ctx.far;
   const progressed = gd2 < hat.stuckPrev - cfg.step;
   hat.stuckPrev = gd2;

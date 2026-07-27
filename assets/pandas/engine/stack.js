@@ -22,7 +22,7 @@ import { applyPos } from './geometry.js';
 import { MODE, ANIM, easeVisual, snapVisual } from './state.js';
 import { emitIncident, isFreeRoamer } from './director.js';
 import { igniteCascade, claimed } from './cascade.js';
-import { sin, hypot, clamp, round, min, max, PI } from './mathx.js';
+import { sin, hypot, clamp, round, min, max, sq, PI } from './mathx.js';
 
 // Assembly phases. MOUNT = the current climber is walking up; FLIGHT = it is mid-hop;
 // PARADE = the finished tower is on the move.
@@ -89,7 +89,7 @@ function formStack(state, cfg, rng) {
 
   const base = rng.pick(bases);
   const nRiders = rng.chance(cfg.stackRiders2P) ? 2 : 1; // 3-high or 2-high
-  const d2 = (e) => (e.lx - base.lx) ** 2 + (e.ly - base.ly) ** 2;
+  const d2 = (e) => sq(e.lx - base.lx) + sq(e.ly - base.ly);
   const mounters = pool
     .filter((e) => e.id !== base.id)
     .sort((a, b) => d2(a) - d2(b)) // the nearest join — short, snappy walk-ups
@@ -218,10 +218,10 @@ function beginParade(state, cfg, rng) {
 
 // A runaway ploughs into the tower → bring it down early.
 function struck(state, base, cfg) {
-  const r2 = cfg.toppleHitR ** 2;
+  const r2 = sq(cfg.toppleHitR);
   for (const q of state.entities) {
     if (q.mode !== MODE.ZOOMIES) continue;
-    if ((q.lx - base.lx) ** 2 + (q.ly - base.ly) ** 2 < r2) return true;
+    if (sq(q.lx - base.lx) + sq(q.ly - base.ly) < r2) return true;
   }
   return false;
 }

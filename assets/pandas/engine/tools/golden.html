@@ -14,10 +14,12 @@
 <h1>Golden trace — browser side</h1>
 <p class="muted">
   Runs the same engine + harness ES modules the Node CLI runs. The batch digest
-  below must equal <code>node tools/golden.js</code>'s. This is the browser half
-  of Phase A's "byte-identical Node vs browser" gate. Serve this file over http
-  (ES modules need it): <code>python3 -m http.server</code> from the engine dir,
-  then open <code>/tools/golden.html?ticks=10000</code>.
+  below must equal
+  <code>node tools/golden.js --engine ./engine.js --ticks 10000</code>'s. This is
+  the browser half of Phase A's "byte-identical Node vs browser" gate. Serve this
+  file over http (ES modules need it): <code>npm run serve</code> from the engine
+  dir, then open <code>/tools/golden.html?ticks=10000</code>. Add
+  <code>&amp;engine=demo</code> to trace the toy engine instead of the real one.
 </p>
 <p>batch digest: <span id="batch">running…</span></p>
 <div id="seeds"></div>
@@ -25,11 +27,14 @@
 <script type="module">
   import { runTrace, PHASE_A_SEEDS } from './trace.js';
   import { hex } from './checksum.js';
+  import * as realEngine from '../engine.js';
   import { demoEngine } from './demo-engine.js';
 
-  const ticks = Number(new URLSearchParams(location.search).get('ticks')) || 10000;
+  const params = new URLSearchParams(location.search);
+  const ticks = Number(params.get('ticks')) || 10000;
+  const engine = params.get('engine') === 'demo' ? demoEngine : realEngine;
   const t0 = performance.now();
-  const { batch, seeds } = runTrace({ engine: demoEngine, seeds: PHASE_A_SEEDS, ticks });
+  const { batch, seeds } = runTrace({ engine, seeds: PHASE_A_SEEDS, ticks });
   const ms = Math.round(performance.now() - t0);
 
   document.getElementById('batch').textContent = `${hex(batch)}  (${ticks} ticks, ${ms} ms)`;

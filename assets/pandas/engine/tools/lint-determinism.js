@@ -21,8 +21,10 @@ const ENGINE_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
 
 // Directories whose contents are exempt: tests legitimately generate inputs with
 // Math.random and name forbidden APIs; tools (this file included) are not engine
-// code and never run inside step().
-const EXEMPT_DIRS = new Set(['test', 'tools', 'node_modules']);
+// code and never run inside step(); and `render/` IS the presentation layer these
+// rules keep things out of — it owns rAF, the wall clock, and the visit's seed by
+// design. Nothing in render/ is ever called from step().
+const EXEMPT_DIRS = new Set(['test', 'tools', 'render', 'node_modules']);
 
 // The only file permitted to call the raw transcendentals — it is the wrapper
 // that exists so every other module doesn't. It still may not touch the clock or
@@ -40,6 +42,9 @@ const FORBIDDEN_ALWAYS = [
   { re: /\bcancelAnimationFrame\b/, msg: 'cancelAnimationFrame (rendering concern — belongs in the presentation layer)' },
   { re: /\bsetTimeout\b/, msg: 'setTimeout (engine advances by discrete ticks, not timers)' },
   { re: /\bsetInterval\b/, msg: 'setInterval (engine advances by discrete ticks, not timers)' },
+  // `x ** 2` is specified in terms of Math.pow, which is implementation-defined
+  // — the same hazard as Math.sin, and just as easy to write by accident.
+  { re: /\*\*/, msg: 'exponentiation ** (Math.pow semantics — use mathx.sq / plain multiplication)' },
 ];
 
 // Implementation-defined transcendentals — cross-engine bit variance risk, so

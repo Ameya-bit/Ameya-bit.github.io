@@ -16,6 +16,7 @@ import { Rng } from './rng.js';
 import { makeConfig, DEFAULT_CONFIG } from './config.js';
 import { DX, DY, wrapDir, opposite, dirName, eightWay } from './dirs.js';
 import { applyPos } from './geometry.js';
+import { sq } from './mathx.js';
 import { detectCollisions } from './collision.js';
 import { MODE, ANIM, spawnEntities, isDown, easeVisual, advanceKnock, beginKnock } from './state.js';
 import { updateAnomaly } from './anomalies.js';
@@ -74,7 +75,7 @@ function wanderStep(e, cfg, rng) {
   const strayed =
     e.oblivious &&
     e.home &&
-    (e.lx - e.home[0]) ** 2 + (e.ly - e.home[1]) ** 2 > cfg.obliviousRadius ** 2;
+    sq(e.lx - e.home[0]) + sq(e.ly - e.home[1]) > sq(cfg.obliviousRadius);
 
   if (strayed) {
     e.dir = eightWay(e.home[0] - e.lx, e.home[1] - e.ly);
