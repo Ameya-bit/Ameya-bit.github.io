@@ -1,6 +1,8 @@
 # The learned line-walker — engineering an emergent world model for the hat panda
 
-*Drafted 2026-07-24; task upgraded to the viewing game the same day; lit-reviewed 2026-07-26; **rewritten 2026-07-26 (v3) as a phased implementation plan.** Status: **direction agreed, nothing built or scheduled.** Expands Phase 6 of [panda-chaos.md](panda-chaos.md).*
+*Drafted 2026-07-24; task upgraded to the viewing game the same day; lit-reviewed 2026-07-26; **rewritten 2026-07-26 (v3) as a phased implementation plan.** Expands Phase 6 of [panda-chaos.md](panda-chaos.md).*
+
+*Status: **Phase A in progress — 4 of its 5 port milestones done (M1–M4, as of 2026-07-27); the engine's sim is feature-complete, M5 (presentation) and the browser-vs-Node parity gate remain. Phases B–G not started.** The live site is still on the untouched `pandas.js` — nothing here has shipped yet. Live detail is in the Phase-A progress note below and, authoritatively, in [`assets/pandas/engine/README.md`](../assets/pandas/engine/README.md); prefer that file over this line if they ever disagree.*
 
 *The v3 decision: the world model must **emerge from playing the game** — no supervision on hidden state, ever. The supervised alternative (train belief heads directly on logged ground truth; near-guaranteed to produce "that's a sleeper, ~9s left" as a literal network output, with the debug overlay for free) was weighed 2026-07-26 and set aside. It survives as the **documented fallback** if the emergence run comes up dry, and shares ~80% of the infrastructure below — sim, corpora, logging, export, evals, even the probe tooling. Only Phase E actually commits to emergence; nothing built before it is wasted either way.*
 

@@ -14,7 +14,7 @@ behavioral map of the original `../pandas.js`.
 
 The **live site still runs the original `../pandas.js`, untouched.** This engine
 gets wired into the homepage (behind `?engine=old|new`) only once it passes the
-golden-trace gate and Ameya's preview. Progress on the port (task #6):
+golden-trace gate and Ameya's preview. Progress on the port:
 
 | Milestone | State |
 |---|---|
@@ -25,8 +25,9 @@ golden-trace gate and Ameya's preview. Progress on the port (task #6):
 | M5 — presentation port (real sprites/cels/CSS + renderer interpolation), reduced-motion tableau, wire `index.qmd` behind `?engine=old|new` | next |
 
 108 unit tests green, determinism lint clean, golden digests stable Node-side
-(batch `e4bb5a41` @ 32 seeds × 10k ticks). Browser-vs-Node parity (task #7) still
-needs a connected Chrome and re-runs against the finished engine.
+(batch `e4bb5a41` @ 32 seeds × 10k ticks). The browser-vs-Node parity gate is the one
+Phase-A exit criterion still open: it needs a connected Chrome, and it should run
+against the finished engine, so it is sequenced into M5 below.
 
 **The sim is now feature-complete against `pandas.js`** — every behaviour in
 [the map](../../../design/panda-engine-map.md) is ported except the presentation
@@ -214,6 +215,6 @@ The sim is done; M5 is the **presentation port** — everything in
    scatter — one panda down, a static 3-high stack, the watcher planted at
    `inspectNear` facing the fallen one, bystanders ≥ `tableauGap` apart. No ticking.
 5. **The flip.** Wire `index.qmd` behind `?engine=old|new` (default `old`), then run
-   the **browser-vs-Node parity gate** (task #7): `tools/golden.html?ticks=10000` must
+   the **browser-vs-Node parity gate**: `tools/golden.html?ticks=10000` must
    print the same batch digest as the CLI. Ameya's preview judgment is the character
    gate and comes before any default flip.
