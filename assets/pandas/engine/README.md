@@ -155,6 +155,7 @@ optional action for it; everything else is autonomous.
 | `tools/preview.html` | Dev preview: full-window stage, hero-card fence, density slider, anomaly/role tags, stack + cascade readouts, and buttons that nudge the tier-2/3 clocks so the rare set pieces are watchable. **Schematic shapes, not the shipped sprites.** |
 | `tools/demo-engine.js` | A toy engine that proved the harness before the real engine existed. Deletable. |
 | `tools/lint-determinism.js` | Fails if engine code reaches for `Math.random` / clock / timers / rAF / raw transcendentals. |
+| `tools/serve.js` | Zero-dep dev static server that sends `no-store`, so edited ES modules are never served stale (`npm run serve`). |
 | `test/` | `node --test` unit tests for every module. |
 
 ## Commands
@@ -165,11 +166,19 @@ Run from this directory:
 node --test                              # unit tests
 npm run lint:determinism                 # ban check on engine sources
 node tools/golden.js --engine ./engine.js --ticks 10000   # deterministic trace digest
-python3 -m http.server 8137              # then open /tools/preview.html to watch the sim
+npm run serve                            # dev server -> /tools/preview.html
 ```
 
 Browser-vs-Node parity gate: open `/tools/golden.html?ticks=10000` and confirm its
 batch digest equals `node tools/golden.js --engine ./engine.js --ticks 10000`.
+
+**Use `npm run serve`, not `python3 -m http.server`.** Python's server sends only
+`Last-Modified` — no `Cache-Control`, no `ETag` — so browsers apply heuristic caching to
+ES modules and can serve a stale one without revalidating. After an edit you then get
+errors describing the code as it *was*: the giveaway is `SyntaxError: doesn't provide an
+export named 'X'` for an export that is plainly in the file (and in the served response).
+`tools/serve.js` sends `no-store` on everything, so a plain refresh always picks up the
+real module graph. If you do end up on a cached page, Cmd/Ctrl+Shift+R clears it.
 
 ## Rules
 
