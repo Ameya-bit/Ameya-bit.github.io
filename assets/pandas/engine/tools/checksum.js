@@ -32,6 +32,21 @@ export function hashNumbers(nums, seed = FNV_OFFSET) {
   return h >>> 0;
 }
 
+// FNV-1a straight over raw bytes — the same hash, fed the bytes as they already
+// sit in memory. `hashNumbers` exists to *canonicalise* numbers before hashing
+// (a float64 view, -0 folded to 0) because a state's numbers arrive as doubles;
+// when the bytes are already the artefact — a corpus shard's Float32 rows — there
+// is nothing to canonicalise and four bytes per value beats eight. Same constants,
+// so a digest means the same thing in both.
+export function hashBytes(bytes, seed = FNV_OFFSET) {
+  let h = seed >>> 0;
+  for (let i = 0; i < bytes.length; i++) {
+    h ^= bytes[i];
+    h = Math.imul(h, FNV_PRIME);
+  }
+  return h >>> 0;
+}
+
 // Fold a sequence of uint32 tick-hashes into a single uint32 digest — the
 // per-seed fingerprint of an entire rollout.
 export function foldHashes(hashes) {

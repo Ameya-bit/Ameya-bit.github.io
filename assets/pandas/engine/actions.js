@@ -15,6 +15,8 @@
 // the action space — the policy owns *where to be*, and the presentation layer
 // owns the gaze flourish (design/panda-policy-net.md, D1 + the map §7).
 
+import { DIRS } from './dirs.js';
+
 export const ACTION = Object.freeze({
   HOLD: 0,
   STEP_BASE: 1, // + dir(0..7) => 1..8
@@ -37,3 +39,14 @@ export const rollDirOf = (a) => a - ACTION.ROLL_BASE;
 // out-of-range logit from a future NN (the plan's `?policy=nn` auto-fallback).
 export const isValidAction = (a) =>
   Number.isInteger(a) && a >= 0 && a < ACTION.COUNT;
+
+// Names for the 17 actions, indexed by the action itself. Nothing in the sim reads
+// these — they exist so a printed action is legible: the corpus manifest's action
+// vocabulary, the JSONL sample, and later a policy debug overlay.
+export const ACTION_NAME = Object.freeze([
+  'hold',
+  ...DIRS.map((d) => `step:${d}`),
+  ...DIRS.map((d) => `roll:${d}`),
+]);
+
+export const actionName = (a) => (isValidAction(a) ? ACTION_NAME[a] : `invalid(${a})`);

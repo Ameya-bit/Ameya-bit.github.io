@@ -68,6 +68,11 @@ export const ENTITY_FIELDS = Object.freeze([
   'age', 'ttl', 'nextMode',
 ]);
 
+// The observation↔truth join, one row per observation token. `slot` is the token
+// index and so is redundant in a rectangular shard — it is written anyway, because
+// a schema that is exactly the record is a schema that cannot drift from it.
+export const SLOT_FIELDS = Object.freeze(['slot', 'id', 'heldFor', 'visible']);
+
 // Label vocabularies, for the manifest and for anything that has to print a class.
 export const TRUTH_LABELS = Object.freeze({
   mode: MODE_NAME,

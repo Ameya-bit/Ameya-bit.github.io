@@ -6,6 +6,7 @@
   "description": "Rollout harness and corpus tooling for the learned line-walker. Phase B of design/panda-policy-net.md. Imports the shipped engine directly (../assets/pandas/engine) — never a copy — so a corpus is always a recording of the machine the site runs.",
   "scripts": {
     "test": "node --test",
-    "bench": "node bench.js"
+    "bench": "node bench.js",
+    "cut": "node cut.js"
   }
 }

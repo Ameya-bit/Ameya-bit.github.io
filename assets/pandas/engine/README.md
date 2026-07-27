@@ -275,7 +275,7 @@ differently in Chrome than in Node would move actions the trainer never saw.
 | `director.js` | Tier-1 scheduler (pick kind≠last + eligible candidate), the shared `isFreeRoamer` pool test, and the incident queue (`emitIncident`/`pruneIncidents`). |
 | `stack.js` | Tier 2: the tower — director, mount walk + hop, parade with accumulating sway, topple. Exports `riderSway` for the renderer. |
 | `cascade.js` | Tier 3: the arming clock, the nearest-neighbour sweep (`igniteCascade`/claims/scheduled falls), `cascadeKnock`, the liveness backstop. |
-| `actions.js` | The hat panda's 17-way discrete action interface (`hold / step×8 / roll×8`) — the policy seam. |
+| `actions.js` | The hat panda's 17-way discrete action interface (`hold / step×8 / roll×8`) — the policy seam. `ACTION_NAME`/`actionName` name them for anything that has to print one (the corpus manifest, a debug overlay); the sim never reads those. |
 | `watcher.js` | The hat panda's rules brain: attention picker + observe/reflex logic, emitting one action per decision tick (`rulesAction`). |
 | `hat.js` | The engine side of the seam: executes an action (`updateHat`), runs the roll + knock mechanics. |
 | `engine.js` | `makeEngine(config)` factory + default `init`/`step(state, action)`/`encode`; per-entity dispatch, director, hat, collisions. Re-exports `ACTION` + `rulesAction`. |
@@ -291,7 +291,7 @@ differently in Chrome than in Node would move actions the trainer never saw.
 | `render/host.js` | `mountPandas(stage)` — the fixed-timestep loop, pause (hidden tab / off-screen), resize re-framing, density, reduced-motion branch. |
 | `render/site.js` | The homepage entry point (`?engine=new` loads this). |
 | `render/pandas.css` | Presentation styles for the engine-rendered pandas. Separate from `styles.scss` so both engines can run side by side. |
-| `tools/checksum.js` | FNV-1a over canonical IEEE-754 bytes — identical hashes across V8. |
+| `tools/checksum.js` | FNV-1a over canonical IEEE-754 bytes — identical hashes across V8. `hashBytes` is the same hash fed raw bytes, for artefacts that need no canonicalising (a corpus shard's float32 rows). |
 | `tools/trace.js` | Engine-agnostic golden-trace runner (`runSeed`/`runTrace`/`firstDivergence`) + the 32-seed set. |
 | `tools/golden.js` | CLI: run an engine across 32 seeds × N ticks, print per-seed + batch digests. |
 | `tools/golden.html` | Browser side of the same computation — its batch digest must equal the CLI's. |
