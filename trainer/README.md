@@ -84,8 +84,9 @@ because a corpus missing labels it could have had is the expensive mistake.
 | `truth.js` | Per-tick ground truth (B3) + `recordEpisode`, which emits aligned `{tick, action, obs, truth}` rows. |
 | `corpus.js` | The three corpus specs (`natural` / `dense` / `wild`) as pure functions of a PRNG, plus deterministic episode seeding. |
 | `shard.js` | The shard format (B4): the row layout, the streaming writer, and the reader that decodes it back. |
-| `cut.js` | Episodes → shards + manifest + JSONL sample. Also the CLI, including `--dry-run` and `--verify`. |
+| `cut.js` | Episodes → shards + manifest + JSONL sample. Also the CLI (`--dry-run`, `--verify`) and `checkContract`, the freeze (B6). |
 | `bench.js` | Throughput per spec against the exit bar. |
+| `test/freeze.test.js` | Runs `checkContract` over every committed manifest — the roster freeze, enforced. |
 | `corpora/` | Cut corpora. Gitignored except manifests and the JSONL sample — a corpus is re-cuttable from its manifest, so the bytes need not be in git. |
 
 ## The observation encoder is in the engine, not here

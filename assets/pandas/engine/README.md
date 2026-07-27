@@ -23,9 +23,16 @@ reference the port is judged against.
 | **M2 — director + incident queue + 8 tier-1 anomaly FSMs** | ✅ done |
 | **M3 — hat panda (observe / reflex / dive-roll) + 17-action seam + i-frames** | ✅ done |
 | **M4 — stack (tier 2) + cascade (tier 3)** | ✅ done |
-| **M5 — presentation: real sprites/cels/CSS, tick interpolation, seated riders, the two deferred beats, the reduced-motion tableau, `?engine=old\|new`** | ✅ done |
+| **M5 — presentation: real sprites/cels/CSS, tick interpolation, seated riders, the two deferred beats, the reduced-motion tableau, the `?engine=old\|new` switch** | ✅ done |
 | **M6 — the entrance (`cfg.entrance`): the troupe walks on from off-stage** | ✅ done |
 | **B2 — `policy/obs.js`: the observation encoder (Phase B, no site impact yet)** | ✅ done |
+| **the `.stop` hit box — the last divergence from `pandas.js`** | ✅ closed |
+
+**This engine is now frozen against cut corpora.** Phase B's 17 GB of training and
+eval rollouts (`trainer/README.md`) are recordings of *this* machine, and every
+manifest carries its golden digest, so a behavioural change here is no longer a day's
+work — it is a re-cut and a retrain. `trainer/test/freeze.test.js` fails the moment
+the two disagree, which is the intended reminder rather than an obstacle.
 
 170 unit tests green, determinism lint clean, and the **browser-vs-Node parity
 gate passes**: batch `d4a2d47b` at 32 seeds × 10k ticks and `bfbc8a5c` at 32 × 60k
@@ -297,7 +304,7 @@ differently in Chrome than in Node would move actions the trainer never saw.
 | `render/flourish.js` | The two hand-authored beats: the gaze flourish (a drawn facing) and the hat-drop/fetch skit (drives the 17-way seam). |
 | `render/tableau.js` | The reduced-motion still, built as an ordinary state so the ordinary renderer draws it. |
 | `render/host.js` | `mountPandas(stage)` — the fixed-timestep loop, pause (hidden tab / off-screen), resize re-framing, density, reduced-motion branch. |
-| `render/site.js` | The homepage entry point (`?engine=new` loads this). |
+| `render/site.js` | The homepage entry point — loaded on every visit that does not ask for `?engine=old`. |
 | `render/pandas.css` | Presentation styles for the engine-rendered pandas. Separate from `styles.scss` so both engines can run side by side. |
 | `tools/checksum.js` | FNV-1a over canonical IEEE-754 bytes — identical hashes across V8. `hashBytes` is the same hash fed raw bytes, for artefacts that need no canonicalising (a corpus shard's float32 rows). |
 | `tools/trace.js` | Engine-agnostic golden-trace runner (`runSeed`/`runTrace`/`firstDivergence`) + the 32-seed set. |

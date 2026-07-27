@@ -1,4 +1,5 @@
-// The site entry point — what index.qmd loads when ?engine=new is on.
+// The site entry point — what index.qmd loads for every visit that does not ask
+// for ?engine=old.
 //
 // One line of work: find the hero stage and start the host on it. Kept as a real
 // module (rather than an inline script) so every relative import inside the engine

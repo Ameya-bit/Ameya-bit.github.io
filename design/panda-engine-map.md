@@ -2,6 +2,8 @@
 
 *Produced 2026-07-26 as the first work of Phase A ([panda-policy-net.md](panda-policy-net.md)). A complete, line-anchored map of the current `assets/pandas/pandas.js` (1857-line IIFE): every constant, every source of nondeterminism/time, every per-entity state field, and every FSM described as an explicit state machine. This is the reference the pure `step(state, actions) -> state` engine is built from — the point of capturing it is so the port can be validated against a written spec (plus golden traces + Ameya's eye) rather than by re-reading the closures each time.*
 
+*Status (2026-07-27): **the port is done and shipping** — it is the homepage default, `pandas.js` sits behind `?engine=old`, and the one divergence this map ever carried unfixed (the `.stop` hit box, §6) is closed. Read this file as the map of the machine, not of work outstanding. It is also no longer free to change: the sim is frozen against the Phase-B corpora, so a behavioural edit here means a re-cut and a retrain (`trainer/test/freeze.test.js` enforces it).*
+
 **Base tick is settled: 50 ms (20 Hz).** Both `STACK_TICK_MS` and the collision `setInterval` already run at 50 ms, and the header comment calls the collision cadence "20 Hz". So the engine's fixed tick = 50 ms, and every `*_MS` constant below converts by `msToTicks(ms) = max(1, round(ms/50))`. Feel drift from rounding is expected and gated on Ameya's preview.
 
 Art/data blobs (skip when reading): `pandaSvg` decoder table L108–112; `HAT_PIXELS` L148; `SIT_CELS` L1340. *(2026-07-27: these four literals are now lifted verbatim into `assets/pandas/engine/render/art-data.js` by `tools/bake-art.js`, and a unit test fails if the two copies drift — `pandas.js` remains the authoring side, per the hat pipeline.)*
