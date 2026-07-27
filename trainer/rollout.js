@@ -19,6 +19,10 @@
 //     expert would do" would be wrong twice over: it mutates the watcher's brain
 //     (it is the expert, not a dry run), and its answer need not match what the
 //     engine actually applied on a non-decision tick or mid-roll.
+//
+// Phase C adds the fourth: **a policy can drive.** `policy` is consulted once per
+// decision tick and its action goes into `step(state, action)`; leaving it null is
+// the expert, which is what every Phase-B corpus was cut with.
 
 import { makeEngine } from '../assets/pandas/engine/engine.js';
 import { TICKS_PER_ACTION } from '../assets/pandas/engine/tick.js';
@@ -46,19 +50,45 @@ export const DEFAULT_ROLLOUT = Object.freeze({
   warmup: 0,
 });
 
+// Bind a policy to one episode. A policy is either a bare
+//
+//   (state, tick) -> action | null
+//
+// or an object with `init(ctx) -> actor` for anything that needs per-episode state
+// (an observer's slot memory, its own PRNG). That mirrors `makeObserver`/`makeEngine`
+// — a factory whose `init` mints the episode's scratch — so the three compose without
+// a fourth convention. Returning null (or an out-of-range value) hands that tick back
+// to the rules expert, which is also the seam's NaN-logit fallback in the engine.
+export function bindPolicy(policy, ctx) {
+  if (!policy) return null;
+  if (typeof policy === 'function') return policy;
+  if (typeof policy.init === 'function') return policy.init(ctx);
+  throw new Error('policy must be a function (state, tick) -> action, or have init(ctx)');
+}
+
 // Run one episode. Returns the summary; the data goes to the sink.
-export function runEpisode({ seed, config = {}, sink = null, ...opts }) {
+export function runEpisode({ seed, config = {}, sink = null, policy = null, ...opts }) {
   const { ticks, stride, warmup } = { ...DEFAULT_ROLLOUT, ...opts };
   const engine = makeEngine(config);
   let state = engine.init(seed);
 
-  sink?.begin?.({ seed, cfg: engine.cfg, ticks, stride, warmup });
+  const ctx = { seed, cfg: engine.cfg, ticks, stride, warmup };
+  sink?.begin?.(ctx);
+  const act = bindPolicy(policy, ctx);
 
   let samples = 0;
   for (let t = 1; t <= warmup + ticks; t++) {
-    // No action argument: the rules expert drives, and what it applied lands on
-    // hat.action. When a policy takes over, this is the one line that changes.
-    state = engine.step(state);
+    // The policy sees the state it is acting FROM — tick t-1 — and its action is
+    // applied during the step that produces tick t. That is the only causally
+    // available information set: an action chosen from tick t would have to know
+    // where its own step landed. ⚠️ The Phase-B corpora pair the action applied at
+    // tick t with the observation encoded AFTER that step, so a BC policy fed
+    // `obs(t-1)` here is a tick off its training pairing. Noted, not resolved:
+    // it is Phase D's to settle, and it cancels out of any comparison run here
+    // (every policy reads the same states).
+    const action = act && t % TICKS_PER_ACTION === 0 ? act(state, t) : null;
+    // No action: the rules expert drives, and what it applied lands on hat.action.
+    state = engine.step(state, action);
     if (t > warmup && (t - warmup) % stride === 0) {
       sink?.sample?.(state, t - warmup);
       samples += 1;

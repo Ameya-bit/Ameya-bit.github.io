@@ -1,7 +1,7 @@
 # panda trainer
 
-Rollout harness and corpus tooling for the learned line-walker —
-**Phase B** of [design/panda-policy-net.md](../design/panda-policy-net.md).
+Rollout harness, corpus tooling and the viewing game for the learned line-walker —
+**Phases B and C** of [design/panda-policy-net.md](../design/panda-policy-net.md).
 
 No site impact: nothing here is ever loaded by a page. It imports the shipped
 engine from [`../assets/pandas/engine`](../assets/pandas/engine/README.md)
@@ -21,6 +21,10 @@ Zero dependencies, `node --test`.
 | **B4 — shard writer + manifest + JSONL sample** | ✅ done |
 | **B5 — worker_threads fan-out** | ⬜ (see throughput below — it was never needed for the cut) |
 | **B6 — cut the corpora, freeze the roster** | ✅ done |
+| **C1 — the game: scoring rules, the policy seam, the evaluator** | ✅ done |
+| **C2 — the oracle, the memoryless twin, the exploit bots** | ⬜ |
+| **C3 — the twin-episode battery, one set per knowability tier** | ⬜ |
+| **C4 — the memory gap, measured against the exit threshold** | ⬜ |
 
 **Phase B's exit is met.** The corpora are cut, the roster is frozen (and the freeze
 is a test — see below), the encoder's fixture check is green, and rollouts clear the
@@ -80,12 +84,15 @@ because a corpus missing labels it could have had is the expensive mistake.
 
 | File | Role |
 |---|---|
-| `rollout.js` | One episode of the engine, headless, into a sink. `runEpisode({seed, config, sink, ticks, stride, warmup})`. |
+| `rollout.js` | One episode of the engine, headless, into a sink. `runEpisode({seed, config, sink, policy, ticks, stride, warmup})`. |
 | `truth.js` | Per-tick ground truth (B3) + `recordEpisode`, which emits aligned `{tick, action, obs, truth}` rows. |
 | `corpus.js` | The three corpus specs (`natural` / `dense` / `wild`) as pure functions of a PRNG, plus deterministic episode seeding. |
 | `shard.js` | The shard format (B4): the row layout, the streaming writer, and the reader that decodes it back. |
 | `cut.js` | Episodes → shards + manifest + JSONL sample. Also the CLI (`--dry-run`, `--verify`) and `checkContract`, the freeze (B6). |
 | `bench.js` | Throughput per spec against the exit bar. |
+| `game.js` | **The viewing game (C1)**: the scoring rules, and the sink that keeps the ledger. |
+| `policies.js` | The policies the game is scored against. C1 ships `expert` / `still` / `random`; C2 adds the yardsticks. |
+| `evaluate.js` | Runs a policy over a set of episodes and reports the distribution. Also the CLI. |
 | `test/freeze.test.js` | Runs `checkContract` over every committed manifest — the roster freeze, enforced. |
 | `corpora/` | Cut corpora. Gitignored except manifests and the JSONL sample — a corpus is re-cuttable from its manifest, so the bytes need not be in git. |
 
@@ -270,6 +277,126 @@ pins the sensor to the corpus.
 radius are per-corpus config Phase C tunes, and each manifest records what its own
 cut used.
 
+## The viewing game (C1)
+
+`game.js` is the only file in the project that says what *good* means. The live
+site never computes score and never will — the hat panda's job on the homepage is
+to look like he is watching; score is the trainer's opinion about whether he was.
+
+```
++ viewPay per tick, per live incident, while he stands within viewRadius of it
+- knockPenalty each time he is floored
+- a small cost per stride, a larger one per dive-roll
+```
+
+Everything else in `DEFAULT_RULES` exists to move money out of *reaction* and into
+*inference*, because a score a reactive policy can reach proves nothing:
+
+| knob | default | what it buys |
+|---|---|---|
+| `viewRadius` | 180 | Comfortably outside the expert's own study standoff (`inspectNear` = 140) — the reward must not fight the character. At 130 his shipped vantage stops paying and income halves. |
+| `anticipationTau` | 200 | The arrival multiplier is `tau / (tau + incident age on arrival)`, **fixed at arrival for the whole incident**. 200 ticks ≈ one stage crossing, so showing up "a crossing late" halves the rate. The wager moves onto time-remaining. |
+| `diminishHalf` | 100 | Rate halves after 5 s banked on one incident. Total pay grows logarithmically, so camping is worthless *structurally* rather than penalised after the fact — and principle #3 of [panda-chaos.md](../design/panda-chaos.md) (watch a while, then move on) becomes arithmetic. |
+| `incidentCap` | 120 | The hard ceiling on top. It binds on long, fully-attended incidents only — 0–2 per episode for the expert. |
+| `stepCost` | 0.5 | A stage crossing ≈ 24 strides ≈ 12 points, about a quarter of what one incident is typically worth. Enough that a trip is a wager, not a free option. |
+| `payAll` | true | Pay every incident in range, leaving the `R_VIEW`-intersection parking exploit open on purpose for C2's bots. Measured: turning it off costs the expert **4%** of income on `natural` and 3% on `dense` — at this radius incidents rarely overlap, so the exploit is small before anyone tries to work it. |
+
+Two decisions that look small and are not:
+
+- **Ordinary knocks pay nothing.** Only the three directors post incidents; a panda
+  felled by a collision is just a panda on the ground. That is the keystone of the
+  flagship twin-episode certificate — a sleeper and a freshly knocked panda encode
+  to *identical bytes* (pinned by a test in the engine's obs suite), one is worth
+  points and the other nothing, and only event memory separates them. If knocks
+  paid, that certificate would be worthless.
+- **`inc.abandoned` is ignored**, though `watcher.js`'s own `isLive` honours it. It
+  is the rules expert's bookkeeping and is never set at all when a policy drives
+  (the expert does not run). Scoring through it would have two policies playing two
+  different games.
+
+Pay also stops when the *behaviour* stops, not when the incident expires: an
+incident outlives its anomaly by `aftermathLinger` so the watcher can arrive and
+find the aftermath, and arriving at the aftermath is worth nothing.
+
+### The policy seam
+
+`runEpisode({ policy })` consults a policy once per decision tick and feeds its
+action to `step(state, action)`. A policy is `(state, tick) -> action | null`, or
+`{ init(ctx) -> that }` for anything holding per-episode scratch — the same shape
+`makeObserver` and `makeEngine` use. Returning null (or a NaN / out-of-range value)
+hands the tick back to the rules expert, which is both how `expert` is implemented
+and the engine's own bad-logit fallback. Leaving `policy` unset is byte-identical
+to before it existed: `cut.js --verify` re-cuts a committed shard to the same
+digest.
+
+⚠️ **One tick of alignment is unresolved, deliberately.** A policy sees the state
+it acts *from* (tick t−1) and its action lands on tick t — the only causally
+available information set. But the Phase-B corpora pair the action applied at tick
+t with the observation encoded *after* that step, so a BC policy fed `obs(t-1)`
+here is a tick off its training pairing. It cancels out of every comparison made in
+Phase C (all policies read the same states); it is Phase D's to settle.
+
+### Calibration, and what the numbers already say
+
+`node evaluate.js` — 24 episodes × 12000 ticks of `natural`, the same seeds and
+configs as the committed `eval-natural` corpus (same root, same spec, so a score
+and a shard are the same world). Scoring costs nothing worth measuring: 320k
+ticks/s, ~0.9 s for the whole set.
+
+| policy | score/min | ±se | view | cost | cover | tick-cov | late | knock/m | down% |
+|---|---|---|---|---|---|---|---|---|---|
+| `expert` | **30.4** | 8.1 | 1084 | 779 | 33.1% | 19.2% | 77 | 1.27 | 14.1% |
+| `still` | −4.4 | 6.1 | 382 | 427 | 12.3% | 6.2% | 48 | 1.07 | 9.7% |
+| `random` | −357.6 | 2.3 | 254 | 3830 | 18.1% | 3.4% | 72 | 2.68 | 23.8% |
+
+`knockPenalty` was set from this table, at **40**. It is the +view/−hit ratio D3
+leaves open and the knob most likely to move as C2's bots arrive; 40 makes the
+knock term ~40% of the expert's gross income, on top of the ~14% of the episode he
+spends grounded earning nothing. It also leaves the incumbent clearly positive,
+which matters for legibility: a game where the shipped watcher scores negative is a
+game where the do-nothing floor looks like a strategy.
+
+**The episode is noisy and that sets the eval size.** Per-episode score/min for the
+expert ranges −50 to +111 (sd 39.5, median 32.1) — whether a cascade fired, whether
+the tower formed near him, how crowded the draw was. 24 episodes gives ±8; anything
+smaller cannot see a 30% memory gap.
+
+Three findings already worth having, none of them flattering:
+
+1. **Standing still is not safe.** `still` is knocked 1.07 times a minute against
+   the expert's 1.27 — the field walks into *him*. The knock penalty is therefore
+   close to a constant tax on existing rather than a price on recklessness, which
+   is most of why the next finding happens.
+2. **Under crowding, cowering beats working.** On `dense` the expert scores −47.4
+   and `still` −36.5. Break-even is measured, not estimated: the two tie exactly at
+   `knockPenalty=29` on `dense` and at `knockPenalty=215` on `natural`. So the game
+   as specified prices activity out of the market at high density, and the
+   curriculum corpus currently teaches freezing. That is a reward-*shape* problem,
+   not a magnitude one — the plan's appendix is blunt that per-tick proximity
+   rewards breed parking equilibria and that the fix is the shape.
+3. **The camping machinery does not close camping.** Diminishing returns and the
+   cap are per incident, and a crowd supplies a stream of *fresh* incidents, each
+   paying full early-arrival rate. `still` collects 382 points a run without
+   deciding anything. This is the spawn-centroid camping the plan named, and it
+   needs a structural answer (a global rate, an arrival requirement, a travel
+   term) rather than a bigger penalty.
+
+All three are C2/C3's to settle — the phase exit is explicitly "iterate the game
+knobs and re-run" — and they are recorded here rather than tuned away, because a
+default chosen to hide a finding is a default nobody can reason about.
+
+### The policies (C1's three)
+
+| name | what it is |
+|---|---|
+| `expert` | The shipped rules watcher. Not a baseline so much as the incumbent: what the site runs, what the corpora recorded, what Phase D clones. Implemented as "return null" — that *is* the definition, since re-deriving through `rulesAction` would mutate the watcher's brain mid-episode. |
+| `still` | Always HOLD. The do-nothing floor, and a more interesting one than it sounds — he spawns in a crowd and the field comes to him. |
+| `random` | Uniform over the 17 actions. Off its own PRNG stream, never the sim's. Worse than `still` by 350 points a minute, which is the cheapest available check that the cost side of the ledger has teeth. |
+
+Every policy must be a pure function of what it is handed — no `Math.random`, no
+wall clock. A score that is not reproducible is not a measurement, and a test pins
+that an episode is a pure function of (seed, config, policy).
+
 ## Corpus specs
 
 A spec is `(rng) -> config overrides`. Diversity is not tidiness here — it is the
@@ -299,6 +426,13 @@ every spec can emit against `DEFAULT_CONFIG` for exactly this reason.
 node --test                        # unit tests
 node bench.js                      # throughput vs the exit bar
 node bench.js --ticks 60000 --episodes 12
+
+# score policies on the game (C1)
+node evaluate.js                                   # every policy, natural, 24 episodes
+node evaluate.js --policy expert --episodes 64
+node evaluate.js --spec dense --ticks 6000
+node evaluate.js --policy expert --json            # the full per-episode reports
+node evaluate.js --rules knockPenalty=25,payAll=0  # turn a knob and re-read
 
 # cut a corpus: shards under corpora/<name>/, manifest + sample beside it
 node cut.js --spec natural --name eval-natural --episodes 120 --ticks 12000
