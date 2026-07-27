@@ -369,13 +369,15 @@ real module graph. If you do end up on a cached page, Cmd/Ctrl+Shift+R clears it
 
 ## Picking up from here
 
-Phase A is closed. What follows is Phase B, in [`trainer/`](../../../trainer/README.md)
-— except the observation encoder, which lives here (see above): B1–B4 are done, B5–B6
-open, and the roster freezes at the exit.
-
-**The engine change that was owed before the corpus cut has landed** (the `.stop`
-hit box — see the character-gate record below), so nothing here is outstanding. The
-next sim change costs a retrain rather than a day, so it needs a reason worth that.
+Phase A is closed, and so is Phase B, in [`trainer/`](../../../trainer/README.md) —
+except the observation encoder, which lives here (see above). **The corpora are cut
+and the roster is frozen**, which changes what a sim change costs: `trainer/test/
+freeze.test.js` compares every committed corpus manifest against this engine's
+golden digest, the encoder's fixture digest and every schema, so editing the roster,
+a mode, the observation layout or the action space now turns that suite red and means
+re-cutting 17 GB and retraining anything fitted to it. Sim changes need a reason
+worth that from here on; the last free one (the `.stop` hit box, in the
+character-gate record below) landed just before the cut.
 
 ### The character gate (passed 2026-07-27, on round two)
 

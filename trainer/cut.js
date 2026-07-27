@@ -34,7 +34,7 @@ import * as shippedEngine from '../assets/pandas/engine/engine.js';
 import { makeObserver, OBS_FIELDS, obsLayout } from '../assets/pandas/engine/policy/obs.js';
 import { ACTION, ACTION_NAME, actionName } from '../assets/pandas/engine/actions.js';
 import { runTrace, PHASE_A_SEEDS } from '../assets/pandas/engine/tools/trace.js';
-import { hex } from '../assets/pandas/engine/tools/checksum.js';
+import { hex, hashBytes } from '../assets/pandas/engine/tools/checksum.js';
 
 import { configFactory, episodeSeeds, SPECS } from './corpus.js';
 import { recordEpisode, TRUTH_VERSION, TRUTH_LABELS, GLOBAL_FIELDS, ENTITY_FIELDS, SLOT_FIELDS } from './truth.js';
@@ -77,6 +77,19 @@ export function engineFingerprint() {
     ticks: GOLDEN.ticks,
   });
   return { ...GOLDEN, digest: hex(batch) };
+}
+
+// The *sensor's* fingerprint, which the engine's cannot be: `policy/obs.js` never
+// touches the sim, so an encoder change leaves every golden digest where it was
+// while silently changing what a corpus's `obs` columns mean. The fixture is the
+// encoder's own contract (it is regenerated from it and a unit test enforces the
+// match), so hashing that file pins the encoder to the corpus.
+export const OBS_FIXTURE = join(
+  dirname(TRAINER_DIR), 'assets', 'pandas', 'engine', 'policy', 'obs-fixture.json',
+);
+
+export function encoderFingerprint() {
+  return { fixture: 'policy/obs-fixture.json', digest: hex(hashBytes(readFileSync(OBS_FIXTURE))) };
 }
 
 // How many pandas an episode has. Fixed at init and constant for the episode's
@@ -227,6 +240,7 @@ export function cutCorpus(options = {}) {
     dir: name,
     rollout: { episodes, ticks, stride, warmup, truth },
     engine: engineFingerprint(),
+    encoder: encoderFingerprint(),
     observation: { ...obsLayout(observer.layout.slots), params: observer.params },
     truth: truth
       ? {
@@ -312,6 +326,69 @@ export function describeFrame(frame, layout = obsLayout()) {
   };
 }
 
+// ---- the freeze ----
+//
+// At the exit of Phase B the roster locks (design/panda-policy-net.md, change #5):
+// once corpora are cut, the 8 anomaly kinds, the mode vocabulary, the observation
+// layout, the action space and the ground-truth schemas are *what the bytes mean*.
+// A change to any of them does not corrupt a shard — it silently re-labels one,
+// which is worse, because nothing fails.
+//
+// So every manifest is a contract, and this executes it against the code as it
+// currently stands. It reads no shards, which is what lets the unit suite run it
+// over the committed manifests while the bytes themselves stay gitignored: the
+// freeze is enforced by a red test at the moment someone edits the roster, not by a
+// line in a design doc.
+//
+// `observation.params` is deliberately NOT compared — the cone and the peripheral
+// radius are per-corpus config that Phase C tunes, and the manifest records what
+// each corpus used. What must not move is everything below.
+export function checkContract(manifest) {
+  const now = {
+    version: SHARD_VERSION,
+    'engine.digest': engineFingerprint().digest,
+    'encoder.digest': encoderFingerprint().digest,
+    'actions.count': ACTION.COUNT,
+    'actions.names': ACTION_NAME,
+    'observation.version': obsLayout().version,
+    'observation.width': obsLayout().width,
+    'observation.fields': OBS_FIELDS.map((f) => `${f.name}@${f.at}+${f.size}`),
+  };
+  if (manifest.truth) {
+    now['truth.version'] = TRUTH_VERSION;
+    now['truth.global'] = GLOBAL_FIELDS;
+    now['truth.entity'] = ENTITY_FIELDS;
+    now['truth.slot'] = SLOT_FIELDS;
+    now['truth.labels.mode'] = TRUTH_LABELS.mode;
+    now['truth.labels.anomalyKind'] = TRUTH_LABELS.anomalyKind; // the roster itself
+  }
+  const at = (path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), manifest);
+  const same = (a, b) => (Array.isArray(a) || Array.isArray(b)
+    ? JSON.stringify(a) === JSON.stringify(b)
+    : a === b);
+
+  const diffs = [];
+  for (const [path, value] of Object.entries(now)) {
+    const was = path === 'observation.fields'
+      ? (at(path) ?? []).map((f) => `${f.name}@${f.at}+${f.size}`)
+      : at(path);
+    if (!same(was, value)) diffs.push({ field: path, manifest: was, now: value });
+  }
+  return diffs;
+}
+
+// A one-line account of a contract mismatch, short enough for a test message and a
+// CLI line both. Arrays are summarised by their first difference — a renamed truth
+// column should not print two 32-item lists.
+export function describeDiff({ field, manifest, now }) {
+  if (Array.isArray(now) && Array.isArray(manifest)) {
+    if (manifest.length !== now.length) return `${field}: ${manifest.length} entries -> ${now.length}`;
+    const i = now.findIndex((v, k) => v !== manifest[k]);
+    return `${field}[${i}]: ${JSON.stringify(manifest[i])} -> ${JSON.stringify(now[i])}`;
+  }
+  return `${field}: ${JSON.stringify(manifest)} -> ${JSON.stringify(now)}`;
+}
+
 // ---- verification ----
 
 // Re-cut one episode from the manifest alone and compare it to what is recorded.
@@ -388,10 +465,11 @@ function main() {
     const manifest = JSON.parse(readFileSync(path, 'utf8'));
     const episode = args.episode === undefined ? 0 : Number(args.episode);
     console.log(`verifying ${manifest.name} episode ${episode} — re-cutting from the manifest alone\n`);
-    const engineNow = engineFingerprint();
-    if (engineNow.digest !== manifest.engine.digest) {
-      console.log(`⚠ engine digest ${engineNow.digest} != ${manifest.engine.digest} recorded at cut time — ` +
-        'the sim has changed; this corpus is stale.');
+    const contract = checkContract(manifest);
+    if (contract.length) {
+      console.log(`⚠ this corpus is stale — ${contract.length} contract field(s) have moved since it was cut:`);
+      for (const d of contract) console.log(`    ${describeDiff(d)}`);
+      console.log('');
     }
     const r = verifyEpisode(manifest, { episode, out: dirname(path) });
     if (r.ok) {

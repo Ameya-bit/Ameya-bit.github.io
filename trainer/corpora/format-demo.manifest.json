@@ -16,6 +16,10 @@
     "ticks": 2000,
     "digest": "603b00e4"
   },
+  "encoder": {
+    "fixture": "policy/obs-fixture.json",
+    "digest": "2ae43ea6"
+  },
   "observation": {
     "version": 1,
     "slots": 8,

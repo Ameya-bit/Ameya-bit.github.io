@@ -19,14 +19,28 @@ Zero dependencies, `node --test`.
 | **B2 — observation encoder (heading-cone FOV, sticky slots, frozen + bit-matched)** | ✅ done — in the engine, see below |
 | **B3 — per-tick ground-truth logging (FSM kind/phase/timers, cascade arm, claims)** | ✅ done |
 | **B4 — shard writer + manifest + JSONL sample** | ✅ done |
-| **B5 — worker_threads fan-out** | ⬜ (see throughput below — still not needed for the cut) |
-| **B6 — cut the corpora, freeze the roster** | ⬜ next |
+| **B5 — worker_threads fan-out** | ⬜ (see throughput below — it was never needed for the cut) |
+| **B6 — cut the corpora, freeze the roster** | ✅ done |
 
-The engine change owed before B6 — the `.stop` hit box, the last known divergence
-from `pandas.js` — landed 2026-07-27, so the sim under the cut is settled. It moved
-the golden digests (`d4a2d47b` @ 32×10k, `bfbc8a5c` @ 60k) and the observation
-fixture, and `format-demo` was re-cut against it. Its own `--verify` flagged the
-staleness before the re-cut, which is the guard doing its job rather than a scare.
+**Phase B's exit is met.** The corpora are cut, the roster is frozen (and the freeze
+is a test — see below), the encoder's fixture check is green, and rollouts clear the
+≥50k ticks/s/core bar. B5 is the one milestone left open, and it is a Phase-E want,
+not a Phase-B need.
+
+| corpus | spec | episodes × ticks | rows | on disk | cut in |
+|---|---|---|---|---|---|
+| **`train-wild`** | `wild` | 840 × 12000 | 5.04M (10.08M ticks) | 15.20 GB | 205 s (49k ticks/s) |
+| **`eval-natural`** | `natural` | 120 × 12000 | 720k (1.44M ticks) | 1.72 GB | 11 s (126k ticks/s) |
+
+Both carry ground truth. The training corpus spans **6 to 28 pandas** per episode
+(23 distinct row widths — which is exactly why the unit of a file is one episode),
+uses all 17 actions, and is finite in every cell. Loading it from the manifest alone
+in NumPy was checked end to end, including that entity sub-row *k* is panda *k*.
+
+The engine change owed before the cut — the `.stop` hit box, the last known
+divergence from `pandas.js` — landed first, so the sim underneath is settled. It
+moved the golden digests (`d4a2d47b` @ 32×10k, `bfbc8a5c` @ 60k) and the observation
+fixture; every corpus here is cut against that engine and says so in its manifest.
 
 **Throughput, with the whole pipeline in the loop** (`npm run bench`):
 
@@ -47,20 +61,20 @@ spec — but the end-to-end cut lands at 42–44k, about 16% under it.** Most of
 last step is not computation: a labelled `wild` episode is ~18 MB, and writing plus
 digesting the bytes is roughly two thirds of the gap (measured: hashing 122 MB costs
 0.12 s). It changes nothing operationally — a 10M-tick corpus is **~4 core-minutes**
-— but the number is recorded as a miss rather than rounded into a pass.
+— but the number is recorded as a miss rather than rounded into a pass. The real B6
+cut then ran at **49k ticks/s** end to end, a little above the bench and a hair under
+the bar: the bench's `wild` draws are its own, and the corpus mixes cheap thin
+episodes with 28-panda ones.
 
 B5's worker pool is therefore still not on the critical path for the cut. It is on
 it for Phase E's on-policy rollouts, where the step count is billions rather than
 millions, and one shard per episode makes it embarrassingly parallel when it comes:
 no shared file, no ordering, nothing to merge.
 
-**What B6 will cost, from `cut.js --dry-run`** (exact byte counts — panda counts come
-from `init`, not an estimate):
-
-| corpus | spec | episodes × ticks | rows | on disk |
-|---|---|---|---|---|
-| training | `wild` | 840 × 12000 | 5.04M | 15.2 GB (6.7 GB with `--no-truth`) |
-| eval | `natural` | 120 × 12000 | 720k | 1.7 GB |
+`cut.js --dry-run` prices a cut before it writes a byte, from exact panda counts
+(read from `init`, not estimated) — it called B6's 15.20 GB and 1.72 GB to the
+megabyte. A `--no-truth` training cut would have been 6.7 GB; labels were kept,
+because a corpus missing labels it could have had is the expensive mistake.
 
 ## The pieces
 
@@ -217,11 +231,43 @@ episode, with every field named. It is decoded back **out of the shard's bytes**
 rather than re-rendered from memory, and a test pins that, so what it shows is what
 the file holds. A format nobody can look at is a format nobody checks.
 
-[`corpora/format-demo.manifest.json`](corpora/format-demo.manifest.json) and its
-sample are in the repo as exactly that — a 2 × 12000 `natural` cut whose only job is
-to make the format readable before B6 cuts anything real. Its 28 MB of shards are
-not in git; `node cut.js --spec natural --name format-demo --episodes 2 --ticks 12000`
-puts them back.
+Three manifests are in the repo: `train-wild` and `eval-natural` (the B6 corpora) and
+[`corpora/format-demo.manifest.json`](corpora/format-demo.manifest.json), a 2 × 12000
+`natural` cut kept because it is small enough to read in one sitting. Their 17 GB of
+shards are not in git; the commands at the bottom of this file put them back.
+
+## The freeze, and what it is a freeze *of* (B6)
+
+Phase B exits with the roster locked (change #5 of the plan). What that means
+concretely: once corpora are cut, the 8 anomaly kinds, the mode vocabulary, the
+observation layout, the 17-way action space and every ground-truth column are **what
+the bytes mean**. Editing one of them does not corrupt a shard — it silently
+re-labels one, and every number downstream stays plausible. That is the failure this
+phase has to make impossible, so the freeze is a test, not a paragraph:
+
+```sh
+node --test test/freeze.test.js
+```
+
+`cut.js`'s `checkContract(manifest)` compares every committed manifest against the
+code as it stands — shard version, engine digest, encoder digest, action names,
+observation layout, truth schemas and label vocabularies — and `test/freeze.test.js`
+runs it over `corpora/*.manifest.json`. It reads **no shards**, which is what lets it
+live in the ordinary unit suite while the bytes stay gitignored. Change the roster
+and the suite goes red naming the field that moved; the corpus then has to be re-cut
+and anything trained on it retrained. `cut.js --verify` prints the same list before
+it re-cuts an episode.
+
+One field in the manifest exists purely for this: **`encoder`**, a digest of
+`policy/obs-fixture.json`. The engine's golden digest cannot cover the sensor —
+`policy/obs.js` never touches the sim, so an encoder change moves no golden digest
+while changing what every `obs` column means. The fixture is the encoder's own
+contract (regenerated from it, enforced by an engine test), so hashing that file
+pins the sensor to the corpus.
+
+`observation.params` is deliberately *not* frozen: the cone angle and peripheral
+radius are per-corpus config Phase C tunes, and each manifest records what its own
+cut used.
 
 ## Corpus specs
 
@@ -258,6 +304,10 @@ node cut.js --spec natural --name eval-natural --episodes 120 --ticks 12000
 node cut.js --spec wild --name train-wild --episodes 840 --dry-run   # cost, no bytes
 node cut.js --spec wild --name train-bc --episodes 840 --no-truth    # BC-only, half the disk
 node cut.js --verify corpora/eval-natural.manifest.json --episode 3
+
+# put the cut corpora back (they are gitignored; the manifests are not)
+node cut.js --spec wild --name train-wild --episodes 840 --ticks 12000
+node cut.js --spec natural --name eval-natural --episodes 120 --ticks 12000
 ```
 
 `--stride` (default 2, the policy's 10 Hz clock), `--warmup`, `--seed` (the corpus
