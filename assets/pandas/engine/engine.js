@@ -1,34 +1,46 @@
 // The engine — pure, fixed-tick `step(state) -> state`.
 //
-// Milestone 1: the physics foundation — a field of pandas that wander (with the
-// oblivious one keeping to its patch) and a model-space collision → knock → fall
-// → lie → stand-up → recover cycle. Anomalies, the hat-panda watcher, the stack,
-// and the cascade attach on top in later milestones.
+// The whole sim: a field of pandas that wander (with the oblivious one keeping to
+// its patch), a model-space collision → knock → fall → lie → stand-up → recover
+// cycle, the tier-1 anomaly director and its 8 FSMs, the hat-panda watcher behind
+// the 17-way action seam, the tier-2 stack, and the tier-3 cascade.
 //
 // State is a plain, serialisable object; every tick is a pure function of the one
 // before it, so any tick can be snapshotted, hashed (golden traces), or resumed.
 // Config lives inside state so `step(state)` needs nothing else. Randomness is the
 // mulberry32 seed threaded through state.rng; draw order is entity-id order, then
-// collision, so it is identical in Node and the browser.
+// the three directors, then the hat, then collision — identical in Node and the
+// browser.
 
 import { Rng } from './rng.js';
 import { makeConfig, DEFAULT_CONFIG } from './config.js';
 import { DX, DY, wrapDir, opposite, dirName, eightWay } from './dirs.js';
 import { applyPos } from './geometry.js';
 import { detectCollisions } from './collision.js';
-import { MODE, ANIM, KNOCK, spawnEntities, isDown, easeVisual, advanceKnock } from './state.js';
+import { MODE, ANIM, spawnEntities, isDown, easeVisual, advanceKnock, beginKnock } from './state.js';
 import { updateAnomaly } from './anomalies.js';
 import { initDirector, runDirector, pruneIncidents } from './director.js';
 import { updateHat } from './hat.js';
+import { initStack, runStack } from './stack.js';
+import {
+  initCascade, runCascade, igniteCascade, cascadeElsewhere,
+  claimed, isIgnitionSeed, releaseClaim,
+} from './cascade.js';
 
 // ---- per-entity update (movement + knock FSM) ----
 
 // Advance one entity by one tick. Returns a NEW entity object (input untouched).
-function updateEntity(e, cfg, rng) {
+// `state` is this step's partially-built next state — the knock FSM needs it to
+// release a cascade claim on recovery.
+function updateEntity(e, cfg, rng, state) {
   if (e.mode === MODE.WANDER) return updateWander(e, cfg, rng);
-  if (e.mode === MODE.KNOCKED) return updateKnocked(e, cfg);
-  // An anomaly mode: advance its FSM on a clone. (The hat panda is handled
-  // separately in updateHat and never reaches here.)
+  if (e.mode === MODE.KNOCKED) return updateKnocked(e, cfg, state);
+  // Stack roles are driven wholesale by runStack (one machine owns the tower), and
+  // the hat panda by updateHat — both only need a clone here.
+  if (e.mode === MODE.STACK_BASE || e.mode === MODE.MOUNTING || e.mode === MODE.RIDING) {
+    return { ...e };
+  }
+  // An anomaly mode: advance its FSM on a clone.
   const next = { ...e };
   updateAnomaly(next, cfg, rng);
   return next;
@@ -79,7 +91,7 @@ function wanderStep(e, cfg, rng) {
   if (blocked) e.dir = opposite(e.dir); // walk away from the wall, don't moonwalk into it
 }
 
-function updateKnocked(e, cfg) {
+function updateKnocked(e, cfg, state) {
   const next = { ...e };
   // Shared fall → lie → stand-up skid (state.advanceKnock). A roamer that finishes
   // recovering rejoins the wander; the hat panda's knock is advanced in updateHat
@@ -87,6 +99,12 @@ function updateKnocked(e, cfg) {
   if (advanceKnock(next, cfg)) {
     next.mode = MODE.WANDER;
     next.anim = ANIM.WALK;
+    // Standing up releases a cascade claim — it has played its part as a domino and
+    // is fair game for the next front (or an ordinary collision) again.
+    if (next.cascadeFall) {
+      next.cascadeFall = false;
+      releaseClaim(state, next.id);
+    }
   }
   return next;
 }
@@ -95,43 +113,38 @@ function updateKnocked(e, cfg) {
 
 // Apply this tick's collisions to the freshly-updated entities (mutating them in
 // place — they are this step's own new objects, not shared with the input state).
-// A panda already down is left alone; a fresh contact starts its knock.
-function applyCollisions(entities, cfg, rng) {
+// A panda already down is left alone; a fresh contact starts its knock. While the
+// cascade director is armed, the collisions that land here are its ignition.
+function applyCollisions(state, cfg, rng) {
+  const entities = state.entities;
   const hits = detectCollisions(entities, cfg);
-  if (hits.length === 0) return entities;
+  if (hits.length === 0) return;
   const byId = new Map(entities.map((e) => [e.id, e]));
+  const seeds = [];
   for (const { id, hit } of hits) {
     const e = byId.get(id);
     if (isDown(e)) continue; // already on the ground (knock, nap, trip, crash) — can't re-knock
     if (e.mode === MODE.ROLLING) continue; // dive-roll i-frames — the committed escape is invulnerable
+    if (claimed(state, e.id)) continue; // a cascade front owns this fall; don't pre-empt it
     startKnock(e, hit, cfg, rng); // a real knock overrides an in-progress anomaly
+    if (isIgnitionSeed(state, e)) seeds.push(e.id);
   }
-  return entities;
+  // Ignition: while armed, the next natural collision between ordinary roamers
+  // escalates into a cascade — but only if it erupts away from the watcher's gaze
+  // (else hold the arm for a farther one).
+  if (seeds.length && cascadeElsewhere(state, seeds, cfg)) {
+    igniteCascade(state, seeds, cfg, rng);
+  }
 }
 
-// Begin a knock: face the impact, drop into the fall phase, and set the slide
-// vector (IMPACT px away from the struck side). Lie time is drawn now, at onset.
+// An ordinary shove: the slide is IMPACT px away from the struck side.
 function startKnock(e, hit, cfg, rng) {
   const name = dirName(hit);
-  // A knock outranks any anomaly — clear its scratch so no stale FSM state leaks.
-  e.aPhase = 0;
-  e.aTimer = 0;
-  e.aCount = 0;
-  e.aHeading = 0;
-  e.aLie = 0;
-  e.aStep = 0;
-  e.mode = MODE.KNOCKED;
-  e.knockPhase = KNOCK.FALL;
-  e.knockTimer = cfg.fallTicks;
-  e.knockLie = cfg.lieTimesTicks[rng.int(cfg.lieTimesTicks.length)];
-  e.hit = hit;
-  e.dir = hit; // faces the impact
-  e.anim = ANIM.FALL;
-  // The slide starts from where the panda visually is; logical snaps to it.
-  e.lx = e.x;
-  e.ly = e.y;
-  e.slideVx = (name.includes('left') ? cfg.impact : 0) - (name.includes('right') ? cfg.impact : 0);
-  e.slideVy = (name.includes('up') ? cfg.impact : 0) - (name.includes('down') ? cfg.impact : 0);
+  beginKnock(e, cfg, rng, {
+    faceDir: hit,
+    slideVx: (name.includes('left') ? cfg.impact : 0) - (name.includes('right') ? cfg.impact : 0),
+    slideVy: (name.includes('up') ? cfg.impact : 0) - (name.includes('down') ? cfg.impact : 0),
+  });
 }
 
 // ---- the public engine ----
@@ -148,6 +161,8 @@ export function makeEngine(userConfig = {}) {
       cfg,
       entities,
       director: initDirector(cfg),
+      stack: initStack(cfg),
+      cascade: initCascade(cfg),
       incidents: [],
     };
   };
@@ -155,37 +170,64 @@ export function makeEngine(userConfig = {}) {
   const step = (state, action = null) => {
     const rng = new Rng(state.rng);
     const c = state.cfg;
+    // Everything mutable is copied up front so the input state is never touched
+    // (purity at the tick boundary). The arrays inside stack/cascade hold ids and
+    // small records, so a shallow copy per array is enough.
     const next = {
       tick: state.tick + 1,
       rng: 0,
       cfg: c,
-      // The hat panda is updated separately (updateHat), after the director, so it
-      // reasons about this tick's positions and the freshest incident queue — here
-      // it is only cloned.
-      entities: state.entities.map((e) => (e.hasHat ? { ...e } : updateEntity(e, c, rng))),
+      entities: [],
       director: { ...state.director },
-      // Deep copy: the hat may mark an incident abandoned, and the input state must
-      // stay untouched (purity at the tick boundary).
+      stack: { ...state.stack, mounters: [...state.stack.mounters], riders: [...state.stack.riders] },
+      cascade: {
+        ...state.cascade,
+        lock: [...state.cascade.lock],
+        pending: state.cascade.pending.map((p) => ({ ...p })),
+      },
+      // The hat may mark an incident abandoned and a topple shortens one, so these
+      // are copied too.
       incidents: state.incidents.map((inc) => ({ ...inc })),
     };
-    // Order: roamers/anomalies → director (may start an anomaly + emit an incident)
-    // → the hat (reads incidents, emits its 17-way action) → collisions (may knock,
-    // overriding an anomaly; the hat's roll is i-framed) → prune the queue.
+    // The hat panda is updated separately (updateHat), after the directors, so it
+    // reasons about this tick's positions and the freshest incident queue — here it
+    // is only cloned.
+    next.entities = state.entities.map((e) => (e.hasHat ? { ...e } : updateEntity(e, c, rng, next)));
+    // Order: roamers/anomalies → tier-1 director (may start an anomaly + emit an
+    // incident) → tier 2 (the stack: assembly, parade, topple) → tier 3 (the cascade:
+    // the arming clock and the scheduled domino falls) → the hat (reads incidents,
+    // emits its 17-way action) → collisions (may knock, overriding an anomaly, and
+    // are the cascade's ignition while armed; the hat's roll is i-framed) → prune.
     runDirector(next, c, rng);
+    runStack(next, c, rng);
+    runCascade(next, c, rng);
     updateHat(next, c, rng, action);
-    applyCollisions(next.entities, c, rng);
+    applyCollisions(next, c, rng);
     pruneIncidents(next);
     next.rng = rng.state;
     return next;
   };
 
   const encode = (state) => {
-    const out = [state.tick, state.rng, state.director.nextAt, state.director.last, state.incidents.length];
+    const s = state.stack;
+    const cc = state.cascade;
+    const out = [
+      state.tick, state.rng, state.director.nextAt, state.director.last, state.incidents.length,
+      // tier 2 — the stack machine
+      s.nextAt, s.baseId, s.phase, s.mountIdx, s.mounters.length, s.riders.length,
+      s.timer, s.steps, s.flight, s.born, s.life, s.baseDir,
+      // tier 3 — the cascade machine
+      cc.armed ? 1 : 0, cc.active ? 1 : 0, cc.nextArmAt, cc.forceAt, cc.endAt,
+      cc.felled, cc.target, cc.lock.length, cc.pending.length,
+    ];
     for (const e of state.entities) {
       out.push(
         e.x, e.y, e.lx, e.ly, e.dir, e.mode, e.anim, e.moveTimer,
         e.knockPhase, e.knockTimer, e.slideVx, e.slideVy,
         e.aPhase, e.aTimer, e.aCount, e.aHeading, e.aLie, e.aStep,
+        // set-piece roles: the collision flags and the tower tier
+        e.solid ? 1 : 0, e.flying ? 1 : 0, e.riding ? 1 : 0, e.stackLevel,
+        e.cascadeFall ? 1 : 0,
       );
     }
     // The hat panda's watcher brain — only the hat carries meaningful values, so
@@ -194,9 +236,9 @@ export function makeEngine(userConfig = {}) {
     const h = state.entities.find((e) => e.hasHat);
     if (h) {
       out.push(
-        h.subject, h.td, h.relocating ? 1 : 0, h.vAxis, h.stuck, h.revantaged ? 1 : 0,
-        h.stuckPrev, h.incSubject, h.incBorn, h.incidentSince, h.ambientTicks,
-        h.rollReadyAt, h.action,
+        h.subject, h.subjPx, h.subjPy, h.td, h.relocating ? 1 : 0, h.vAxis, h.stuck,
+        h.revantaged ? 1 : 0, h.stuckPrev, h.incSubject, h.incBorn, h.incidentSince,
+        h.ambientTicks, h.rollReadyAt, h.action,
       );
     }
     return out;

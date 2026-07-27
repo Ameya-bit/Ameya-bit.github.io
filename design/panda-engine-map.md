@@ -103,7 +103,7 @@ Constructor (200–242) unless noted. DOM refs (`el`,`inner`,`sprite`,`corners`)
 
 **tier-1 `director()` (1298–1309):** global `lastAnomaly` (prevents same kind twice-running). Candidate filter `anomalyCandidates` (1294): ordinary roamer, on feet, not busy, not hat, not oblivious, not solid/flying/riding. Picks a kind from the 8 `ANOMALIES` (L1288) excluding `lastAnomaly`, picks a candidate, invokes `pool[kind]()`. Reschedules in `ANOM_GAP` (6–11 s).
 
-**tier-2 `stackDirector()` (1497–1512):** singleton `activeStack` (at most one alive). Needs pool ≥3 and a candidate with headroom `y ≥ 2·RIDER_RISE+20`. `nRiders` = 2 (55%) or 1 (45%); nearest pool members become mounters; `new Stack(base, mounters)`. Reschedules in `STACK_GAP` (60–120 s).
+**tier-2 `stackDirector()` (1497–1512):** singleton `activeStack` (at most one alive). Needs pool ≥3 and a candidate with headroom `y ≥ 2·RIDER_RISE+20`. `nRiders` = 2 (45%) or 1 (55%) — L1506 is `random() < 0.45 ? 2 : 1`, so a 3-high tower is the *less* likely of the two; nearest pool members become mounters; `new Stack(base, mounters)`. Reschedules in `STACK_GAP` (60–120 s).
 
 **tier-3 `cascadeDirector()` (1627–1635):** global `cascadeArmed`, `cascadeActive`, `cascadeLock` (Set of claimed victims), `cascadeFelled`/`cascadeTargetFell`. Arms (sets `cascadeArmed`) and schedules `forceIgnite` backstop at 40 s. Reschedules in 2–5 min. **Ignition is external** — fired by `collisionCheck` (985) on a natural armed collision, `Stack.topple` (1488) coupling, or `forceIgnite` (1615).
 

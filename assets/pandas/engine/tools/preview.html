@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8" />
-<title>panda engine — live preview (Milestone 1)</title>
+<title>panda engine — live preview (M1-M4)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   :root { color-scheme: light dark; }
@@ -31,6 +31,11 @@
     <label>density <input id="density" type="range" min="55000" max="300000" step="5000" value="217000" style="width:180px" /></label>
     <span id="densityVal" class="muted"></span>
   </div>
+  <div class="controls" style="margin-top:.35rem">
+    <button id="stackBtn" title="fire the tier-2 director on the next tick">▲ build a stack</button>
+    <button id="armBtn" title="arm tier 3 — the next collision away from the watcher ignites">☍ arm cascade</button>
+    <button id="igniteBtn" title="arm and fire the liveness backstop at once">✸ ignite now</button>
+  </div>
   <div id="stats" class="muted" style="margin-top:.35rem"></div>
 </header>
 
@@ -38,13 +43,15 @@
 
 <script type="module">
   import { makeEngine } from '../engine.js';
-  import { MODE, ANIM, KNOCK, MODE_NAME, isDown } from '../state.js';
+  import { MODE, ANIM, KNOCK, MODE_NAME, POINT_SUBJECT, isDown } from '../state.js';
   import { DX, DY } from '../dirs.js';
   import { TICK_MS } from '../tick.js';
   import { pandaCountForViewport, freeArea } from '../layout.js';
+  import { PHASE, riderSway } from '../stack.js';
 
   // Short tags shown under a panda mid-anomaly, so behaviours are legible.
   const TAG = { sleeper: 'sleep', tumbler: 'trip', spinner: 'spin', loop: 'loop', starer: 'stare', zoomies: 'zoom', moonwalk: 'moon', hiccup: 'hic' };
+  const PHASE_NAME = ['mounting', 'hopping', 'parading'];
 
   const canvas = document.getElementById('c');
   const stageEl = document.getElementById('stage');
@@ -91,11 +98,54 @@
     ctx.fillStyle = 'rgba(128,128,128,.05)';
     ctx.fillRect(forbid.l, forbid.t, forbid.r - forbid.l, forbid.b - forbid.t);
 
-    for (const e of [...state.entities].sort((a, b) => a.y - b.y)) {
+    // A rider must draw over the base it sits on, and y-sorting alone would put it
+    // behind (its y is smaller). Riders borrow the base's depth plus their tier —
+    // the same trick the shipped renderer's zIndex uses.
+    const base = state.stack.baseId >= 0 ? state.entities.find((q) => q.id === state.stack.baseId) : null;
+    const depth = (e) => (e.riding && base ? base.y + e.stackLevel : e.y);
+
+    for (const e of [...state.entities].sort((a, b) => depth(a) - depth(b))) {
       const cx = e.x + CELL / 2, cy = e.y + CELL / 2;
       const down = isDown(e); // knocked OR a grounded anomaly (nap, trip, crash)
       const anomaly = e.mode >= MODE.SLEEPER && e.mode <= MODE.HICCUP; // tier-1 kinds only, not the hat's OBSERVING/ROLLING
       const body = 20;
+
+      // A rider: seated, drawn smaller, tilted by the engine's own sway value so the
+      // wobble the eye sees is exactly the one that shifts the seats.
+      if (e.mode === MODE.RIDING) {
+        ctx.save();
+        ctx.translate(cx, cy + body);
+        ctx.rotate((riderSway(state.tick, e.stackLevel, state.cfg) * state.cfg.sitTiltDeg * Math.PI) / 180);
+        ctx.fillStyle = '#efe9dc';
+        ctx.strokeStyle = '#2a2724';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, -body, body * 0.86, body * 0.78, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#2a2724';
+        for (const sx of [-1, 1]) {
+          ctx.beginPath();
+          ctx.arc(sx * body * 0.55, -body * 1.5, body * 0.26, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = '#6a655c';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -body);
+        ctx.lineTo(DX[e.dir] * body * 0.7, -body + DY[e.dir] * body * 0.7);
+        ctx.stroke();
+        ctx.restore();
+        continue;
+      }
+
+      // A climber mid-hop: a ground shadow under the arc sells the height.
+      if (e.mode === MODE.MOUNTING && e.y !== e.ly) {
+        ctx.fillStyle = 'rgba(40,40,40,.16)';
+        ctx.beginPath();
+        ctx.ellipse(e.lx + CELL / 2, e.ly + CELL / 2 + 10, body * 0.8, body * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // motion streaks: a zoomies dash, or the hat panda's dive-roll (his one burst)
       if (e.mode === MODE.ZOOMIES) {
@@ -106,13 +156,20 @@
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - DX[e.dir] * 30, cy - DY[e.dir] * 30); ctx.stroke();
       }
 
-      // the hat panda's attention: a faint thread to whatever it is watching
-      if (e.hasHat && e.subject >= 0) {
-        const subj = state.entities.find((q) => q.id === e.subject);
+      // the hat panda's attention: a faint thread to whatever it is watching — a
+      // panda, or the bare spot a cascade left behind
+      if (e.hasHat && (e.subject >= 0 || e.subject === POINT_SUBJECT)) {
+        const subj = e.subject === POINT_SUBJECT
+          ? { x: e.subjPx, y: e.subjPy }
+          : state.entities.find((q) => q.id === e.subject);
         if (subj) {
           ctx.strokeStyle = 'rgba(192,138,62,.25)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
           ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(subj.x + CELL / 2, subj.y + CELL / 2); ctx.stroke();
           ctx.setLineDash([]);
+          if (e.subject === POINT_SUBJECT) {
+            ctx.strokeStyle = 'rgba(176,74,58,.5)';
+            ctx.beginPath(); ctx.arc(subj.x + CELL / 2, subj.y + CELL / 2, 9, 0, Math.PI * 2); ctx.stroke();
+          }
         }
       }
 
@@ -146,11 +203,20 @@
         ctx.stroke();
         if (e.anim === ANIM.IDLE && !anomaly) { ctx.fillStyle = '#8a8578'; ctx.font = '11px monospace'; ctx.fillText('z', body * 0.5, -body * 0.9); }
       }
-      // anomaly tag under the panda (both on-feet and grounded kinds)
-      if (anomaly) {
-        ctx.fillStyle = '#3b6fb0'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
-        ctx.fillText(TAG[MODE_NAME[e.mode]] || '', 0, body + 16);
+      // tags under the panda: the tier-1 anomaly kind, or its role in the tower
+      const tag = anomaly ? (TAG[MODE_NAME[e.mode]] || '')
+        : e.mode === MODE.STACK_BASE ? 'base'
+        : e.mode === MODE.MOUNTING ? 'climb' : '';
+      if (tag) {
+        ctx.fillStyle = e.mode >= MODE.STACK_BASE ? '#7a5cb0' : '#3b6fb0';
+        ctx.font = '10px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(tag, 0, body + 16);
         ctx.textAlign = 'start';
+      }
+      // a cascade domino: ringed while its claim is live, so the sweep is legible
+      if (e.cascadeFall) {
+        ctx.strokeStyle = 'rgba(176,74,58,.55)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, body + 8, 0, Math.PI * 2); ctx.stroke();
       }
       if (e.hasHat) {
         ctx.strokeStyle = '#c08a3e'; ctx.lineWidth = 2;
@@ -179,9 +245,23 @@
     const tally = active.reduce((m, k) => ((m[k] = (m[k] || 0) + 1), m), {});
     const anomStr = Object.entries(tally).map(([k, v]) => `${TAG[k]}${v > 1 ? '×' + v : ''}`).join(' ');
     const hat = state.entities.find((e) => e.hasHat);
-    const hatStr = hat ? `${MODE_NAME[hat.mode]}${hat.subject >= 0 ? ' →#' + hat.subject : ''}` : '—';
+    const subjStr = !hat ? '' : hat.subject === POINT_SUBJECT ? ' →spot' : hat.subject >= 0 ? ' →#' + hat.subject : '';
+    const hatStr = hat ? `${MODE_NAME[hat.mode]}${subjStr}` : '—';
+    // tier 2 + tier 3, so the two set pieces are watchable rather than guessed at
+    const st = state.stack;
+    const stackStr = st.baseId < 0
+      ? `—<span class="muted"> (next @${st.nextAt})</span>`
+      : `#${st.baseId} ${PHASE_NAME[st.phase]} ${st.riders.length + 1}-high` +
+        (st.phase === PHASE.PARADE ? ` <span class="muted">(${st.born + st.life - state.tick} left)</span>` : '');
+    const cc = state.cascade;
+    const cascStr = cc.active
+      ? `<b>SWEEPING</b> ${cc.felled}/${cc.target}`
+      : cc.armed
+        ? `armed<span class="muted"> (forced @${cc.forceAt})</span>`
+        : `idle<span class="muted"> (arms @${cc.nextArmAt})</span>`;
     document.getElementById('stats').innerHTML =
-      `tick <b>${state.tick}</b> · down <b>${down}</b>/${state.entities.length} · anomalies: <b>${anomStr || '—'}</b> · incidents ${state.incidents.length} · hat: <b>${hatStr}</b>`;
+      `tick <b>${state.tick}</b> · down <b>${down}</b>/${state.entities.length} · anomalies: <b>${anomStr || '—'}</b>` +
+      ` · incidents ${state.incidents.length} · hat: <b>${hatStr}</b><br>stack: <b>${stackStr}</b> · cascade: ${cascStr}`;
     requestAnimationFrame(frame);
   }
 
@@ -189,6 +269,18 @@
   document.getElementById('playBtn').onclick = (ev) => { playing = !playing; ev.target.textContent = playing ? '⏸ pause' : '▶ play'; };
   document.getElementById('stepBtn').onclick = () => { state = engine.step(state); };
   document.getElementById('reseedBtn').onclick = rebuild;
+  // The set pieces are deliberately rare (35s / 40s clocks), which is unwatchable in a
+  // dev loop. These nudge the directors' clocks — they don't bypass any logic, so what
+  // you see is exactly what the shipped rates produce, just sooner.
+  document.getElementById('stackBtn').onclick = () => {
+    state = { ...state, stack: { ...state.stack, nextAt: state.tick + 1 } };
+  };
+  document.getElementById('armBtn').onclick = () => {
+    state = { ...state, cascade: { ...state.cascade, nextArmAt: state.tick + 1 } };
+  };
+  document.getElementById('igniteBtn').onclick = () => {
+    state = { ...state, cascade: { ...state.cascade, armed: true, forceAt: state.tick + 1 } };
+  };
   const speed = document.getElementById('speed');
   speed.oninput = () => { speedMul = Number(speed.value); document.getElementById('speedVal').textContent = speedMul.toFixed(2) + '×'; };
   document.getElementById('density').oninput = rebuild;

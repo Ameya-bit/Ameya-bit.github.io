@@ -114,6 +114,55 @@ export const DEFAULT_CONFIG = Object.freeze({
   hiccupRise: 18, // px pop height (presentation)
   hiccupWanderP: 0.35, // chance of a re-facing between pops
 
+  // ---- tier 2: the stack (M4) ----
+  // A tower parading as one entity. The base is the only real actor (an unstoppable
+  // `solid`); the riders are pinned ghosts above it, swaying harder the longer it
+  // parades, until it topples into an ordinary three-way knock.
+  stackKick: msToTicks(35000), // 700 — the first tower, once the field has settled
+  stackGapMin: msToTicks(60000), // 1200 — one forms this often: a set piece, not a habit
+  stackGapMax: msToTicks(120000), // 2400
+  stackRiders2P: 0.45, // chance of a 3-high tower (2 riders); else 2-high
+  mountWalkEvery: msToTicks(300), // 6 — the walk-up stride, brisk and purposeful
+  mountMaxSteps: 24, // …or it just hops anyway; never stall the assembly
+  mountNear: 68, // a mounter hops once this close to the base
+  mountHopTicks: msToTicks(440), // 9 — the hop onto a head
+  mountArcPeakMax: 150, // hop-arc height cap (px)
+  mountArcPeakBase: 45, // …and its floor, before the distance term
+  mountArcPeakPerPx: 0.3,
+  stackIncidentTtl: msToTicks(60000), // 1200 — tier-2 attention: assembly + the whole parade
+  paradeMin: msToTicks(18000), // 360 — how long it parades before the wobble maxes
+  paradeMax: msToTicks(34000), // 680
+  baseStep: 3, // the base's parade gait: small crisp steps (no glide) so riders track it
+  baseTurnP: 0.06, // chance per tick the base drifts its heading
+  toppleHitR: 76, // a zoomies within this of the base brings the tower down early
+  // The seat rise: one body height (the art occupies rows 19-81 of the 100px cell),
+  // so a rider's feet land on the head below. The presentation layer may refine this
+  // per facing from the seated cels; the engine needs one number for the geometry.
+  riderRise: 62,
+  sitWobbleTicks: msToTicks(1600), // 32 — one full teeter; sway = sin(tick * 2pi/this)
+  sitTravel: 6, // px of head-shift per rider at the teeter peak — accumulates up the tower
+  // Presentation-only: the rider's tilt at that peak. The engine computes the sway
+  // (it moves the seats, which IS state); only the visible rotation lives here, so the
+  // renderer scales `riderSway()` by this rather than inventing its own wobble.
+  sitTiltDeg: 6,
+
+  // ---- tier 3: the cascade (M4) ----
+  // The chain-reaction knockout. The director ARMS on a long jittered clock — that
+  // clock is the whole of the cascade's rarity — and the next natural collision (or
+  // a stack topple) IGNITES a greedy nearest-neighbour domino sweep.
+  cascadeKick: msToTicks(40000), // 800 — the first arming
+  cascadeArmMin: msToTicks(120000), // 2400 — re-arm every 2-5 min
+  cascadeArmMax: msToTicks(300000), // 6000
+  cascadeArmTimeout: msToTicks(40000), // 800 — armed this long with no collision → manufacture one
+  chainRange: 350, // a front only reaches a neighbour within this; wider gaps end it
+  cascadeHopMin: msToTicks(150), // 3 — stagger between a faller and the one it fells
+  cascadeHopMax: msToTicks(230), // 5
+  cascadeCoverMin: 0.7, // fraction of the field the steering fells — never all of it
+  cascadeCoverMax: 0.9,
+  cascadeDuration: msToTicks(14000), // 280 — machinery idles after this; re-ignition blocked
+  cascadeIncidentTtl: msToTicks(9000), // 180 — the tier-3 pull to the origin of the carnage
+  cascadeStageSlack: 1.6, // hold the arm if a seed is within inspectNear * this of the watcher
+
   // ---- the hat panda: the watcher (M3) ----
   // Cadence. The calm stride is `hatMove` (11); alert is quicker so the weave
   // keeps up with a threat (never zoomies-fast). Decisions run at 10 Hz (every

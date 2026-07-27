@@ -12,10 +12,10 @@
 // the lagging rendered position. Keeping that split is what preserves the feel:
 // he reasons a step ahead of where the glide has actually carried everyone.
 
-import { AX, AY, DX, DY, wrapDir, opposite, headingDir } from './dirs.js';
+import { AX, AY, DX, DY, wrapDir, headingDir } from './dirs.js';
 import { hypot } from './mathx.js';
 import { inBounds, crossesFence, detourCorner, strideTo } from './geometry.js';
-import { MODE, ANIM, UNSET_GAP } from './state.js';
+import { MODE, ANIM, UNSET_GAP, POINT_SUBJECT } from './state.js';
 import { ACTION, stepAction, rollAction } from './actions.js';
 
 // ---- small lookups over the field (all in logical space) ----
@@ -24,6 +24,15 @@ export function subjectEntity(entities, id) {
   if (id < 0) return null;
   const e = entities.find((q) => q.id === id);
   return e && !e.hasHat ? e : null;
+}
+
+// What the hat is currently watching, as something with a logical position: either a
+// panda, or the fixed spot a tier-3 cascade incident pinned (the origin of the
+// carnage — no one body to blame). Everything downstream only reads `lx`/`ly`, so a
+// spot and a panda are interchangeable to the observe loop.
+export function watchedTarget(state, hat) {
+  if (hat.subject === POINT_SUBJECT) return { lx: hat.subjPx, ly: hat.subjPy };
+  return subjectEntity(state.entities, hat.subject);
 }
 
 // Summed proximity of other pandas to (x, y): 0 when clear, growing as they
@@ -169,7 +178,16 @@ export function chooseWeaveDir(hat, tx, ty, entities, cfg) {
 // Live incidents this tick (expiry check mirrors pruneIncidents), skipping ones
 // with no subject or that he already gave up reaching.
 function isLive(inc, tick) {
-  return inc.expires > tick && inc.subject >= 0 && !inc.abandoned;
+  const hasSubject = inc.subject >= 0 || inc.subject === POINT_SUBJECT;
+  return inc.expires > tick && hasSubject && !inc.abandoned;
+}
+
+// Where an incident is: its subject panda, or the spot it pinned. null = its subject
+// has left the roster, so the incident is unreachable.
+function incidentPos(state, inc) {
+  if (inc.subject === POINT_SUBJECT) return { lx: inc.px, ly: inc.py };
+  const subj = subjectEntity(state.entities, inc.subject);
+  return subj ? { lx: subj.lx, ly: subj.ly } : null;
 }
 
 // Highest tier wins; within a tier, the incident nearest the hat (recency only
@@ -180,9 +198,9 @@ export function topIncident(state, hat) {
   let bestD = 0;
   for (const inc of state.incidents) {
     if (!isLive(inc, state.tick)) continue;
-    const subj = subjectEntity(state.entities, inc.subject);
-    if (!subj) continue;
-    const d = (subj.lx - hat.lx) ** 2 + (subj.ly - hat.ly) ** 2;
+    const pos = incidentPos(state, inc);
+    if (!pos) continue;
+    const d = (pos.lx - hat.lx) ** 2 + (pos.ly - hat.ly) ** 2;
     if (
       !best ||
       inc.tier > best.tier ||
@@ -208,7 +226,8 @@ export function pickSubject(hat, entities, cfg, rng) {
 
 // What the hat should attend to this observe tick: the top live incident (held
 // with a stickiness window so it doesn't flip between simultaneous events), else
-// an ambient subject held for a dwell. Returns { subject: id, standoff }.
+// an ambient subject held for a dwell. Returns { subject, standoff, px, py } —
+// px/py carry the spot when `subject` is POINT_SUBJECT, and are 0 otherwise.
 export function pickWatchTarget(state, hat, cfg, rng) {
   const tick = state.tick;
   const top = topIncident(state, hat);
@@ -223,14 +242,14 @@ export function pickWatchTarget(state, hat, cfg, rng) {
   if (top && top !== held && (!held || top.tier > held.tier || tick - hat.incidentSince >= cfg.stickyTicks)) {
     inc = top; // higher tier preempts at once; same/lower only after the sticky window
   }
-  if (inc && inc.subject >= 0) {
+  if (inc) {
     if (inc !== held) {
       hat.incSubject = inc.subject;
       hat.incBorn = inc.born;
       hat.incidentSince = tick;
     }
     hat.ambientTicks = 0; // leaving the incident later rerolls a fresh relax-subject
-    return { subject: inc.subject, standoff: cfg.inspectNear };
+    return { subject: inc.subject, standoff: cfg.inspectNear, px: inc.px, py: inc.py };
   }
   // empty queue → ambient wander-watch, rerolled once its dwell runs out
   hat.incSubject = -1;
@@ -238,9 +257,14 @@ export function pickWatchTarget(state, hat, cfg, rng) {
   const subjValid = hat.subject >= 0 && !!subjectEntity(state.entities, hat.subject);
   if (!subjValid || --hat.ambientTicks <= 0) {
     hat.ambientTicks = Math.max(1, Math.round(rng.intBetween(cfg.dwellMin, cfg.dwellMax) / hat.moveSpeed));
-    return { subject: pickSubject(hat, state.entities, cfg, rng), standoff: cfg.ambientStandoff };
+    return {
+      subject: pickSubject(hat, state.entities, cfg, rng),
+      standoff: cfg.ambientStandoff,
+      px: 0,
+      py: 0,
+    };
   }
-  return { subject: hat.subject, standoff: cfg.ambientStandoff };
+  return { subject: hat.subject, standoff: cfg.ambientStandoff, px: 0, py: 0 };
 }
 
 // Begin a walk to a fresh vantage axis, resetting the stuck accounting that drives
@@ -283,13 +307,19 @@ function reflexAction(state, hat, cfg) {
 function observeTick(state, hat, cfg, rng) {
   const ents = state.entities;
   const want = pickWatchTarget(state, hat, cfg, rng);
-  if (want.subject !== hat.subject || want.standoff !== hat.td) {
+  // A pinned spot counts as a different target when the spot itself moved (a second
+  // cascade elsewhere), even though the subject sentinel is unchanged.
+  const movedSpot =
+    want.subject === POINT_SUBJECT && (want.px !== hat.subjPx || want.py !== hat.subjPy);
+  if (want.subject !== hat.subject || want.standoff !== hat.td || movedSpot) {
     hat.subject = want.subject;
+    hat.subjPx = want.px;
+    hat.subjPy = want.py;
     hat.td = want.standoff;
-    const se = subjectEntity(ents, hat.subject);
+    const se = watchedTarget(state, hat);
     if (se) startRelocate(hat, bestAxis(se, hat, hat.td, -1, ents, cfg));
   }
-  const s = subjectEntity(ents, hat.subject);
+  const s = watchedTarget(state, hat);
   if (!s) {
     // nobody to watch — amble gently (a plain wander stride; the bounce off a wall
     // is handled where the step is applied).
@@ -353,6 +383,8 @@ function relocateStep(state, hat, s, cfg, ctx) {
       hat.incSubject = -1;
       hat.incBorn = -1;
       hat.subject = -1;
+      hat.subjPx = 0;
+      hat.subjPy = 0;
       hat.ambientTicks = 0;
       hat.relocating = false;
     }

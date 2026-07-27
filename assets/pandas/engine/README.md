@@ -21,12 +21,17 @@ golden-trace gate and Ameya's preview. Progress on the port (task #6):
 | **M1 — world + wander + model-space collision + knock/recover** | ✅ done |
 | **M2 — director + incident queue + 8 tier-1 anomaly FSMs** | ✅ done |
 | **M3 — hat panda (observe / reflex / dive-roll) + 17-action seam + i-frames** | ✅ done |
-| M4 — stack (tier 2) + cascade (tier 3) | next |
-| M5 — presentation port (real sprites/cels/CSS + renderer interpolation), reduced-motion tableau, wire `index.qmd` behind `?engine=old|new` | — |
+| **M4 — stack (tier 2) + cascade (tier 3)** | ✅ done |
+| M5 — presentation port (real sprites/cels/CSS + renderer interpolation), reduced-motion tableau, wire `index.qmd` behind `?engine=old|new` | next |
 
-89 unit tests green, determinism lint clean, golden digests stable Node-side
-(batch `4dbc8291` @ 32 seeds × 10k ticks). Browser-vs-Node parity (task #7) still
+108 unit tests green, determinism lint clean, golden digests stable Node-side
+(batch `e4bb5a41` @ 32 seeds × 10k ticks). Browser-vs-Node parity (task #7) still
 needs a connected Chrome and re-runs against the finished engine.
+
+**The sim is now feature-complete against `pandas.js`** — every behaviour in
+[the map](../../../design/panda-engine-map.md) is ported except the presentation
+layer (§10) and the two beats deliberately deferred to M5 (below). What remains is
+art, interpolation, and the flip.
 
 **M3 scope note.** M3 ships the sim-critical watcher: the attention picker
 (`pickWatchTarget` over the incident queue, with stickiness + abandonment), the
@@ -38,6 +43,41 @@ target for Phase B. Deliberately **deferred to M5 (presentation):** the gaze
 flourish (the planted hat just faces its subject — no random bystander glances yet)
 and the hat-drop / fetch skit (a knocked hat keeps its hat and simply recovers back
 into observing). Those are hand-authored character beats per the plan, not sim.
+
+**M4 scope note.** The two multi-panda set pieces, both driven by their own clock and
+both ending in ordinary collisions rather than special-cased outcomes:
+
+- **The stack (`stack.js`).** One tower at most, every 60–120 s. The director recruits
+  a base with headroom plus the 1–2 nearest free roamers; each climbs (a `flying`
+  ghost) and hops onto the head below; then the tower parades as a single `solid`
+  actor with the riders re-pinned every tick, teetering with a sway that accumulates
+  up the tower. It topples on its parade clock or when a zoomies ploughs into it — the
+  riders drop onto the base so all three hitboxes overlap, every stack flag clears,
+  and the *ordinary* collision pass fells the pile a tick later. The original's nested
+  `setTimeout` assembly became one explicit phase machine (`MOUNT → FLIGHT → PARADE`)
+  on `state.stack`; the rider sway, which was a `performance.now()` sine, is now
+  `riderSway(tick, level, cfg)` — exported so the renderer tilts by the same value
+  that shifts the seats.
+- **The cascade (`cascade.js`).** Arms every 2–5 min and then waits: while unarmed
+  every collision is ordinary. The next natural collision — or a stack topple, the
+  coupling rule — ignites a greedy nearest-neighbour sweep, each faller steered at its
+  own next domino so it lands overlapping. Coverage caps at 70–90% of the roamer
+  universe, so the oblivious one (structurally excluded) and a few out-of-range
+  stragglers always survive. The original's recursive `victim.after(hop, …)` timers
+  became a `pending` queue of scheduled falls keyed by tick. A liveness backstop
+  manufactures an ignition from the panda farthest from the watcher if 40 s pass with
+  no collision, and an ignition under his nose is held for a farther one — he should
+  turn to find the field already going down.
+
+The cascade's tier-3 incident is the first one whose subject is a **place, not a
+panda** (`POINT_SUBJECT`): there is no one body to blame for the carnage, so the
+watcher walks to the origin and stands among them. The watcher's target resolution
+(`watchedTarget`) handles a panda and a spot interchangeably.
+
+Two cross-tier races are guarded (both exist in the original, both look broken when
+they land): tier 2 will not recruit a panda a cascade front has already claimed, and
+a scheduled fall on a panda that joined a tower meanwhile is dropped rather than
+yanking a rider out of mid-air.
 
 ## Core model
 
@@ -100,7 +140,9 @@ optional action for it; everything else is autonomous.
 | `state.js` | Entity factory, `MODE`/`ANIM`/`KNOCK` enums, `isDown`, `easeVisual`/`snapVisual`, `spawnEntities`. |
 | `collision.js` | Model-space corner-proximity collision (replaces `getBoundingClientRect`); i-frames while the hat rolls. |
 | `anomalies.js` | The 8 tier-1 FSMs (`startAnomaly`/`updateAnomaly`) + shared grounded fall→lie→stand tail. |
-| `director.js` | Tier-1 scheduler (pick kind≠last + eligible candidate) + the incident queue (`emitIncident`/`pruneIncidents`). |
+| `director.js` | Tier-1 scheduler (pick kind≠last + eligible candidate), the shared `isFreeRoamer` pool test, and the incident queue (`emitIncident`/`pruneIncidents`). |
+| `stack.js` | Tier 2: the tower — director, mount walk + hop, parade with accumulating sway, topple. Exports `riderSway` for the renderer. |
+| `cascade.js` | Tier 3: the arming clock, the nearest-neighbour sweep (`igniteCascade`/claims/scheduled falls), `cascadeKnock`, the liveness backstop. |
 | `actions.js` | The hat panda's 17-way discrete action interface (`hold / step×8 / roll×8`) — the policy seam. |
 | `watcher.js` | The hat panda's rules brain: attention picker + observe/reflex logic, emitting one action per decision tick (`rulesAction`). |
 | `hat.js` | The engine side of the seam: executes an action (`updateHat`), runs the roll + knock mechanics. |
@@ -110,7 +152,7 @@ optional action for it; everything else is autonomous.
 | `tools/trace.js` | Engine-agnostic golden-trace runner (`runSeed`/`runTrace`/`firstDivergence`) + the 32-seed set. |
 | `tools/golden.js` | CLI: run an engine across 32 seeds × N ticks, print per-seed + batch digests. |
 | `tools/golden.html` | Browser side of the same computation — its batch digest must equal the CLI's. |
-| `tools/preview.html` | Dev preview: full-window stage, hero-card fence, density slider, anomaly tags. **Schematic shapes, not the shipped sprites.** |
+| `tools/preview.html` | Dev preview: full-window stage, hero-card fence, density slider, anomaly/role tags, stack + cascade readouts, and buttons that nudge the tier-2/3 clocks so the rare set pieces are watchable. **Schematic shapes, not the shipped sprites.** |
 | `tools/demo-engine.js` | A toy engine that proved the harness before the real engine existed. Deletable. |
 | `tools/lint-determinism.js` | Fails if engine code reaches for `Math.random` / clock / timers / rAF / raw transcendentals. |
 | `test/` | `node --test` unit tests for every module. |
@@ -139,18 +181,30 @@ batch digest equals `node tools/golden.js --engine ./engine.js --ticks 10000`.
   ticks.
 - No dependencies. Node's built-in test runner only.
 
-## Picking up at M4
+## Picking up at M5
 
-M4 ports the **tier-2 stack** and **tier-3 cascade** — the two multi-panda set
-pieces. The stack: `stackDirector` (a singleton `activeStack`, needs pool ≥3 and a
-base with headroom), the mount walk-up + `throwArc` hop, the parade `tick` (base
-strides with rider sway as a function of tick count, not `perf.now`), and `topple`
-(drop the solid/anomaly flags → the 3-way knock next collision tick). The cascade:
-the global BFS (`igniteCascade` → `fellNext` claiming victims into `cascadeLock`,
-each `cascadeKnock` steered at its nearest neighbour), armed by `cascadeDirector`
-and ignited externally by a natural armed collision, a topple, or the `forceIgnite`
-backstop. New collision-role modes (STACK_BASE / RIDER, the `solid`/`riding`/
-`flying` flags already stubbed in the entity) slot into the `mode` tag. Source
-spec: `design/panda-engine-map.md` §5 (Stack + Cascade), §6 (`cascadeKnock`,
-`throwArc`); original `../pandas.js` classes ~1367–1490 (Stack) and functions
-~1514–1635 (Cascade). The 17-action seam + hat brain from M3 are unaffected.
+The sim is done; M5 is the **presentation port** — everything in
+`design/panda-engine-map.md` §10, which is the cut line the engine was built to.
+
+1. **Renderer.** Map `(x, y, dir, anim, mode)` onto the shipped DOM/sprite layer:
+   `applyTransform` (translate + `zIndex` from `y`; riders take `baseY + stackLevel`),
+   `setFacing`/`drawFrame` cel selection from `anim`, and the CSS state classes
+   (`.stop` / `.observing` / `.hatless` / `.riding` / `.flying`). Note the engine
+   already owns what `.stop` used to imply — `snapVisual` vs `easeVisual` — so the
+   class becomes purely cosmetic. Interpolate between the last two ticks for smooth
+   motion at 50 ms; interpolation must never feed back into state.
+2. **The seated riders.** The engine uses one `riderRise` (62 px) for seat geometry;
+   the real art has a per-facing seat height from `SIT_CELS`. Refine in the renderer
+   only — reproducing it inside the engine would drag art data into sim state.
+   Tilt each rider by `riderSway(tick, level, cfg) * cfg.sitTiltDeg`.
+3. **The deferred character beats** (both hand-authored per the plan, neither in sim):
+   the **gaze flourish** (bystander glances / the look-around — the engine only faces
+   the subject) and the **hat-drop + fetch skit** (`dropHat`/`retrieveHat`; today a
+   knocked hat panda keeps its hat and simply recovers into observing).
+4. **Reduced-motion tableau** (`cfg.reduced`, map §8): the frozen composition, not a
+   scatter — one panda down, a static 3-high stack, the watcher planted at
+   `inspectNear` facing the fallen one, bystanders ≥ `tableauGap` apart. No ticking.
+5. **The flip.** Wire `index.qmd` behind `?engine=old|new` (default `old`), then run
+   the **browser-vs-Node parity gate** (task #7): `tools/golden.html?ticks=10000` must
+   print the same batch digest as the CLI. Ameya's preview judgment is the character
+   gate and comes before any default flip.

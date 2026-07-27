@@ -31,17 +31,29 @@ export const MODE = Object.freeze({
   // never collide with the tier-1 anomaly modes above.
   OBSERVING: 10, // navigating to / holding a vantage, studying a subject
   ROLLING: 11, // mid dive-roll (his one fast escape) — i-frames active
+  // The tier-2 stack's three roles (M4). All three are driven by stack.js, not by
+  // the per-entity update, and all three are collision-special (see the flags).
+  STACK_BASE: 12, // the bottom panda: `solid`, carries the tower
+  MOUNTING: 13, // climbing: walking up to the base, then mid-hop (`flying` ghost)
+  RIDING: 14, // seated above the base, pinned (`riding` ghost)
 });
 export const MODE_NAME = [
   'wander', 'knocked', 'sleeper', 'tumbler', 'spinner',
   'loop', 'starer', 'zoomies', 'moonwalk', 'hiccup',
-  'observing', 'rolling',
+  'observing', 'rolling', 'stackBase', 'mounting', 'riding',
 ];
 
 // Sentinel for the watcher's "distance to vantage last stride" when a relocate has
 // just begun — a large finite value (not Infinity) so it hashes cleanly in golden
 // traces and the first stride always reads as progress.
 export const UNSET_GAP = 1e15;
+
+// A subject that is a fixed point on the stage rather than a panda. The tier-3
+// cascade posts one at the origin of the carnage (the original passed a bare
+// `{x, y}` where every other incident passed a panda) — the watcher scrambles to
+// the spot and stands among the bodies, because there is no one body to blame.
+// Entity ids are >= 0, so a negative sentinel can never collide with one.
+export const POINT_SUBJECT = -2;
 
 // Animation names — which sprite cel-cycle the presentation plays.
 export const ANIM = Object.freeze({
@@ -112,6 +124,9 @@ export function makeEntity(id, x, y, opts = {}) {
     slideVx: 0,
     slideVy: 0,
     hit: -1, // heading index of the last contact, or -1
+    // True while this fall belongs to a cascade front (a steered domino rather than
+    // an ordinary shove). It is what releases the panda's cascade claim on standing.
+    cascadeFall: false,
 
     // Anomaly scratch — reused across the 8 tier-1 FSMs (each mode interprets
     // these in its own terms; see anomalies.js).
@@ -122,11 +137,17 @@ export function makeEntity(id, x, y, opts = {}) {
     aLie: 0, // grounded lie duration (ticks), for anomalies that end face-down
     aStep: 0, // in-cycle counter (hiccup strides before a pop)
 
-    // Collision role flags (all false in Milestone 1; wired by later milestones).
+    // Collision role flags. `solid` = an unstoppable force (the stack's base: knocks
+    // non-solids, is never knocked, passes through other solids); `flying` = mid-arc;
+    // `riding` = pinned above a base; `entering` = still walking in. The last three
+    // are collision ghosts. Set/cleared by stack.js (M4).
     solid: false,
     flying: false,
     riding: false,
     entering: false,
+    // Which tier of the tower this panda is: 0 = not a rider, 1 = first rider up, 2 =
+    // the one above it. Drives seat height + the sway phase offset (presentation).
+    stackLevel: 0,
 
     // Identity / role.
     hasHat: !!opts.hasHat,
@@ -140,7 +161,9 @@ export function makeEntity(id, x, y, opts = {}) {
     // shape is uniform and shallow-cloning `{...e}` stays correct. All primitives —
     // no nested object to deep-copy. The picker/policy in watcher.js reads/writes
     // these; encode() serialises them for the hat only.
-    subject: -1, // id of the panda being watched, or -1
+    subject: -1, // id of the panda being watched, POINT_SUBJECT for a spot, or -1
+    subjPx: 0, // that spot's coordinates — meaningful only when subject is POINT_SUBJECT
+    subjPy: 0,
     td: 0, // current standoff distance to keep
     relocating: false, // walking to a vantage (vs. planted)
     vAxis: 0, // which of the 8 sprite axes he's approaching on
@@ -154,6 +177,34 @@ export function makeEntity(id, x, y, opts = {}) {
     rollReadyAt: 0, // tick the dive-roll cooldown expires
     action: 0, // last 17-way action applied (for BC logging + golden traces)
   };
+}
+
+// Begin a knock: face the impact, drop into the fall phase, and carry a knockback
+// slide across the fall cels. Lie time is drawn now, at onset. The one entry point
+// for going down involuntarily — an ordinary collision (engine.js, slide = IMPACT px
+// away from the struck side) and a cascade domino (cascade.js, slide = the steered
+// gap to the next victim) differ only in the vector they hand in. A knock outranks
+// any anomaly, so the FSM scratch is cleared.
+export function beginKnock(e, cfg, rng, { faceDir, slideVx, slideVy, cascade = false }) {
+  e.aPhase = 0;
+  e.aTimer = 0;
+  e.aCount = 0;
+  e.aHeading = 0;
+  e.aLie = 0;
+  e.aStep = 0;
+  e.mode = MODE.KNOCKED;
+  e.knockPhase = KNOCK.FALL;
+  e.knockTimer = cfg.fallTicks;
+  e.knockLie = cfg.lieTimesTicks[rng.int(cfg.lieTimesTicks.length)];
+  e.hit = faceDir;
+  e.dir = faceDir; // faces the impact
+  e.anim = ANIM.FALL;
+  e.cascadeFall = cascade;
+  // The slide starts from where the panda visually is; logical snaps to it.
+  e.lx = e.x;
+  e.ly = e.y;
+  e.slideVx = slideVx;
+  e.slideVy = slideVy;
 }
 
 // Advance a KNOCKED entity's fall -> lie -> stand-up skid one tick. Returns true
@@ -203,6 +254,8 @@ export function advanceKnock(e, cfg) {
 // exactly as the original's knock() -> observe() did). The roll cooldown persists.
 export function resetObserveBrain(e, cfg) {
   e.subject = -1;
+  e.subjPx = 0;
+  e.subjPy = 0;
   e.td = cfg.ambientStandoff;
   e.relocating = true;
   e.vAxis = 0;
