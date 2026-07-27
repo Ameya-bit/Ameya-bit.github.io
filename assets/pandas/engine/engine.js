@@ -1,0 +1,220 @@
+// The engine — pure, fixed-tick `step(state) -> state`.
+//
+// Milestone 1: the physics foundation — a field of pandas that wander (with the
+// oblivious one keeping to its patch) and a model-space collision → knock → fall
+// → lie → stand-up → recover cycle. Anomalies, the hat-panda watcher, the stack,
+// and the cascade attach on top in later milestones.
+//
+// State is a plain, serialisable object; every tick is a pure function of the one
+// before it, so any tick can be snapshotted, hashed (golden traces), or resumed.
+// Config lives inside state so `step(state)` needs nothing else. Randomness is the
+// mulberry32 seed threaded through state.rng; draw order is entity-id order, then
+// collision, so it is identical in Node and the browser.
+
+import { Rng } from './rng.js';
+import { makeConfig, DEFAULT_CONFIG } from './config.js';
+import { DX, DY, wrapDir, opposite, dirName, eightWay } from './dirs.js';
+import { applyPos } from './geometry.js';
+import { detectCollisions } from './collision.js';
+import { MODE, ANIM, KNOCK, spawnEntities, isDown, easeVisual, advanceKnock } from './state.js';
+import { updateAnomaly } from './anomalies.js';
+import { initDirector, runDirector, pruneIncidents } from './director.js';
+import { updateHat } from './hat.js';
+
+// ---- per-entity update (movement + knock FSM) ----
+
+// Advance one entity by one tick. Returns a NEW entity object (input untouched).
+function updateEntity(e, cfg, rng) {
+  if (e.mode === MODE.WANDER) return updateWander(e, cfg, rng);
+  if (e.mode === MODE.KNOCKED) return updateKnocked(e, cfg);
+  // An anomaly mode: advance its FSM on a clone. (The hat panda is handled
+  // separately in updateHat and never reaches here.)
+  const next = { ...e };
+  updateAnomaly(next, cfg, rng);
+  return next;
+}
+
+function updateWander(e, cfg, rng) {
+  const next = { ...e };
+
+  // A stride fires when the cadence timer elapses.
+  if (--next.moveTimer <= 0) {
+    if (next.oblivious && rng.chance(cfg.obliviousIdleP)) {
+      // The oblivious one often just idles in place — logical position holds.
+      next.anim = ANIM.IDLE;
+      next.moveTimer = rng.intBetween(cfg.obliviousIdleMin, cfg.obliviousIdleMax);
+    } else {
+      next.anim = ANIM.WALK;
+      wanderStep(next, cfg, rng); // advances the logical position (lx, ly)
+      next.moveTimer = next.moveSpeed;
+    }
+  }
+
+  // Every tick, the visual position eases toward the logical one — the glide.
+  easeVisual(next, cfg);
+  return next;
+}
+
+// One wander stride: turn a little (or head home if the oblivious one strayed),
+// step STEP px on the LOGICAL position, and bounce (turn around) if a wall/fence
+// blocks both axes. Mutates the already-cloned `e`.
+function wanderStep(e, cfg, rng) {
+  const strayed =
+    e.oblivious &&
+    e.home &&
+    (e.lx - e.home[0]) ** 2 + (e.ly - e.home[1]) ** 2 > cfg.obliviousRadius ** 2;
+
+  if (strayed) {
+    e.dir = eightWay(e.home[0] - e.lx, e.home[1] - e.ly);
+  } else {
+    e.dir = wrapDir(e.dir + rng.pick(cfg.turnOptions));
+  }
+
+  const candX = e.lx + DX[e.dir] * cfg.step;
+  const candY = e.ly + DY[e.dir] * cfg.step;
+  const moved = applyPos(cfg, e.lx, e.ly, candX, candY);
+  const blocked = moved.x === e.lx && moved.y === e.ly;
+  e.lx = moved.x;
+  e.ly = moved.y;
+  if (blocked) e.dir = opposite(e.dir); // walk away from the wall, don't moonwalk into it
+}
+
+function updateKnocked(e, cfg) {
+  const next = { ...e };
+  // Shared fall → lie → stand-up skid (state.advanceKnock). A roamer that finishes
+  // recovering rejoins the wander; the hat panda's knock is advanced in updateHat
+  // instead, which routes recovery back into observing.
+  if (advanceKnock(next, cfg)) {
+    next.mode = MODE.WANDER;
+    next.anim = ANIM.WALK;
+  }
+  return next;
+}
+
+// ---- collision → knocks ----
+
+// Apply this tick's collisions to the freshly-updated entities (mutating them in
+// place — they are this step's own new objects, not shared with the input state).
+// A panda already down is left alone; a fresh contact starts its knock.
+function applyCollisions(entities, cfg, rng) {
+  const hits = detectCollisions(entities, cfg);
+  if (hits.length === 0) return entities;
+  const byId = new Map(entities.map((e) => [e.id, e]));
+  for (const { id, hit } of hits) {
+    const e = byId.get(id);
+    if (isDown(e)) continue; // already on the ground (knock, nap, trip, crash) — can't re-knock
+    if (e.mode === MODE.ROLLING) continue; // dive-roll i-frames — the committed escape is invulnerable
+    startKnock(e, hit, cfg, rng); // a real knock overrides an in-progress anomaly
+  }
+  return entities;
+}
+
+// Begin a knock: face the impact, drop into the fall phase, and set the slide
+// vector (IMPACT px away from the struck side). Lie time is drawn now, at onset.
+function startKnock(e, hit, cfg, rng) {
+  const name = dirName(hit);
+  // A knock outranks any anomaly — clear its scratch so no stale FSM state leaks.
+  e.aPhase = 0;
+  e.aTimer = 0;
+  e.aCount = 0;
+  e.aHeading = 0;
+  e.aLie = 0;
+  e.aStep = 0;
+  e.mode = MODE.KNOCKED;
+  e.knockPhase = KNOCK.FALL;
+  e.knockTimer = cfg.fallTicks;
+  e.knockLie = cfg.lieTimesTicks[rng.int(cfg.lieTimesTicks.length)];
+  e.hit = hit;
+  e.dir = hit; // faces the impact
+  e.anim = ANIM.FALL;
+  // The slide starts from where the panda visually is; logical snaps to it.
+  e.lx = e.x;
+  e.ly = e.y;
+  e.slideVx = (name.includes('left') ? cfg.impact : 0) - (name.includes('right') ? cfg.impact : 0);
+  e.slideVy = (name.includes('up') ? cfg.impact : 0) - (name.includes('down') ? cfg.impact : 0);
+}
+
+// ---- the public engine ----
+
+export function makeEngine(userConfig = {}) {
+  const cfg = makeConfig(userConfig);
+
+  const init = (seed) => {
+    const rng = new Rng(seed);
+    const entities = spawnEntities(rng, cfg);
+    return {
+      tick: 0,
+      rng: rng.state,
+      cfg,
+      entities,
+      director: initDirector(cfg),
+      incidents: [],
+    };
+  };
+
+  const step = (state, action = null) => {
+    const rng = new Rng(state.rng);
+    const c = state.cfg;
+    const next = {
+      tick: state.tick + 1,
+      rng: 0,
+      cfg: c,
+      // The hat panda is updated separately (updateHat), after the director, so it
+      // reasons about this tick's positions and the freshest incident queue — here
+      // it is only cloned.
+      entities: state.entities.map((e) => (e.hasHat ? { ...e } : updateEntity(e, c, rng))),
+      director: { ...state.director },
+      // Deep copy: the hat may mark an incident abandoned, and the input state must
+      // stay untouched (purity at the tick boundary).
+      incidents: state.incidents.map((inc) => ({ ...inc })),
+    };
+    // Order: roamers/anomalies → director (may start an anomaly + emit an incident)
+    // → the hat (reads incidents, emits its 17-way action) → collisions (may knock,
+    // overriding an anomaly; the hat's roll is i-framed) → prune the queue.
+    runDirector(next, c, rng);
+    updateHat(next, c, rng, action);
+    applyCollisions(next.entities, c, rng);
+    pruneIncidents(next);
+    next.rng = rng.state;
+    return next;
+  };
+
+  const encode = (state) => {
+    const out = [state.tick, state.rng, state.director.nextAt, state.director.last, state.incidents.length];
+    for (const e of state.entities) {
+      out.push(
+        e.x, e.y, e.lx, e.ly, e.dir, e.mode, e.anim, e.moveTimer,
+        e.knockPhase, e.knockTimer, e.slideVx, e.slideVy,
+        e.aPhase, e.aTimer, e.aCount, e.aHeading, e.aLie, e.aStep,
+      );
+    }
+    // The hat panda's watcher brain — only the hat carries meaningful values, so
+    // append them once rather than per entity. All of it feeds future ticks, so
+    // the golden trace must cover it.
+    const h = state.entities.find((e) => e.hasHat);
+    if (h) {
+      out.push(
+        h.subject, h.td, h.relocating ? 1 : 0, h.vAxis, h.stuck, h.revantaged ? 1 : 0,
+        h.stuckPrev, h.incSubject, h.incBorn, h.incidentSince, h.ambientTicks,
+        h.rollReadyAt, h.action,
+      );
+    }
+    return out;
+  };
+
+  return { init, step, encode, cfg };
+}
+
+// The action the built-in expert actually applied each tick is recorded on the hat
+// entity as `hat.action` (encode() serialises it) — that is the exact, side-effect-
+// free behaviour-cloning target for Phase B: just read it off the stepped state.
+// The raw `rulesAction` (which MUTATES the hat's brain — it *is* the expert, not a
+// dry-run query) and the ACTION vocabulary are re-exported for the trainer/NN seam.
+export { ACTION } from './actions.js';
+export { rulesAction } from './watcher.js';
+
+// Default engine (live-site config) — the module the golden-trace CLI loads.
+const defaultEngine = makeEngine(DEFAULT_CONFIG);
+export const init = defaultEngine.init;
+export const step = defaultEngine.step;
+export const encode = defaultEngine.encode;

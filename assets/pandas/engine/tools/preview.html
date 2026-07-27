@@ -1,0 +1,201 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>panda engine — live preview (Milestone 1)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { color-scheme: light dark; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #1a1a1a; background: #faf8f3; display: flex; flex-direction: column;
+  }
+  @media (prefers-color-scheme: dark) { body { color: #e8e4da; background: #16150f; } }
+  header { padding: .5rem .75rem; border-bottom: 1px solid rgba(128,128,128,.25); }
+  .controls { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  button, input { font: inherit; }
+  button { padding: .2rem .6rem; cursor: pointer; }
+  label { display: inline-flex; gap: .35rem; align-items: center; white-space: nowrap; }
+  #stage { position: relative; flex: 1; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .muted { opacity: .65; }
+  b { font-weight: 700; }
+</style>
+
+<header>
+  <div class="controls">
+    <button id="playBtn">⏸ pause</button>
+    <button id="stepBtn">▸ step</button>
+    <label>seed <input id="seed" type="number" value="20260726" style="width:10ch" /></label>
+    <button id="reseedBtn">↻ reseed</button>
+    <label>speed <input id="speed" type="range" min="0.25" max="3" step="0.25" value="1" /><span id="speedVal">1.0×</span></label>
+    <label>density <input id="density" type="range" min="55000" max="300000" step="5000" value="217000" style="width:180px" /></label>
+    <span id="densityVal" class="muted"></span>
+  </div>
+  <div id="stats" class="muted" style="margin-top:.35rem"></div>
+</header>
+
+<div id="stage"><canvas id="c"></canvas></div>
+
+<script type="module">
+  import { makeEngine } from '../engine.js';
+  import { MODE, ANIM, KNOCK, MODE_NAME, isDown } from '../state.js';
+  import { DX, DY } from '../dirs.js';
+  import { TICK_MS } from '../tick.js';
+  import { pandaCountForViewport, freeArea } from '../layout.js';
+
+  // Short tags shown under a panda mid-anomaly, so behaviours are legible.
+  const TAG = { sleeper: 'sleep', tumbler: 'trip', spinner: 'spin', loop: 'loop', starer: 'stare', zoomies: 'zoom', moonwalk: 'moon', hiccup: 'hic' };
+
+  const canvas = document.getElementById('c');
+  const stageEl = document.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+
+  let engine, state, W, H, forbid, playing = true, speedMul = 1, acc = 0, last = 0;
+
+  // A hero-card-sized fence, centered-left like the real .hero-inner, scaled to
+  // the viewport but clamped so it stays card-shaped on any screen.
+  function computeFence(w, h) {
+    const fw = Math.min(560, Math.max(360, w * 0.28));
+    const fh = Math.min(320, Math.max(220, h * 0.30));
+    const l = w * 0.42 - fw / 2;
+    const t = h * 0.54 - fh / 2;
+    return { l, t, r: l + fw, b: t + fh };
+  }
+
+  function rebuild() {
+    // Match the canvas backing store to its on-screen pixel size (the real stage).
+    W = Math.max(320, Math.round(stageEl.clientWidth));
+    H = Math.max(240, Math.round(stageEl.clientHeight));
+    canvas.width = W;
+    canvas.height = H;
+    forbid = computeFence(W, H);
+    const areaPerPanda = Number(document.getElementById('density').value);
+    const pandaCount = pandaCountForViewport(W, H, forbid, { areaPerPanda });
+    engine = makeEngine({ width: W, height: H, forbid, pandaCount });
+    state = engine.init(Number(document.getElementById('seed').value) | 0);
+    acc = 0;
+    const perK = Math.round(freeArea(W, H, forbid) / pandaCount / 1000);
+    document.getElementById('densityVal').textContent =
+      `${pandaCount} pandas · ${perK}k px²/panda · stage ${W}×${H}`;
+  }
+
+  // ---- drawing ----
+  const CELL = 100;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // fence
+    ctx.strokeStyle = 'rgba(128,128,128,.35)';
+    ctx.setLineDash([6, 5]);
+    ctx.strokeRect(forbid.l, forbid.t, forbid.r - forbid.l, forbid.b - forbid.t);
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(128,128,128,.05)';
+    ctx.fillRect(forbid.l, forbid.t, forbid.r - forbid.l, forbid.b - forbid.t);
+
+    for (const e of [...state.entities].sort((a, b) => a.y - b.y)) {
+      const cx = e.x + CELL / 2, cy = e.y + CELL / 2;
+      const down = isDown(e); // knocked OR a grounded anomaly (nap, trip, crash)
+      const anomaly = e.mode >= MODE.SLEEPER && e.mode <= MODE.HICCUP; // tier-1 kinds only, not the hat's OBSERVING/ROLLING
+      const body = 20;
+
+      // motion streaks: a zoomies dash, or the hat panda's dive-roll (his one burst)
+      if (e.mode === MODE.ZOOMIES) {
+        ctx.strokeStyle = 'rgba(80,120,200,.35)'; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - DX[e.dir] * 34, cy - DY[e.dir] * 34); ctx.stroke();
+      } else if (e.mode === MODE.ROLLING) {
+        ctx.strokeStyle = 'rgba(192,138,62,.5)'; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - DX[e.dir] * 30, cy - DY[e.dir] * 30); ctx.stroke();
+      }
+
+      // the hat panda's attention: a faint thread to whatever it is watching
+      if (e.hasHat && e.subject >= 0) {
+        const subj = state.entities.find((q) => q.id === e.subject);
+        if (subj) {
+          ctx.strokeStyle = 'rgba(192,138,62,.25)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(subj.x + CELL / 2, subj.y + CELL / 2); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (down) {
+        ctx.rotate(0.5);
+        ctx.fillStyle = (e.knockPhase === KNOCK.LIE || e.anim === ANIM.FALLEN) ? '#b04a3a' : '#c8735f';
+        ctx.beginPath();
+        ctx.ellipse(0, 6, body * 1.15, body * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = e.oblivious ? '#e7ddc2' : '#f6f3ec';
+        ctx.strokeStyle = '#2a2724';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, body, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#2a2724';
+        for (const sx of [-1, 1]) {
+          ctx.beginPath();
+          ctx.arc(sx * body * 0.62, -body * 0.72, body * 0.32, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = '#6a655c';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(DX[e.dir] * body * 0.9, DY[e.dir] * body * 0.9);
+        ctx.stroke();
+        if (e.anim === ANIM.IDLE && !anomaly) { ctx.fillStyle = '#8a8578'; ctx.font = '11px monospace'; ctx.fillText('z', body * 0.5, -body * 0.9); }
+      }
+      // anomaly tag under the panda (both on-feet and grounded kinds)
+      if (anomaly) {
+        ctx.fillStyle = '#3b6fb0'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(TAG[MODE_NAME[e.mode]] || '', 0, body + 16);
+        ctx.textAlign = 'start';
+      }
+      if (e.hasHat) {
+        ctx.strokeStyle = '#c08a3e'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, body + 5, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#c8973f';
+        ctx.beginPath();
+        ctx.moveTo(-body * 0.9, -body * 0.7); ctx.lineTo(body * 0.9, -body * 0.7); ctx.lineTo(0, -body * 1.5);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  function frame(now) {
+    if (!last) last = now;
+    let dt = now - last; last = now;
+    if (dt > 250) dt = 250;
+    if (playing) {
+      acc += dt * speedMul;
+      while (acc >= TICK_MS) { state = engine.step(state); acc -= TICK_MS; }
+    }
+    draw();
+    const down = state.entities.filter(isDown).length;
+    const active = state.entities.filter((e) => e.mode >= MODE.SLEEPER && e.mode <= MODE.HICCUP)
+      .map((e) => MODE_NAME[e.mode]);
+    const tally = active.reduce((m, k) => ((m[k] = (m[k] || 0) + 1), m), {});
+    const anomStr = Object.entries(tally).map(([k, v]) => `${TAG[k]}${v > 1 ? '×' + v : ''}`).join(' ');
+    const hat = state.entities.find((e) => e.hasHat);
+    const hatStr = hat ? `${MODE_NAME[hat.mode]}${hat.subject >= 0 ? ' →#' + hat.subject : ''}` : '—';
+    document.getElementById('stats').innerHTML =
+      `tick <b>${state.tick}</b> · down <b>${down}</b>/${state.entities.length} · anomalies: <b>${anomStr || '—'}</b> · incidents ${state.incidents.length} · hat: <b>${hatStr}</b>`;
+    requestAnimationFrame(frame);
+  }
+
+  // ---- controls ----
+  document.getElementById('playBtn').onclick = (ev) => { playing = !playing; ev.target.textContent = playing ? '⏸ pause' : '▶ play'; };
+  document.getElementById('stepBtn').onclick = () => { state = engine.step(state); };
+  document.getElementById('reseedBtn').onclick = rebuild;
+  const speed = document.getElementById('speed');
+  speed.oninput = () => { speedMul = Number(speed.value); document.getElementById('speedVal').textContent = speedMul.toFixed(2) + '×'; };
+  document.getElementById('density').oninput = rebuild;
+
+  let resizeTimer;
+  addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(rebuild, 150); });
+
+  rebuild();
+  requestAnimationFrame(frame);
+</script>
