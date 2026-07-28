@@ -143,8 +143,10 @@ test('the float32 headroom watch reads the end of the episode, not just its star
   const cut = cutEpisode({ seed, config, path: join(dir, 'ep.bin'), ticks, stride: 2, warmup: 0 });
   // `tick` only grows, so the first row's labels are the smallest in the episode.
   // A watch that never looked past them would report a peak under the last tick and
-  // would miss a monotonic counter walking off float32's exact range.
-  assert.ok(cut.peak >= ticks, `peak ${cut.peak} is below the episode's last tick ${ticks}`);
+  // would miss a monotonic counter walking off float32's exact range. The last row's
+  // truth is taken at `ticks - 1`, since a row is the decision the action was made at.
+  const lastTruthTick = ticks - 1;
+  assert.ok(cut.peak >= lastTruthTick, `peak ${cut.peak} is below the last recorded tick ${lastTruthTick}`);
   assert.ok(cut.peak < FLOAT32_EXACT_INT);
 }));
 
@@ -312,8 +314,11 @@ test('the JSONL sample is a decode of the bytes, not a second rendering of them'
     assert.equal(line.actionName, ACTION_NAME[row.action]);
     assert.deepEqual(line.truth, JSON.parse(JSON.stringify(row.truth)));
     // The tick is derived from the recording schedule; ground truth carries the
-    // engine's own. They agree, or the schedule arithmetic is wrong.
-    assert.equal(line.tick, row.truth.global.tick);
+    // engine's own. A row is a decision (D0), so truth is the tick *before* the
+    // action's — and the sample says so out loud rather than leaving it to be
+    // inferred from a version number.
+    assert.equal(line.obsTick, line.tick - 1);
+    assert.equal(line.obsTick, row.truth.global.tick);
     // Named observation fields point back at the same floats.
     const named = describeFrame(row.obs, manifest.observation);
     assert.deepEqual(line.obs.self, JSON.parse(JSON.stringify(named.self)));

@@ -11,7 +11,7 @@
 // stays at exactly 20 Hz regardless of display refresh rate.
 
 import { makeEngine } from '../engine.js';
-import { TICK_MS } from '../tick.js';
+import { TICK_MS, TICKS_PER_ACTION } from '../tick.js';
 import { pandaCountForViewport } from '../layout.js';
 import { makeRenderer } from './renderer.js';
 import { makeFlourish } from './flourish.js';
@@ -56,6 +56,9 @@ function computeFence(stage, cardSelector) {
  * @param {boolean} [opts.reduced]     force the static tableau
  * @param {number} [opts.areaPerPanda] density override (dev slider)
  * @param {object} [opts.config]       extra engine config overrides
+ * @param {object} [opts.policy]       a `{ init(ctx) }` brain for the hat panda
+ *                                     (Phase D's `?policy=nn`); default is the
+ *                                     built-in rules expert
  * @returns {{destroy: () => void, get state(): object}}
  */
 export function mountPandas(stage, opts = {}) {
@@ -81,6 +84,18 @@ export function mountPandas(stage, opts = {}) {
   let destroyed = false;
   let resizeTimer = 0;
 
+  // The hat panda's brain, when it is not the built-in rules expert. `policy` is the
+  // factory; `act` is this world's bound instance, re-minted whenever the world is —
+  // it holds an episode's slot memory and frame history, and a rebuild is a new
+  // episode. Null for both means the engine's own expert drives, which is the
+  // default and the fallback.
+  let policy = opts.policy ?? null;
+  let act = null;
+  // The seed this world was built from. `state` carries the PRNG's *current* value,
+  // not the one it started at, and a policy attaching mid-visit needs the latter to
+  // seed its own stream reproducibly.
+  let worldSeed = 0;
+
   // ---- world construction ----
 
   function buildConfig() {
@@ -99,6 +114,20 @@ export function mountPandas(stage, opts = {}) {
   // through state, so the run remains perfectly reproducible from it.
   const seedForVisit = () => (opts.seed ?? Date.now()) | 0;
 
+  // Bind the policy to this world. Anything it throws (a weight file that does not
+  // match this encoder, most likely) costs the page nothing: the rules expert is
+  // still there, and it is what would have driven anyway.
+  function bindPolicy(seed) {
+    act = null;
+    if (!policy) return;
+    try {
+      act = policy.init({ seed, cfg: engine.cfg });
+    } catch (err) {
+      console.warn('[pandas] policy failed to start; the rules expert is driving', err);
+      policy = null;
+    }
+  }
+
   function build() {
     renderer?.clear();
     const config = buildConfig();
@@ -110,8 +139,10 @@ export function mountPandas(stage, opts = {}) {
       return false;
     }
     engine = makeEngine(config);
-    state = engine.init(seedForVisit());
+    worldSeed = seedForVisit();
+    state = engine.init(worldSeed);
     if (config.reduced) state = buildTableau(state, engine.cfg);
+    bindPolicy(worldSeed);
     prevState = state;
     renderer = renderer ?? makeRenderer(stage);
     flourish = flourish ?? makeFlourish(stage);
@@ -147,6 +178,41 @@ export function mountPandas(stage, opts = {}) {
 
   // ---- the loop ----
 
+  // Who decides this tick. Three claimants, in order:
+  //
+  //  1. **The flourish**, whenever it wants him — the hat-drop skit is authored
+  //     character and outranks any brain, exactly as it outranks the rules expert.
+  //  2. **The policy**, on decision ticks only (10 Hz), fed the state it is acting
+  //     *from* — which is the pairing the corpora were recorded at (D0) and the one
+  //     the trainer's `runEpisode` uses, so page and trainer ask the same question.
+  //  3. **null**, which is the engine's own rules expert.
+  //
+  // The policy is consulted even while the skit owns him, and its answer thrown away.
+  // That looks wasteful and is the cheap option: the frame ring has to stay a run of
+  // *consecutive* decisions or the stacked-frame input silently means something else,
+  // and a forward pass costs ~0.5 ms against a 100 ms decision period.
+  function actionFor(current) {
+    const scripted = flourish.action(current);
+    const next = current.tick + 1;
+    const chosen = act && next % TICKS_PER_ACTION === 0 ? safeAct(current, next) : null;
+    return scripted ?? chosen;
+  }
+
+  // A policy that throws mid-visit is a bug, not an emergency: log it once, drop back
+  // to the rules expert, and let the page carry on. `driver.js` already returns null
+  // rather than throwing for the expected failures (NaN logits, an unusable
+  // distribution) — this is for the unexpected ones.
+  function safeAct(current, tick) {
+    try {
+      return act(current, tick);
+    } catch (err) {
+      console.warn('[pandas] policy threw; the rules expert is driving from here', err);
+      act = null;
+      policy = null;
+      return null;
+    }
+  }
+
   function frame(now) {
     rafId = requestAnimationFrame(frame);
     const dt = Math.min(MAX_FRAME_MS, lastFrame ? now - lastFrame : 0);
@@ -156,7 +222,7 @@ export function mountPandas(stage, opts = {}) {
     acc += dt;
     while (acc >= TICK_MS) {
       prevState = state;
-      state = engine.step(state, flourish.action(state));
+      state = engine.step(state, actionFor(state));
       acc -= TICK_MS;
     }
     renderer.sync(prevState, state, acc / TICK_MS, dt, flourish.sync(state, dt));
@@ -217,6 +283,18 @@ export function mountPandas(stage, opts = {}) {
     },
     get state() {
       return state;
+    },
+    get policy() {
+      return policy;
+    },
+    // Attach (or clear, with null) the hat panda's brain. Separate from `mountPandas`
+    // because the weights are fetched *after* first paint — the page must not wait on
+    // 240 KB to start moving — so the policy arrives late and takes over mid-scene.
+    // He is mid-stride when it lands and that is fine: the driver's first decision
+    // primes its history from the frame it is handed, the same way an episode starts.
+    setPolicy(next) {
+      policy = next ?? null;
+      if (state) bindPolicy(worldSeed);
     },
     rebuild() {
       stop();

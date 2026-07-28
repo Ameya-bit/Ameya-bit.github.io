@@ -15,10 +15,17 @@
 // browser, a future WASM trainer — now produces identical bits.
 //
 // `sqrt` stays native: IEEE-754 requires it to be correctly rounded, so it is
-// already exact everywhere. `exp`/`pow`/`atan2` are deliberately NOT exported —
-// nothing in the sim needs them, and re-introducing an unpinned one would quietly
-// reopen the hole. Use `sq(x)` rather than `x ** 2`: exponentiation is specified
-// in terms of Math.pow, and carries the same implementation-defined licence.
+// already exact everywhere. `pow`/`atan2` are deliberately NOT exported — nothing
+// in the sim needs them, and re-introducing an unpinned one would quietly reopen
+// the hole. Use `sq(x)` rather than `x ** 2`: exponentiation is specified in terms
+// of Math.pow, and carries the same implementation-defined licence.
+//
+// **`exp` was added in Phase D, pinned the same way.** The policy net's attention
+// softmax needs it, and a policy is not a bystander to determinism: its action goes
+// straight into `step`, so an engine that computed `exp` one ULP differently would
+// diverge the whole episode exactly as `Math.sin` did. Same treatment, therefore —
+// argument reduction in plain arithmetic, a Taylor core, and an exactly-built table
+// of powers of two — rather than an exemption for the one module that wanted it.
 //
 // The engine treats all of these as pure functions of their inputs — no state, no
 // time. The determinism lint keeps raw `Math.sin` (and `**`) out of engine code so
@@ -86,6 +93,71 @@ export function cos(x) {
     sign = -1;
   }
   return sign * (y > QUARTER_PI ? sinCore(HALF_PI - y) : cosCore(y));
+}
+
+// ---- exp ----
+//
+// exp(x) = 2^k * exp(r), with k = round(x / ln2) so |r| <= ln2/2 ~ 0.347, where a
+// short Taylor series is tight. Three details make it reproducible:
+//
+//  1. **ln2 is carried in two halves.** `x - k*LN2` would round k*LN2 once, and that
+//     rounding is multiplied by k; splitting ln2 into a head with trailing zero bits
+//     plus a small tail keeps the reduction faithful across the whole range.
+//  2. **2^k is a table, built by exact doubling and halving from 1.0.** Every entry
+//     is a power of two, so every step is exact — including the subnormals below
+//     2^-1022, which are still exactly representable. No `Math.pow` anywhere.
+//  3. **The series runs a fixed number of terms.** No convergence test, so no
+//     data-dependent branch that could resolve differently under a different FPU
+//     rounding mode. 13 terms is past double precision on |r| <= 0.347.
+const LN2_HI = 0.6931471803691238; // ln2 with its low 20 bits cleared…
+const LN2_LO = 1.9082149292705877e-10; // …and the rest
+const INV_LN2 = 1.4426950408889634;
+
+const POW2_MIN = -1074; // the smallest subnormal, 2^-1074
+const POW2_MAX = 1023;
+const POW2 = (() => {
+  const t = new Float64Array(POW2_MAX - POW2_MIN + 1);
+  const zero = -POW2_MIN;
+  t[zero] = 1;
+  for (let k = 1; k <= POW2_MAX; k++) t[zero + k] = t[zero + k - 1] * 2;
+  for (let k = -1; k >= POW2_MIN; k--) t[zero + k] = t[zero + k + 1] / 2;
+  return t;
+})();
+
+// exp(r) - 1 is not what we want here (no need for expm1's accuracy near 0), so the
+// plain series is evaluated by Horner from the smallest term up.
+const E2 = 1 / 2;
+const E3 = 1 / 6;
+const E4 = 1 / 24;
+const E5 = 1 / 120;
+const E6 = 1 / 720;
+const E7 = 1 / 5040;
+const E8 = 1 / 40320;
+const E9 = 1 / 362880;
+const E10 = 1 / 3628800;
+const E11 = 1 / 39916800;
+const E12 = 1 / 479001600;
+const E13 = 1 / 6227020800;
+
+function expCore(r) {
+  return 1 + r * (1 + r * (E2 + r * (E3 + r * (E4 + r * (E5 + r * (E6 + r * (E7 + r
+    * (E8 + r * (E9 + r * (E10 + r * (E11 + r * (E12 + r * E13)))))))))))); // eslint-disable-line
+}
+
+export function exp(x) {
+  if (Number.isNaN(x)) return NaN;
+  if (x === Infinity) return Infinity;
+  if (x === -Infinity) return 0;
+  const k = Math.round(x * INV_LN2);
+  if (k > POW2_MAX) return Infinity;
+  // Below the table the result is zero. Measured against `Math.exp` this is exact
+  // everywhere except the last handful of subnormals — `exp(-745)` returns 0 where
+  // Math.exp returns 5e-324 — because the reduction picks k = -1075, one below the
+  // smallest power of two. Stated rather than chased: the only caller is a softmax
+  // whose inputs are shifted to <= 0, where 1e-324 and 0 are the same answer.
+  if (k < POW2_MIN) return 0;
+  const r = (x - k * LN2_HI) - k * LN2_LO;
+  return POW2[k - POW2_MIN] * expCore(r);
 }
 
 export const sqrt = Math.sqrt;

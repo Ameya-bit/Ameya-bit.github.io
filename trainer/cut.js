@@ -31,7 +31,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { makeEngine } from '../assets/pandas/engine/engine.js';
 import * as shippedEngine from '../assets/pandas/engine/engine.js';
-import { makeObserver, OBS_FIELDS, obsLayout } from '../assets/pandas/engine/policy/obs.js';
+import { makeObserver, OBS_FIELDS, obsLayout, DEFAULT_OBS } from '../assets/pandas/engine/policy/obs.js';
 import { ACTION, ACTION_NAME, actionName } from '../assets/pandas/engine/actions.js';
 import { runTrace, PHASE_A_SEEDS } from '../assets/pandas/engine/tools/trace.js';
 import { hex, hashBytes } from '../assets/pandas/engine/tools/checksum.js';
@@ -238,7 +238,10 @@ export function cutCorpus(options = {}) {
     spec,
     corpusSeed,
     dir: name,
-    rollout: { episodes, ticks, stride, warmup, truth },
+    // `alignment` is what SHARD_VERSION 2 means, spelled out: a row is a decision,
+    // so `obs` and `truth` are tick-1 and `action` is tick. A reader should not have
+    // to know the version history to know which way round the pairing goes.
+    rollout: { episodes, ticks, stride, warmup, truth, alignment: 'decision' },
     engine: engineFingerprint(),
     encoder: encoderFingerprint(),
     observation: { ...obsLayout(observer.layout.slots), params: observer.params },
@@ -288,13 +291,17 @@ export function writeSample({ manifest, out, rows = DEFAULT_CUT.sample }) {
   for (let n = 0; n < take; n++) {
     const i = Math.min(n * step, shard.rows - 1);
     const row = shard.decode(i);
+    // The engine tick the action landed on — recovered from the schedule rather than
+    // stored, since a rectangular row has no room for what arithmetic knows.
+    const tick = manifest.rollout.warmup + (i + 1) * manifest.rollout.stride;
     const line = {
       episode: first.episode,
       seed: first.seed,
       row: i,
-      // The engine tick this row was taken at — recovered from the schedule rather
-      // than stored, since a rectangular row has no room for what arithmetic knows.
-      tick: manifest.rollout.warmup + (i + 1) * manifest.rollout.stride,
+      tick,
+      // …and the tick `obs`/`truth` describe: the state he chose from. Spelled out
+      // rather than implied, because the whole point of D0 is that the two differ.
+      obsTick: tick - 1,
       action: row.action,
       actionName: actionName(row.action),
       obs: describeFrame(row.obs, manifest.observation),
@@ -346,6 +353,7 @@ export function describeFrame(frame, layout = obsLayout()) {
 export function checkContract(manifest) {
   const now = {
     version: SHARD_VERSION,
+    'rollout.alignment': 'decision',
     'engine.digest': engineFingerprint().digest,
     'encoder.digest': encoderFingerprint().digest,
     'actions.count': ACTION.COUNT,
@@ -439,6 +447,32 @@ function parseArgs(argv) {
   return args;
 }
 
+// `--obs coneDeg=360,occludeFence=0,sightRange=2000` — the sensor's own knobs, which
+// the manifest records per corpus and the roster freeze deliberately does not pin.
+// Phase D's BC corpus opens the mask up; Phase E's keeps the cone. Booleans arrive as
+// 0/1 because a shell flag has no other honest spelling. Unknown keys are rejected by
+// `makeObserver`, not here, so there is one list of what the sensor has.
+export function parseObsOverrides(spec) {
+  if (!spec) return {};
+  const out = {};
+  for (const pair of spec.split(',')) {
+    const [key, raw] = pair.split('=');
+    if (raw === undefined) throw new Error(`--obs "${pair}" must be key=value`);
+    const known = DEFAULT_OBS[key];
+    if (known === undefined) {
+      throw new Error(`--obs: unknown observation parameter "${key}" (have ${Object.keys(DEFAULT_OBS)})`);
+    }
+    if (typeof known === 'boolean') {
+      out[key] = raw === '1' || raw === 'true';
+      continue;
+    }
+    const n = Number(raw);
+    if (!Number.isFinite(n)) throw new Error(`--obs ${key}: "${raw}" is not a number`);
+    out[key] = n;
+  }
+  return out;
+}
+
 // What a cut will cost, without running it: exact byte count (panda counts come
 // from init, which is cheap) and a time estimate from the measured record rate.
 function dryRun({ spec, corpusSeed, episodes, ticks, stride, warmup, truth, obs }) {
@@ -493,6 +527,7 @@ function main() {
     warmup: args.warmup === undefined ? DEFAULT_CUT.warmup : Number(args.warmup),
     truth: !args['no-truth'],
     sample: args.sample === undefined ? DEFAULT_CUT.sample : Number(args.sample),
+    obs: parseObsOverrides(args.obs),
     out,
   };
 
@@ -500,7 +535,10 @@ function main() {
   console.log(`${opts.spec} — ${opts.episodes} episodes x ${opts.ticks} ticks, stride ${opts.stride}` +
     `${opts.truth ? ' + ground truth' : ' (observations and actions only)'}`);
   console.log(`  ${plan.rows.toLocaleString()} rows, ${plan.meanPandas.toFixed(1)} pandas/episode mean, ` +
-    `${gb(plan.bytes)} on disk\n`);
+    `${gb(plan.bytes)} on disk`);
+  const tuned = Object.entries(opts.obs);
+  if (tuned.length) console.log(`  sensor: ${tuned.map(([k, v]) => `${k}=${v}`).join(' ')}`);
+  console.log('');
   if (args['dry-run']) return;
 
   const t0 = process.hrtime.bigint();

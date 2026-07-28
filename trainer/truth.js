@@ -28,6 +28,7 @@
 // mismatch is an exception rather than a quietly poisoned label.
 
 import { runEpisode, hatOf, DEFAULT_ROLLOUT } from './rollout.js';
+import { TICKS_PER_ACTION } from '../assets/pandas/engine/tick.js';
 import { MODE_NAME } from '../assets/pandas/engine/state.js';
 import { ANOMALY_KINDS } from '../assets/pandas/engine/anomalies.js';
 import { topIncident } from '../assets/pandas/engine/watcher.js';
@@ -256,33 +257,69 @@ export function truthAt(state, timeline, { slots = null, frame = null } = {}) {
 //
 //   { tick, action, obs, truth }
 //
-// where `action` is the 17-way action the engine actually applied (the exact BC
-// target — read, never re-derived), `obs` is the encoder's frame, and `truth` is
-// everything above. B4 turns rows into shards; a test or a probe can just collect
-// them.
+// where `action` is the 17-way action the engine actually applied at `tick` (the
+// exact BC target — read, never re-derived), and `obs` and `truth` are the world at
+// tick-1, the state that action was chosen from. B4 turns rows into shards; a test
+// or a probe can just collect them.
+//
+// ## A row is a decision, not a tick (D0)
+//
+// The obvious recording — encode after the step, at the same tick as the action —
+// is wrong, and not by a little. `hat.action` is applied *during* the step, so the
+// state it produces already shows the outcome on the hat's own token: he is facing
+// the way he stepped, his cel has flipped to WALK, his roll cooldown is freshly
+// stamped. Measured over 36000 decisions, **P(drawn facing == the step's direction)
+// is 93.3% on `natural` and 85.5% on `wild` when the frame is taken after the step,
+// against 48.9% / 39.0% before it** — and the second number is an honest prior (he
+// often keeps going the way he was already pointed) rather than a readout.
+//
+// Direction is 8 of the 17 classes and the whole content of a locomotion policy, so
+// a corpus aligned the other way hands a clone most of its label on the self token
+// and teaches it to consult its own body instead of the world. It would train to a
+// flattering number and then fail in the browser, where the frame it gets is the one
+// *before* the action — which is the only frame a decider can ever have.
+//
+// So recording happens on `decide`: the frame and the labels come from the state the
+// expert acted from, and the action is read off the state the step produced. The two
+// hooks fire either side of one `step`, which is exactly the pairing a deployed
+// policy computes.
 //
 // ⚠️ `obs` is the observer's reused buffer and `truth.entities` is rebuilt per row,
 // but the buffer is not: copy `obs` if you keep the row.
 export function recordEpisode({ seed, config = {}, observer, onRow, ...opts }) {
   // The timeline has to cover the warmup as well: a nap that began during it is
   // still running when recording starts, and its `age` counts from where it began.
-  const { ticks, warmup } = { ...DEFAULT_ROLLOUT, ...opts };
+  const { ticks, stride, warmup } = { ...DEFAULT_ROLLOUT, ...opts };
+  // Every recorded row has to *be* a decision, so the record clock must be a whole
+  // number of decision periods. Asserted rather than assumed: a stride of 1 would
+  // otherwise record every other row with no pending frame at all.
+  if (stride % TICKS_PER_ACTION !== 0) {
+    throw new Error(
+      `recordEpisode: stride ${stride} must be a multiple of TICKS_PER_ACTION ` +
+      `(${TICKS_PER_ACTION}) — a row is a decision, and only decision ticks have one`,
+    );
+  }
   const timeline = scanEpisode({ seed, config, ticks: ticks + warmup });
   const mem = observer ? observer.init() : null;
+  let pending = null;
 
   const summary = runEpisode({
     seed,
     config,
     ...opts,
     sink: {
-      sample(state) {
+      // Before the step: what he can see, and what is actually true, at the moment
+      // he chooses. Nothing here has seen the action yet.
+      decide(state, tick) {
+        if (tick <= warmup || (tick - warmup) % stride !== 0) return;
         const frame = observer ? observer.observe(state, mem) : null;
-        onRow({
-          tick: state.tick,
-          action: hatOf(state).action,
-          obs: frame,
-          truth: truthAt(state, timeline, { slots: mem, frame }),
-        });
+        pending = { obs: frame, truth: truthAt(state, timeline, { slots: mem, frame }) };
+      },
+      // After it: the action the engine applied, and nothing else from this state.
+      sample(state) {
+        if (!pending) throw new Error(`record: no decision frame for tick ${state.tick}`);
+        onRow({ tick: state.tick, action: hatOf(state).action, ...pending });
+        pending = null;
       },
     },
   });

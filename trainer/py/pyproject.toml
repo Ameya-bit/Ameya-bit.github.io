@@ -1,0 +1,12 @@
+[project]
+name = "panda-bc"
+version = "0.1.0"
+description = "Phase D — the behaviour-cloning clone of the rules watcher, and its export to the browser"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.4",
+    "numpy>=1.26",
+]
+
+[tool.uv]
+package = false

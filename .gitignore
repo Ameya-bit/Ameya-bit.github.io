@@ -12,3 +12,16 @@
 !/trainer/corpora/*.manifest.json
 !/trainer/corpora/*.sample.jsonl
 /trainer/node_modules/
+
+# Parity reference arrays — regenerable with trainer/py/reference.py, 128MB of frames.
+# The committed contract is policy/weights/parity-fixture.json (16 cases).
+assets/pandas/engine/policy/weights/*.npy
+assets/pandas/engine/policy/weights/*.f32
+assets/pandas/engine/policy/weights/parity-bulk.json
+
+# The Python training env and its run artefacts. The weights it exports ARE committed
+# (assets/pandas/engine/policy/weights) — they are what the page fetches.
+/trainer/py/.venv/
+/trainer/py/runs/
+/trainer/py/__pycache__/
+/trainer/py/uv.lock

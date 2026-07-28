@@ -58,10 +58,78 @@ test('the record schema is the record — the manifest cannot drift from the dat
   }
 });
 
+// D0. The row's frame must be the one the decider actually had — the state *before*
+// the step that applied the action. This is the exact, structural version of that
+// claim: re-encode the pre-step state independently and demand the same bytes.
+//
+// It is worth a test of its own because the other alignment is not detectably wrong
+// from inside a shard. It reads as an ordinary corpus and trains to a better number;
+// what it teaches is `facing`, which the post-step frame carries because the step set
+// it. Measured over 36000 decisions, P(facing == step dir | stepped) is 93.3% after
+// the step against 48.9% before it — so the wrong pairing hands a clone most of the
+// direction label and it never learns to look at anyone else.
+test('the recorded frame is the one he decided from, not the one his action produced', () => {
+  const seed = 4242;
+  const observer = makeObserver();
+
+  // What the recorder produced.
+  const recorded = [];
+  recordEpisode({
+    seed,
+    config: BUSY,
+    ticks: 1200,
+    observer,
+    onRow: (row) => recorded.push({ tick: row.tick, action: row.action, obs: row.obs.slice() }),
+  });
+
+  // What an independent replay saw at each decision point, encoded before stepping.
+  const shadow = makeObserver();
+  const mem = shadow.init();
+  const expected = [];
+  runEpisode({
+    seed,
+    config: BUSY,
+    ticks: 1200,
+    sink: {
+      decide(state, tick) { expected.push({ tick, obs: shadow.observe(state, mem).slice() }); },
+    },
+  });
+
+  assert.equal(recorded.length, expected.length);
+  assert.ok(recorded.length > 400, `only ${recorded.length} decisions`);
+  for (let i = 0; i < recorded.length; i++) {
+    assert.equal(recorded[i].tick, expected[i].tick);
+    assert.deepEqual(recorded[i].obs, expected[i].obs, `frame ${i} at tick ${recorded[i].tick}`);
+  }
+
+  // And the negative half, so the test cannot pass by both sides being wrong the
+  // same way: the post-step frame is a *different* frame on plenty of rows. (Not
+  // all — he holds most ticks, and holding still changes little.)
+  const after = makeObserver();
+  const afterMem = after.init();
+  let differs = 0;
+  let n = 0;
+  runEpisode({
+    seed,
+    config: BUSY,
+    ticks: 1200,
+    sink: {
+      sample(state) {
+        const frame = after.observe(state, afterMem);
+        if (!frame.every((v, k) => v === recorded[n].obs[k])) differs += 1;
+        n += 1;
+      },
+    },
+  });
+  assert.ok(differs > recorded.length / 4, `post-step frames differed on only ${differs}/${n} rows`);
+});
+
 test('truth is aligned to the observation it was taken with', () => {
   const { rows, observer } = record({ ticks: 1200 });
   for (const row of rows) {
-    assert.equal(row.truth.global.tick, row.tick);
+    // A row is a decision (D0): `obs` and `truth` are the world he chose from, and
+    // `action` is what the step that followed applied. One tick apart, always.
+    assert.equal(row.truth.global.tick, row.tick - 1);
     assert.ok(isValidAction(row.action));
     assert.equal(row.truth.slots.length, observer.layout.slots);
     for (const slot of row.truth.slots) {
@@ -215,7 +283,8 @@ test('the warmup is covered by the timeline, so ages survive it', () => {
     observer: makeObserver(),
     onRow: (row) => rows.push({ tick: row.tick, truth: row.truth }),
   });
-  assert.equal(rows[0].truth.global.tick, 2002);
+  // First recorded decision lands at 2002; the world it was taken in is 2001.
+  assert.equal(rows[0].truth.global.tick, 2001);
   // Something in the first recorded frame must have begun before recording did —
   // otherwise the timeline is being rebuilt from the window rather than the episode.
   assert.ok(rows[0].truth.entities.some((e) => e.age > 100));

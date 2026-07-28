@@ -1,6 +1,6 @@
 {
   "name": "format-demo",
-  "version": 1,
+  "version": 2,
   "spec": "natural",
   "corpusSeed": 20260727,
   "dir": "format-demo",
@@ -9,7 +9,8 @@
     "ticks": 12000,
     "stride": 2,
     "warmup": 0,
-    "truth": true
+    "truth": true,
+    "alignment": "decision"
   },
   "engine": {
     "seeds": 4,
@@ -350,7 +351,7 @@
     "samples": 12000,
     "ticks": 24000,
     "bytes": 28608000,
-    "peakIntLabel": 12000
+    "peakIntLabel": 11999
   },
   "shards": [
     {
@@ -361,7 +362,7 @@
       "rows": 6000,
       "width": 580,
       "bytes": 13920000,
-      "digest": "e4ad146d"
+      "digest": "b7b42193"
     },
     {
       "file": "ep-0001.bin",
@@ -371,7 +372,7 @@
       "rows": 6000,
       "width": 612,
       "bytes": 14688000,
-      "digest": "40eb7b31"
+      "digest": "25eb0773"
     }
   ]
 }

@@ -27,6 +27,13 @@ reference the port is judged against.
 | **M6 — the entrance (`cfg.entrance`): the troupe walks on from off-stage** | ✅ done |
 | **B2 — `policy/obs.js`: the observation encoder (Phase B, no site impact yet)** | ✅ done |
 | **the `.stop` hit box — the last divergence from `pandas.js`** | ✅ closed |
+| **D3/D5 — `policy/net.js` + `policy/driver.js`: the trained clone, behind `?policy=nn`** | ✅ built, opt-in |
+
+**Phase D lands here as an opt-in brain, not a default.** `?policy=nn` fetches
+`policy/weights/` after first paint and hands the hat panda to a 122k-parameter
+transformer; anything absent, stale or NaN falls back to the rules watcher without
+a visible event. It stays opt-in for the same reason `?engine=new` did: the
+character gate is Ameya's and has not been run. See [Phase D](#phase-d--the-trained-clone) below.
 
 **This engine is now frozen against cut corpora.** Phase B's 17 GB of training and
 eval rollouts (`trainer/README.md`) are recordings of *this* machine, and every
@@ -285,6 +292,53 @@ differently in Chrome than in Node would move actions the trainer never saw.
   the encoder drifts from the fixture; the layout freezes with the roster at the
   exit of Phase B, because changing it invalidates a cut corpus.
 
+## Phase D — the trained clone
+
+`?policy=nn` replaces the rules watcher with a network that learned to imitate it.
+Four files, all opt-in and none of them on the default path:
+
+| File | Role |
+|---|---|
+| `policy/net.js` | The forward pass, by hand. 4 layers × 9 tokens × d48, ~122k parameters. Typed arrays, zero per-tick allocation, weights kept in PyTorch's `[out, in]` layout so the kernel walks both operands stride-1. |
+| `policy/load.js` | Manifest + blob → a running net, with the compatibility checks that make a layout mismatch a load-time error rather than a plausible-looking wrong answer. |
+| `policy/driver.js` | The seam adapter: slot memory, the frame ring, the sampler, and the fallback. |
+| `render/policy-loader.js` | `fetch` and the `?policy=` switch. Browser-only, which is why it is under `render/`. |
+
+**The model reads pandas, not timesteps.** Tokens are the encoder's 9 slots; the last
+4 decision frames are *stacked into each token's features* rather than laid along the
+sequence. Slot identity is already sticky (B2), so token *j* is the same panda at t,
+t−1, t−2, t−3 and velocity is a subtraction the first layer can do. That is what
+makes the browser budget reachable — attention is quadratic in tokens and the
+embedding is only linear in stacked width:
+
+| shape | measured |
+|---|---|
+| 4 layers × 9 tokens × d64, 1 frame | 0.82 ms |
+| 4 layers × 18 tokens × d64, 2 frames along the sequence | 1.67 ms |
+| 4 layers × 36 tokens × d64, 4 frames along the sequence | 3.50 ms |
+| **4 layers × 9 tokens × d48, 4 frames stacked** | **0.49 ms** |
+
+against 4.43 GFLOP/s for the shipped kernel (dot-product form with four accumulators
+— 40% faster than scatter-accumulate, which is why it is written that way).
+
+⚠️ This is a Phase-D answer. Stacked frames are a fixed-length memory *handed* to the
+network, not a belief it carries, and Phase E's emergence claim is about the latter —
+which the table says cannot run on the main thread at this width. A known bill, not a
+surprise.
+
+**`mathx.exp` was added for this.** The attention softmax needs it, and a policy is
+not a bystander to determinism — its action goes into `step`, so an engine computing
+`exp` one ULP differently would diverge the episode exactly as `Math.sin` did. It is
+pinned the same way (two-part argument reduction, a Taylor core, an exactly-built
+table of powers of two) rather than exempted. ReLU rather than GELU for the same
+reason: a comparison cannot disagree across engines.
+
+**Failure is a non-event by design.** NaN or infinite logits, an unusable
+distribution, a policy that throws, a fetch that 404s — every one of them returns
+`null`, which is the seam's long-standing "the rules expert takes this tick". After
+`maxFailures` consecutive bad passes the driver retires for the visit rather than
+asking 10 times a second forever.
+
 ## Layout
 
 | File | Role |
@@ -343,6 +397,8 @@ node tools/obs-fixture.js --check        # the observation encoder still matches
 node tools/golden.js --engine ./engine.js --ticks 10000   # deterministic trace digest
 npm run serve                            # dev server -> /tools/stage.html (real sprites)
                                          #            -> /tools/preview.html (schematic + set-piece buttons)
+                                         #            -> /tools/policy-bench.html (Phase D's <1ms budget)
+node tools/parity-net.mjs                # Phase D: JS vs PyTorch action agreement
 ```
 
 The suite is deterministic and should be green every time. It was not, until

@@ -26,6 +26,9 @@ Zero dependencies, `node --test`.
 | **C3 — the twin-episode battery, one set per knowability tier** | ✅ done |
 | **C4 — close the action-space holes, price commitment, re-run the gate** | ✅ done |
 | **C5 — the risk economy, and what the conservative ceiling is actually worth** | ✅ done |
+| **D0 — the obs/action alignment, and the corpora re-cut against it** | ✅ done |
+| **D1 — the full-observation BC corpora (`train-bc`, `eval-bc`)** | ✅ done |
+| **D2 — the BC clone, in [`py/`](py/README.md)** | ✅ done |
 
 **Phase C's exit is met: all three checks pass** (`node evaluate.js --gate`, game v3).
 The memory gap is **87%** of the oracle against a 30% threshold; every exploit bot
@@ -41,12 +44,57 @@ is a test — see below), the encoder's fixture check is green, and rollouts cle
 ≥50k ticks/s/core bar. B5 is the one milestone left open, and it is a Phase-E want,
 not a Phase-B need.
 
+## ⚠️ D0 — every corpus was re-cut, and shard version 2 is why
+
+**A row is now a decision, not a tick.** `obs` and `truth` are the world the action
+was chosen *from* (tick−1); `action` is what the step that followed applied (tick).
+Through Phase C they were both taken at the same tick — after the step — which is
+wrong in a way nothing about the bytes reveals.
+
+`hat.action` is applied *during* the step, so the state it produces already shows the
+outcome on the hat panda's own token: he faces the way he stepped, his cel has flipped
+to WALK, his roll cooldown is freshly stamped. Measured over 36,000 decisions:
+
+| | after the step (v1) | before it (v2) |
+|---|---|---|
+| P(drawn facing == the step's direction \| stepped), `natural` | **93.3%** | 48.9% |
+| …on `wild` | **85.5%** | 39.0% |
+| P(drawn pose == WALK \| stepped), `natural` | 89.5% | 70.8% |
+
+The second column is an honest prior — he often keeps going the way he was pointed.
+The first is a readout. Direction is 8 of the 17 classes and the whole content of a
+locomotion policy, so a v1 corpus hands a clone most of its label on the self token
+and teaches it to consult its own body instead of the world. It would train to a
+flattering number and then fail in the browser, where the only frame a decider can
+ever have is the one *before* its action.
+
+`SHARD_VERSION` went to 2, manifests carry `rollout.alignment: "decision"`, the freeze
+test compares it, and `corpus.py` refuses v1 outright. Recording now happens on
+`rollout.js`'s new `decide` hook, which fires before the step; `sample` supplies only
+the action. Cost of the re-cut: 208 s for `train-wild`, 12 s for `eval-natural`.
+
 | corpus | spec | episodes × ticks | rows | on disk | cut in |
 |---|---|---|---|---|---|
-| **`train-wild`** | `wild` | 840 × 12000 | 5.04M (10.08M ticks) | 15.20 GB | 205 s (49k ticks/s) |
-| **`eval-natural`** | `natural` | 120 × 12000 | 720k (1.44M ticks) | 1.72 GB | 11 s (126k ticks/s) |
+| **`train-wild`** | `wild` | 840 × 12000 | 5.04M (10.08M ticks) | 15.20 GB | 209 s (48k ticks/s) |
+| **`eval-natural`** | `natural` | 120 × 12000 | 720k (1.44M ticks) | 1.72 GB | 12 s (123k ticks/s) |
+| **`train-bc`** | `wild` | 840 × 12000 | 5.04M | 6.73 GB | 181 s (56k ticks/s) |
+| **`eval-bc`** | `natural` | 120 × 12000 | 720k | 962 MB | 10 s (151k ticks/s) |
 
-Both carry ground truth. The training corpus spans **6 to 28 pandas** per episode
+The first two carry ground truth.
+
+**`train-bc` / `eval-bc` are Phase D's, and see the whole room** — `coneDeg 360`,
+`occludeFence false`, no ground truth. The plan clones on full observation because
+Phase D's job is the pipeline, not the hardest possible learning problem; the
+120° cone stays the shipped default and Phase E's sensor. `observation.params` was
+deliberately left out of the roster freeze for exactly this, and `cut.js --obs` is
+now wired to reach it.
+
+**The slot count is set by the browser, not the sensor.** Opening the mask to 360°
+argues for more than 8 slots on `wild` (p95 of bodies in range is 9), but the token
+count is what the deployed forward pass is quadratic in: 4 layers × 9 tokens × d64 is
+0.82 ms and 17 tokens is 1.58 ms, against a 1 ms budget. So 8 slots, and the
+truncation is recorded rather than hidden — on `wild` more bodies are in range than
+there are slots on 5.7% of frames, which is also true of the shipped cone. The training corpus spans **6 to 28 pandas** per episode
 (23 distinct row widths — which is exactly why the unit of a file is one episode),
 uses all 17 actions, and is finite in every cell. Loading it from the manifest alone
 in NumPy was checked end to end, including that entity sub-row *k* is panda *k*.
@@ -1073,6 +1121,10 @@ node evaluate.js --spec dense --ticks 6000
 node evaluate.js --policy expert --json            # the full per-episode reports
 node evaluate.js --rules knockPenalty=25,payAll=0  # turn a knob and re-read
 
+# the Phase-D clone, read off the exported weights (see py/README.md)
+node evaluate.js --policy expert,still,clone --episodes 16
+node evaluate.js --policy clone@1/0.4              # family / direction temperatures
+
 # the twin-episode battery (C3) on its own — 0.2 s for all three tiers
 node twins.js                                      # exit check 3
 node twins.js --pairs 24                           # every bearing x distance
@@ -1089,6 +1141,12 @@ node cut.js --verify corpora/eval-natural.manifest.json --episode 3
 # put the cut corpora back (they are gitignored; the manifests are not)
 node cut.js --spec wild --name train-wild --episodes 840 --ticks 12000
 node cut.js --spec natural --name eval-natural --episodes 120 --ticks 12000
+
+# …and Phase D's, which see the whole room and carry no labels
+node cut.js --spec wild --name train-bc --episodes 840 --ticks 12000 \
+  --no-truth --obs coneDeg=360,occludeFence=0
+node cut.js --spec natural --name eval-bc --episodes 120 --ticks 12000 \
+  --no-truth --obs coneDeg=360,occludeFence=0
 ```
 
 `--stride` (default 2, the policy's 10 Hz clock), `--warmup`, `--seed` (the corpus

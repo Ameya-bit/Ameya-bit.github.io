@@ -16,7 +16,14 @@
 // `Math.random` (take a PRNG off the episode seed), no wall clock: a score that is
 // not reproducible is not a measurement.
 
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
 import { Rng } from '../assets/pandas/engine/rng.js';
+import { makeObserver } from '../assets/pandas/engine/policy/obs.js';
+import { loadPolicy } from '../assets/pandas/engine/policy/load.js';
+import { makePolicyDriver } from '../assets/pandas/engine/policy/driver.js';
 import { ACTION, stepAction } from '../assets/pandas/engine/actions.js';
 import { hypot } from '../assets/pandas/engine/mathx.js';
 
@@ -178,6 +185,38 @@ export const roller = makePlanner({
   options: { travel: 'roll', strideEvery: 1 },
 });
 
+// ---- the Phase-D clone ----
+//
+// The trained policy, read off the exported weights rather than a checkpoint: the
+// evaluator scores the file the browser will fetch, not an approximation of it. It is
+// registered lazily because the weights are a build artefact — a fresh checkout has
+// no `policy/weights/`, and the C1-C5 gate must keep running without one.
+//
+// Note what it is *not*: a yardstick. The clone's ceiling is the imitation gap, not
+// the game — it never sees the incident feed, so it cannot know which distant panda
+// is worth the walk. Reading its score against the oracle's would be measuring the
+// wrong thing. It belongs here so that Phase D's "does he still dodge" has a number
+// on the same ledger as everything else.
+export function loadClone({ dir = CLONE_DIR, temperature = 1, dirTemperature } = {}) {
+  const manifest = JSON.parse(readFileSync(join(dir, 'policy.json'), 'utf8'));
+  const bytes = new Uint8Array(readFileSync(join(dir, 'policy.bin')));
+  const observer = makeObserver(manifest.observation.params);
+  const { net } = loadPolicy(manifest, bytes, { observer });
+  const driver = makePolicyDriver(net, { observer, temperature, ...(dirTemperature === undefined ? {} : { dirTemperature }) });
+  return {
+    describe: `the Phase-D BC clone (${manifest.trainedOn}, T=${temperature})`,
+    manifest,
+    init: (ctx) => driver.init(ctx),
+  };
+}
+
+export const CLONE_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..', 'assets', 'pandas', 'engine', 'policy', 'weights',
+);
+
+export const hasClone = () => existsSync(join(CLONE_DIR, 'policy.json'));
+
 export const POLICIES = Object.freeze({
   expert,
   still,
@@ -210,7 +249,23 @@ export const ACTION_EXPLOITS = Object.freeze(['speeder', 'roller']);
 export const EXPLOITS = Object.freeze([...REWARD_EXPLOITS, ...ACTION_EXPLOITS]);
 
 export function policyByName(name) {
+  // `clone` and `clone@T` (a temperature) are built on demand from the exported
+  // weights, so they are resolved here rather than sitting in the frozen table.
+  // `clone`, `clone@T`, or `clone@T/DT` — the family and direction temperatures.
+  if (name === 'clone' || name.startsWith('clone@')) {
+    if (!hasClone()) {
+      throw new Error(`no exported policy in ${CLONE_DIR} — run trainer/py/export.py first`);
+    }
+    const [rawT, rawDT] = name.startsWith('clone@') ? name.slice(6).split('/') : [];
+    const num = (raw, what) => {
+      if (raw === undefined) return undefined;
+      const v = Number(raw);
+      if (!Number.isFinite(v) || v <= 0) throw new Error(`clone ${what} must be > 0, got "${raw}"`);
+      return v;
+    };
+    return loadClone({ temperature: num(rawT, 'temperature') ?? 1, dirTemperature: num(rawDT, 'dirTemperature') });
+  }
   const p = POLICIES[name];
-  if (!p) throw new Error(`unknown policy: ${name} (have ${Object.keys(POLICIES).join(', ')})`);
+  if (!p) throw new Error(`unknown policy: ${name} (have ${Object.keys(POLICIES).join(', ')}, clone)`);
   return p;
 }

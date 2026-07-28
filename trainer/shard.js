@@ -35,7 +35,11 @@ import { OBS_WIDTH, DEFAULT_OBS } from '../assets/pandas/engine/policy/obs.js';
 import { hashBytes, hex } from '../assets/pandas/engine/tools/checksum.js';
 import { GLOBAL_FIELDS, ENTITY_FIELDS, SLOT_FIELDS } from './truth.js';
 
-export const SHARD_VERSION = 1;
+// 2 (D0): a row became a *decision* rather than a tick — `obs` and `truth` are now
+// the world the action was chosen from, not the world it produced. Same bytes, same
+// widths, different meaning, which is precisely the change a version exists for:
+// nothing about a v1 shard looks wrong, it is just labelled one step late.
+export const SHARD_VERSION = 2;
 
 // Float32Array writes in platform byte order, so the format's "little-endian" is a
 // claim about the machine as much as the code. Every platform this runs on is LE;

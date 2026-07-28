@@ -1,0 +1,620 @@
+{
+  "format": 1,
+  "dtype": "float16",
+  "elements": 121601,
+  "bytes": 243202,
+  "digest": "1abefd88ceab2580",
+  "config": {
+    "tokens": 9,
+    "obs_width": 37,
+    "frames": 4,
+    "d_model": 48,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff": 192,
+    "n_actions": 17,
+    "ln_eps": 1e-05
+  },
+  "tensors": [
+    {
+      "name": "embed.weight",
+      "shape": [
+        48,
+        148
+      ],
+      "offset": 0,
+      "count": 7104
+    },
+    {
+      "name": "embed.bias",
+      "shape": [
+        48
+      ],
+      "offset": 7104,
+      "count": 48
+    },
+    {
+      "name": "pos",
+      "shape": [
+        9,
+        48
+      ],
+      "offset": 7152,
+      "count": 432
+    },
+    {
+      "name": "block.0.ln1.weight",
+      "shape": [
+        48
+      ],
+      "offset": 7584,
+      "count": 48
+    },
+    {
+      "name": "block.0.ln1.bias",
+      "shape": [
+        48
+      ],
+      "offset": 7632,
+      "count": 48
+    },
+    {
+      "name": "block.0.qkv.weight",
+      "shape": [
+        144,
+        48
+      ],
+      "offset": 7680,
+      "count": 6912
+    },
+    {
+      "name": "block.0.qkv.bias",
+      "shape": [
+        144
+      ],
+      "offset": 14592,
+      "count": 144
+    },
+    {
+      "name": "block.0.proj.weight",
+      "shape": [
+        48,
+        48
+      ],
+      "offset": 14736,
+      "count": 2304
+    },
+    {
+      "name": "block.0.proj.bias",
+      "shape": [
+        48
+      ],
+      "offset": 17040,
+      "count": 48
+    },
+    {
+      "name": "block.0.ln2.weight",
+      "shape": [
+        48
+      ],
+      "offset": 17088,
+      "count": 48
+    },
+    {
+      "name": "block.0.ln2.bias",
+      "shape": [
+        48
+      ],
+      "offset": 17136,
+      "count": 48
+    },
+    {
+      "name": "block.0.fc1.weight",
+      "shape": [
+        192,
+        48
+      ],
+      "offset": 17184,
+      "count": 9216
+    },
+    {
+      "name": "block.0.fc1.bias",
+      "shape": [
+        192
+      ],
+      "offset": 26400,
+      "count": 192
+    },
+    {
+      "name": "block.0.fc2.weight",
+      "shape": [
+        48,
+        192
+      ],
+      "offset": 26592,
+      "count": 9216
+    },
+    {
+      "name": "block.0.fc2.bias",
+      "shape": [
+        48
+      ],
+      "offset": 35808,
+      "count": 48
+    },
+    {
+      "name": "block.1.ln1.weight",
+      "shape": [
+        48
+      ],
+      "offset": 35856,
+      "count": 48
+    },
+    {
+      "name": "block.1.ln1.bias",
+      "shape": [
+        48
+      ],
+      "offset": 35904,
+      "count": 48
+    },
+    {
+      "name": "block.1.qkv.weight",
+      "shape": [
+        144,
+        48
+      ],
+      "offset": 35952,
+      "count": 6912
+    },
+    {
+      "name": "block.1.qkv.bias",
+      "shape": [
+        144
+      ],
+      "offset": 42864,
+      "count": 144
+    },
+    {
+      "name": "block.1.proj.weight",
+      "shape": [
+        48,
+        48
+      ],
+      "offset": 43008,
+      "count": 2304
+    },
+    {
+      "name": "block.1.proj.bias",
+      "shape": [
+        48
+      ],
+      "offset": 45312,
+      "count": 48
+    },
+    {
+      "name": "block.1.ln2.weight",
+      "shape": [
+        48
+      ],
+      "offset": 45360,
+      "count": 48
+    },
+    {
+      "name": "block.1.ln2.bias",
+      "shape": [
+        48
+      ],
+      "offset": 45408,
+      "count": 48
+    },
+    {
+      "name": "block.1.fc1.weight",
+      "shape": [
+        192,
+        48
+      ],
+      "offset": 45456,
+      "count": 9216
+    },
+    {
+      "name": "block.1.fc1.bias",
+      "shape": [
+        192
+      ],
+      "offset": 54672,
+      "count": 192
+    },
+    {
+      "name": "block.1.fc2.weight",
+      "shape": [
+        48,
+        192
+      ],
+      "offset": 54864,
+      "count": 9216
+    },
+    {
+      "name": "block.1.fc2.bias",
+      "shape": [
+        48
+      ],
+      "offset": 64080,
+      "count": 48
+    },
+    {
+      "name": "block.2.ln1.weight",
+      "shape": [
+        48
+      ],
+      "offset": 64128,
+      "count": 48
+    },
+    {
+      "name": "block.2.ln1.bias",
+      "shape": [
+        48
+      ],
+      "offset": 64176,
+      "count": 48
+    },
+    {
+      "name": "block.2.qkv.weight",
+      "shape": [
+        144,
+        48
+      ],
+      "offset": 64224,
+      "count": 6912
+    },
+    {
+      "name": "block.2.qkv.bias",
+      "shape": [
+        144
+      ],
+      "offset": 71136,
+      "count": 144
+    },
+    {
+      "name": "block.2.proj.weight",
+      "shape": [
+        48,
+        48
+      ],
+      "offset": 71280,
+      "count": 2304
+    },
+    {
+      "name": "block.2.proj.bias",
+      "shape": [
+        48
+      ],
+      "offset": 73584,
+      "count": 48
+    },
+    {
+      "name": "block.2.ln2.weight",
+      "shape": [
+        48
+      ],
+      "offset": 73632,
+      "count": 48
+    },
+    {
+      "name": "block.2.ln2.bias",
+      "shape": [
+        48
+      ],
+      "offset": 73680,
+      "count": 48
+    },
+    {
+      "name": "block.2.fc1.weight",
+      "shape": [
+        192,
+        48
+      ],
+      "offset": 73728,
+      "count": 9216
+    },
+    {
+      "name": "block.2.fc1.bias",
+      "shape": [
+        192
+      ],
+      "offset": 82944,
+      "count": 192
+    },
+    {
+      "name": "block.2.fc2.weight",
+      "shape": [
+        48,
+        192
+      ],
+      "offset": 83136,
+      "count": 9216
+    },
+    {
+      "name": "block.2.fc2.bias",
+      "shape": [
+        48
+      ],
+      "offset": 92352,
+      "count": 48
+    },
+    {
+      "name": "block.3.ln1.weight",
+      "shape": [
+        48
+      ],
+      "offset": 92400,
+      "count": 48
+    },
+    {
+      "name": "block.3.ln1.bias",
+      "shape": [
+        48
+      ],
+      "offset": 92448,
+      "count": 48
+    },
+    {
+      "name": "block.3.qkv.weight",
+      "shape": [
+        144,
+        48
+      ],
+      "offset": 92496,
+      "count": 6912
+    },
+    {
+      "name": "block.3.qkv.bias",
+      "shape": [
+        144
+      ],
+      "offset": 99408,
+      "count": 144
+    },
+    {
+      "name": "block.3.proj.weight",
+      "shape": [
+        48,
+        48
+      ],
+      "offset": 99552,
+      "count": 2304
+    },
+    {
+      "name": "block.3.proj.bias",
+      "shape": [
+        48
+      ],
+      "offset": 101856,
+      "count": 48
+    },
+    {
+      "name": "block.3.ln2.weight",
+      "shape": [
+        48
+      ],
+      "offset": 101904,
+      "count": 48
+    },
+    {
+      "name": "block.3.ln2.bias",
+      "shape": [
+        48
+      ],
+      "offset": 101952,
+      "count": 48
+    },
+    {
+      "name": "block.3.fc1.weight",
+      "shape": [
+        192,
+        48
+      ],
+      "offset": 102000,
+      "count": 9216
+    },
+    {
+      "name": "block.3.fc1.bias",
+      "shape": [
+        192
+      ],
+      "offset": 111216,
+      "count": 192
+    },
+    {
+      "name": "block.3.fc2.weight",
+      "shape": [
+        48,
+        192
+      ],
+      "offset": 111408,
+      "count": 9216
+    },
+    {
+      "name": "block.3.fc2.bias",
+      "shape": [
+        48
+      ],
+      "offset": 120624,
+      "count": 48
+    },
+    {
+      "name": "ln_f.weight",
+      "shape": [
+        48
+      ],
+      "offset": 120672,
+      "count": 48
+    },
+    {
+      "name": "ln_f.bias",
+      "shape": [
+        48
+      ],
+      "offset": 120720,
+      "count": 48
+    },
+    {
+      "name": "head.weight",
+      "shape": [
+        17,
+        48
+      ],
+      "offset": 120768,
+      "count": 816
+    },
+    {
+      "name": "head.bias",
+      "shape": [
+        17
+      ],
+      "offset": 121584,
+      "count": 17
+    }
+  ],
+  "trainedOn": "train-bc",
+  "step": 72000,
+  "engine": {
+    "seeds": 4,
+    "ticks": 2000,
+    "digest": "603b00e4"
+  },
+  "encoder": {
+    "fixture": "policy/obs-fixture.json",
+    "digest": "2ae43ea6"
+  },
+  "observation": {
+    "version": 1,
+    "slots": 8,
+    "tokens": 9,
+    "width": 37,
+    "length": 333,
+    "fields": [
+      {
+        "name": "self",
+        "at": 0,
+        "size": 1
+      },
+      {
+        "name": "present",
+        "at": 1,
+        "size": 1
+      },
+      {
+        "name": "visible",
+        "at": 2,
+        "size": 1
+      },
+      {
+        "name": "relX",
+        "at": 3,
+        "size": 1
+      },
+      {
+        "name": "relY",
+        "at": 4,
+        "size": 1
+      },
+      {
+        "name": "dist",
+        "at": 5,
+        "size": 1
+      },
+      {
+        "name": "lift",
+        "at": 6,
+        "size": 1
+      },
+      {
+        "name": "riding",
+        "at": 7,
+        "size": 1
+      },
+      {
+        "name": "flying",
+        "at": 8,
+        "size": 1
+      },
+      {
+        "name": "carrying",
+        "at": 9,
+        "size": 1
+      },
+      {
+        "name": "level",
+        "at": 10,
+        "size": 1
+      },
+      {
+        "name": "facing",
+        "at": 11,
+        "size": 8
+      },
+      {
+        "name": "pose",
+        "at": 19,
+        "size": 7
+      },
+      {
+        "name": "rollCooldown",
+        "at": 26,
+        "size": 1
+      },
+      {
+        "name": "hatOn",
+        "at": 27,
+        "size": 1
+      },
+      {
+        "name": "edgeClear",
+        "at": 28,
+        "size": 4
+      },
+      {
+        "name": "fenceOffset",
+        "at": 32,
+        "size": 4
+      },
+      {
+        "name": "fencePresent",
+        "at": 36,
+        "size": 1
+      }
+    ],
+    "params": {
+      "slots": 8,
+      "sightRange": 520,
+      "peripheralR": 130,
+      "coneDeg": 360,
+      "occludeFence": false,
+      "holdTicks": 40,
+      "hysteresisPx": 40
+    }
+  },
+  "actions": {
+    "count": 17,
+    "names": [
+      "hold",
+      "step:up",
+      "step:upright",
+      "step:right",
+      "step:downright",
+      "step:down",
+      "step:downleft",
+      "step:left",
+      "step:upleft",
+      "roll:up",
+      "roll:upright",
+      "roll:right",
+      "roll:downright",
+      "roll:down",
+      "roll:downleft",
+      "roll:left",
+      "roll:upleft"
+    ]
+  }
+}

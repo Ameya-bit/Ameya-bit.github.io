@@ -36,6 +36,12 @@ listing:
   // on 2026-07-27. The original pandas.js is kept, unmodified, behind ?engine=old:
   // it is the reference the port is judged against, so it stays until the learned
   // policy ships.
+  //
+  // A second switch rides on the new engine: ?policy=nn hands the hat panda to the
+  // Phase-D trained clone instead of the rules watcher. Opt-in, and deliberately so
+  // — it has not passed the character gate. The weights are fetched after first
+  // paint and any failure falls back to the watcher without a visible event, so the
+  // hero is never waiting on 240 KB and never worse off for asking.
   (function () {
     var wanted = new URLSearchParams(location.search).get('engine');
     if (wanted !== 'old') {

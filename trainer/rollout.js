@@ -31,10 +31,19 @@ import { TICKS_PER_ACTION } from '../assets/pandas/engine/tick.js';
 // legal (if useless) sink and a bench can pass nothing at all.
 //
 //   begin(ctx)          — ctx = { seed, cfg, ticks, stride, rules }
+//   decide(state, tick) — at every decision tick, BEFORE the step, with the state
+//                         the decider is acting from. `tick` is the tick the action
+//                         will land on, so it pairs with the `sample` that follows.
 //   sample(state, tick) — once per recorded tick (see `stride`)
 //   end(summary)        — summary = { seed, ticks, samples }
 //
 // Sinks are called synchronously and must not mutate the state they are handed.
+//
+// `decide` exists because the two hooks see different worlds and a recorder needs
+// the first one. `sample` runs after the step, so its state already contains the
+// action's consequences — including, on the hat's own token, the facing he turned
+// to and the cel he started. See `truth.js` for what that was measured to be worth
+// to a clone (it is most of the direction label) and why recording happens here.
 
 export const DEFAULT_ROLLOUT = Object.freeze({
   // How long an episode runs, in engine ticks. 12000 = 10 minutes of sim.
@@ -84,12 +93,11 @@ export function runEpisode({ seed, config = {}, sink = null, policy = null, rule
     // The policy sees the state it is acting FROM — tick t-1 — and its action is
     // applied during the step that produces tick t. That is the only causally
     // available information set: an action chosen from tick t would have to know
-    // where its own step landed. ⚠️ The Phase-B corpora pair the action applied at
-    // tick t with the observation encoded AFTER that step, so a BC policy fed
-    // `obs(t-1)` here is a tick off its training pairing. Noted, not resolved:
-    // it is Phase D's to settle, and it cancels out of any comparison run here
-    // (every policy reads the same states).
-    const action = act && t % TICKS_PER_ACTION === 0 ? act(state, t) : null;
+    // where its own step landed. The recorder is handed this same state through
+    // `decide`, so a corpus row is the decision as it was actually faced.
+    const decision = t % TICKS_PER_ACTION === 0;
+    if (decision) sink?.decide?.(state, t);
+    const action = act && decision ? act(state, t) : null;
     // No action: the rules expert drives, and what it applied lands on hat.action.
     state = engine.step(state, action);
     if (t > warmup && (t - warmup) % stride === 0) {

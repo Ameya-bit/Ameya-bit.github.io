@@ -1,15 +1,15 @@
 {
-  "name": "eval-natural",
+  "name": "eval-bc",
   "version": 2,
   "spec": "natural",
   "corpusSeed": 20260727,
-  "dir": "eval-natural",
+  "dir": "eval-bc",
   "rollout": {
     "episodes": 120,
     "ticks": 12000,
     "stride": 2,
     "warmup": 0,
-    "truth": true,
+    "truth": false,
     "alignment": "decision"
   },
   "engine": {
@@ -123,109 +123,13 @@
       "slots": 8,
       "sightRange": 520,
       "peripheralR": 130,
-      "coneDeg": 120,
-      "occludeFence": true,
+      "coneDeg": 360,
+      "occludeFence": false,
       "holdTicks": 40,
       "hysteresisPx": 40
     }
   },
-  "truth": {
-    "version": 1,
-    "global": [
-      "tick",
-      "nextAnomalyIn",
-      "lastKind",
-      "incidents",
-      "topTier",
-      "topSubject",
-      "stackBase",
-      "stackPhase",
-      "stackRiders",
-      "stackFormsIn",
-      "cascadeArmed",
-      "cascadeActive",
-      "cascadeArmsIn",
-      "cascadeIgnitesIn",
-      "cascadeFelled",
-      "cascadeTarget",
-      "cascadeClaims",
-      "cascadePending",
-      "expertSubject",
-      "expertIncident",
-      "expertStandoff",
-      "expertRelocating"
-    ],
-    "entity": [
-      "id",
-      "mode",
-      "anim",
-      "dir",
-      "x",
-      "y",
-      "lx",
-      "ly",
-      "moveSpeed",
-      "moveTimer",
-      "aPhase",
-      "aTimer",
-      "aCount",
-      "aHeading",
-      "aLie",
-      "aStep",
-      "knockPhase",
-      "knockTimer",
-      "knockLie",
-      "oblivious",
-      "solid",
-      "flying",
-      "riding",
-      "entering",
-      "stackLevel",
-      "cascadeFall",
-      "claimed",
-      "homeX",
-      "homeY",
-      "age",
-      "ttl",
-      "nextMode"
-    ],
-    "slot": [
-      "slot",
-      "id",
-      "heldFor",
-      "visible"
-    ],
-    "labels": {
-      "mode": [
-        "wander",
-        "knocked",
-        "sleeper",
-        "tumbler",
-        "spinner",
-        "loop",
-        "starer",
-        "zoomies",
-        "moonwalk",
-        "hiccup",
-        "observing",
-        "rolling",
-        "stackBase",
-        "mounting",
-        "riding",
-        "entering"
-      ],
-      "anomalyKind": [
-        "sleeper",
-        "tumbler",
-        "spinner",
-        "loop",
-        "starer",
-        "zoomies",
-        "moonwalk",
-        "hiccup"
-      ]
-    }
-  },
+  "truth": null,
   "actions": {
     "count": 17,
     "names": [
@@ -264,85 +168,6 @@
         "fields": [
           "action"
         ]
-      },
-      {
-        "name": "global",
-        "repeat": 1,
-        "width": 22,
-        "fields": [
-          "tick",
-          "nextAnomalyIn",
-          "lastKind",
-          "incidents",
-          "topTier",
-          "topSubject",
-          "stackBase",
-          "stackPhase",
-          "stackRiders",
-          "stackFormsIn",
-          "cascadeArmed",
-          "cascadeActive",
-          "cascadeArmsIn",
-          "cascadeIgnitesIn",
-          "cascadeFelled",
-          "cascadeTarget",
-          "cascadeClaims",
-          "cascadePending",
-          "expertSubject",
-          "expertIncident",
-          "expertStandoff",
-          "expertRelocating"
-        ]
-      },
-      {
-        "name": "slots",
-        "repeat": 8,
-        "width": 4,
-        "fields": [
-          "slot",
-          "id",
-          "heldFor",
-          "visible"
-        ]
-      },
-      {
-        "name": "entities",
-        "repeat": "pandaCount",
-        "width": 32,
-        "fields": [
-          "id",
-          "mode",
-          "anim",
-          "dir",
-          "x",
-          "y",
-          "lx",
-          "ly",
-          "moveSpeed",
-          "moveTimer",
-          "aPhase",
-          "aTimer",
-          "aCount",
-          "aHeading",
-          "aLie",
-          "aStep",
-          "knockPhase",
-          "knockTimer",
-          "knockLie",
-          "oblivious",
-          "solid",
-          "flying",
-          "riding",
-          "entering",
-          "stackLevel",
-          "cascadeFall",
-          "claimed",
-          "homeX",
-          "homeY",
-          "age",
-          "ttl",
-          "nextMode"
-        ]
       }
     ]
   },
@@ -350,8 +175,8 @@
     "episodes": 120,
     "samples": 720000,
     "ticks": 1440000,
-    "bytes": 1724160000,
-    "peakIntLabel": 11999
+    "bytes": 961920000,
+    "peakIntLabel": 0
   },
   "shards": [
     {
@@ -360,9 +185,9 @@
       "seed": -1717246029,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "b7b42193"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "74a0834e"
     },
     {
       "file": "ep-0001.bin",
@@ -370,9 +195,9 @@
       "seed": 1799220240,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "25eb0773"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "9681e26a"
     },
     {
       "file": "ep-0002.bin",
@@ -380,9 +205,9 @@
       "seed": -1285975223,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "7121316a"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "746be320"
     },
     {
       "file": "ep-0003.bin",
@@ -390,9 +215,9 @@
       "seed": 1149792505,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "63beba85"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "eb1e1c6c"
     },
     {
       "file": "ep-0004.bin",
@@ -400,9 +225,9 @@
       "seed": 1760247047,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "5873d602"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b3fe5f3a"
     },
     {
       "file": "ep-0005.bin",
@@ -410,9 +235,9 @@
       "seed": -742004774,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "01269930"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "8848998d"
     },
     {
       "file": "ep-0006.bin",
@@ -420,9 +245,9 @@
       "seed": -69931028,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "5ba62bb4"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b66d0d47"
     },
     {
       "file": "ep-0007.bin",
@@ -430,9 +255,9 @@
       "seed": -876282041,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "1ebb8445"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "525c8d44"
     },
     {
       "file": "ep-0008.bin",
@@ -440,9 +265,9 @@
       "seed": -67974696,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "5798d091"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "d71db6be"
     },
     {
       "file": "ep-0009.bin",
@@ -450,9 +275,9 @@
       "seed": 1397937866,
       "pandaCount": 8,
       "rows": 6000,
-      "width": 644,
-      "bytes": 15456000,
-      "digest": "eb76de92"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "abd1b887"
     },
     {
       "file": "ep-0010.bin",
@@ -460,9 +285,9 @@
       "seed": -1153338129,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "278a09f2"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "27d1923e"
     },
     {
       "file": "ep-0011.bin",
@@ -470,9 +295,9 @@
       "seed": 1124798344,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "c591216d"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "499349f8"
     },
     {
       "file": "ep-0012.bin",
@@ -480,9 +305,9 @@
       "seed": -1912576037,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "4a1e5349"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "6f0e2cf2"
     },
     {
       "file": "ep-0013.bin",
@@ -490,9 +315,9 @@
       "seed": 64177640,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "3954e6e3"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "7b9e0069"
     },
     {
       "file": "ep-0014.bin",
@@ -500,9 +325,9 @@
       "seed": -1063360417,
       "pandaCount": 11,
       "rows": 6000,
-      "width": 740,
-      "bytes": 17760000,
-      "digest": "adaf612a"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "fd923caf"
     },
     {
       "file": "ep-0015.bin",
@@ -510,9 +335,9 @@
       "seed": -883152079,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "e7227e2f"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "caee3481"
     },
     {
       "file": "ep-0016.bin",
@@ -520,9 +345,9 @@
       "seed": 327654720,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "b391af74"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "7edf8ece"
     },
     {
       "file": "ep-0017.bin",
@@ -530,9 +355,9 @@
       "seed": -436154140,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "1538f805"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "d13028b1"
     },
     {
       "file": "ep-0018.bin",
@@ -540,9 +365,9 @@
       "seed": -221712293,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "2cc2dbea"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "a9f1af0b"
     },
     {
       "file": "ep-0019.bin",
@@ -550,9 +375,9 @@
       "seed": 166996437,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "c0b2c777"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b104080f"
     },
     {
       "file": "ep-0020.bin",
@@ -560,9 +385,9 @@
       "seed": 1608460083,
       "pandaCount": 8,
       "rows": 6000,
-      "width": 644,
-      "bytes": 15456000,
-      "digest": "26912b5e"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "6846331d"
     },
     {
       "file": "ep-0021.bin",
@@ -570,9 +395,9 @@
       "seed": 1208682834,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "1cde2337"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "9fc7f1e2"
     },
     {
       "file": "ep-0022.bin",
@@ -580,9 +405,9 @@
       "seed": 610896436,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "a8b2d33c"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "2f563ced"
     },
     {
       "file": "ep-0023.bin",
@@ -590,9 +415,9 @@
       "seed": -591583154,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "784172ee"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "9910abb6"
     },
     {
       "file": "ep-0024.bin",
@@ -600,9 +425,9 @@
       "seed": -149701438,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "ad1a5258"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "fde70af2"
     },
     {
       "file": "ep-0025.bin",
@@ -610,9 +435,9 @@
       "seed": 1819467090,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "8fa7c50a"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "3b5c3435"
     },
     {
       "file": "ep-0026.bin",
@@ -620,9 +445,9 @@
       "seed": 1433217573,
       "pandaCount": 8,
       "rows": 6000,
-      "width": 644,
-      "bytes": 15456000,
-      "digest": "58dbc1ad"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "0d6a505d"
     },
     {
       "file": "ep-0027.bin",
@@ -630,9 +455,9 @@
       "seed": -1857003705,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "77d1ba21"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "3627594b"
     },
     {
       "file": "ep-0028.bin",
@@ -640,9 +465,9 @@
       "seed": -511720833,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "f664ea4b"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "c9e1dd59"
     },
     {
       "file": "ep-0029.bin",
@@ -650,9 +475,9 @@
       "seed": 630106450,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "df934094"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "925534ad"
     },
     {
       "file": "ep-0030.bin",
@@ -660,9 +485,9 @@
       "seed": 24064431,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "77b393a2"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "83cde2bb"
     },
     {
       "file": "ep-0031.bin",
@@ -670,9 +495,9 @@
       "seed": 762620797,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "d00138e9"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "607731d7"
     },
     {
       "file": "ep-0032.bin",
@@ -680,9 +505,9 @@
       "seed": -1016347185,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "8ad81a65"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "23831135"
     },
     {
       "file": "ep-0033.bin",
@@ -690,9 +515,9 @@
       "seed": 856862172,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "6cbaf82f"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "358b260b"
     },
     {
       "file": "ep-0034.bin",
@@ -700,9 +525,9 @@
       "seed": 1145504110,
       "pandaCount": 8,
       "rows": 6000,
-      "width": 644,
-      "bytes": 15456000,
-      "digest": "511d5186"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "1bb1d99d"
     },
     {
       "file": "ep-0035.bin",
@@ -710,9 +535,9 @@
       "seed": 415770084,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "9c04104f"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "d997d3e7"
     },
     {
       "file": "ep-0036.bin",
@@ -720,9 +545,9 @@
       "seed": 1150761451,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "d3091731"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "6ff5ac93"
     },
     {
       "file": "ep-0037.bin",
@@ -730,9 +555,9 @@
       "seed": 1866809489,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "09065a8e"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "10547eb7"
     },
     {
       "file": "ep-0038.bin",
@@ -740,9 +565,9 @@
       "seed": -1947741092,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "1fcf1eea"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "4ef35269"
     },
     {
       "file": "ep-0039.bin",
@@ -750,9 +575,9 @@
       "seed": 458773127,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "e1409885"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b0596aa5"
     },
     {
       "file": "ep-0040.bin",
@@ -760,9 +585,9 @@
       "seed": 280222460,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "24985278"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "62aa6568"
     },
     {
       "file": "ep-0041.bin",
@@ -770,9 +595,9 @@
       "seed": 299507110,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "79199d4a"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "47438d9d"
     },
     {
       "file": "ep-0042.bin",
@@ -780,9 +605,9 @@
       "seed": 1353380146,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "d24f8788"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "54b9aceb"
     },
     {
       "file": "ep-0043.bin",
@@ -790,9 +615,9 @@
       "seed": 168187486,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "48b7440b"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "67331766"
     },
     {
       "file": "ep-0044.bin",
@@ -800,9 +625,9 @@
       "seed": 2140027948,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "0f3ae6f2"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "8bb7401c"
     },
     {
       "file": "ep-0045.bin",
@@ -810,9 +635,9 @@
       "seed": -622788295,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "6bc8efee"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "a115a750"
     },
     {
       "file": "ep-0046.bin",
@@ -820,9 +645,9 @@
       "seed": 2492595,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "157f8abb"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "31f84675"
     },
     {
       "file": "ep-0047.bin",
@@ -830,9 +655,9 @@
       "seed": -54025174,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "d4a9c993"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "f30b45c0"
     },
     {
       "file": "ep-0048.bin",
@@ -840,9 +665,9 @@
       "seed": -1498900534,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "4c939a12"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "67c6b2f2"
     },
     {
       "file": "ep-0049.bin",
@@ -850,9 +675,9 @@
       "seed": -636884935,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "fd6934f5"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "a56e6471"
     },
     {
       "file": "ep-0050.bin",
@@ -860,9 +685,9 @@
       "seed": -290121555,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "66df1105"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "ad2177ac"
     },
     {
       "file": "ep-0051.bin",
@@ -870,9 +695,9 @@
       "seed": 1699331231,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "6140d4b6"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "c9759d01"
     },
     {
       "file": "ep-0052.bin",
@@ -880,9 +705,9 @@
       "seed": -1484542163,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "234049c3"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "e4139f6e"
     },
     {
       "file": "ep-0053.bin",
@@ -890,9 +715,9 @@
       "seed": -1675623071,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "b521bd80"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "ea89cd21"
     },
     {
       "file": "ep-0054.bin",
@@ -900,9 +725,9 @@
       "seed": 19125572,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "1baef2c4"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "94a23e53"
     },
     {
       "file": "ep-0055.bin",
@@ -910,9 +735,9 @@
       "seed": 1419412335,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "38501e22"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "3be74daa"
     },
     {
       "file": "ep-0056.bin",
@@ -920,9 +745,9 @@
       "seed": 1473500448,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "b9a42c3c"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "9f209f2d"
     },
     {
       "file": "ep-0057.bin",
@@ -930,9 +755,9 @@
       "seed": 2099589763,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "3bb07b84"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "9241f2fb"
     },
     {
       "file": "ep-0058.bin",
@@ -940,9 +765,9 @@
       "seed": 1359475380,
       "pandaCount": 10,
       "rows": 6000,
-      "width": 708,
-      "bytes": 16992000,
-      "digest": "ce1c587c"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b684919e"
     },
     {
       "file": "ep-0059.bin",
@@ -950,9 +775,9 @@
       "seed": 1648968320,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "6177ae71"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "6fc338ca"
     },
     {
       "file": "ep-0060.bin",
@@ -960,9 +785,9 @@
       "seed": 1674798913,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "5259bf80"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "bf81f9c3"
     },
     {
       "file": "ep-0061.bin",
@@ -970,9 +795,9 @@
       "seed": 2121474376,
       "pandaCount": 8,
       "rows": 6000,
-      "width": 644,
-      "bytes": 15456000,
-      "digest": "6afd2e47"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "c9b0d2db"
     },
     {
       "file": "ep-0062.bin",
@@ -980,9 +805,9 @@
       "seed": 651850213,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "d8442333"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b6a71bdb"
     },
     {
       "file": "ep-0063.bin",
@@ -990,9 +815,9 @@
       "seed": 1995986774,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "e1dd84fd"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "871a6a27"
     },
     {
       "file": "ep-0064.bin",
@@ -1000,9 +825,9 @@
       "seed": 1705197863,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "45ad901a"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "c618a586"
     },
     {
       "file": "ep-0065.bin",
@@ -1010,9 +835,9 @@
       "seed": 722884961,
       "pandaCount": 8,
       "rows": 6000,
-      "width": 644,
-      "bytes": 15456000,
-      "digest": "ed824235"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "51e4189a"
     },
     {
       "file": "ep-0066.bin",
@@ -1020,9 +845,9 @@
       "seed": 430370458,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "39e133d7"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "e32f0db8"
     },
     {
       "file": "ep-0067.bin",
@@ -1030,9 +855,9 @@
       "seed": 69199160,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "c22876eb"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "269477b5"
     },
     {
       "file": "ep-0068.bin",
@@ -1040,9 +865,9 @@
       "seed": 444634652,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "673c157e"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "cdbac8a0"
     },
     {
       "file": "ep-0069.bin",
@@ -1050,9 +875,9 @@
       "seed": -1970587175,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "9c18858b"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "494cf66e"
     },
     {
       "file": "ep-0070.bin",
@@ -1060,9 +885,9 @@
       "seed": -527619022,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "f6e82bc3"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "44953d44"
     },
     {
       "file": "ep-0071.bin",
@@ -1070,9 +895,9 @@
       "seed": -1809100561,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "2f10c79a"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "feff2ee1"
     },
     {
       "file": "ep-0072.bin",
@@ -1080,9 +905,9 @@
       "seed": 935565471,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "26e7994f"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "469bfeff"
     },
     {
       "file": "ep-0073.bin",
@@ -1090,9 +915,9 @@
       "seed": -481909076,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "e8a6f1ad"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b1e2bf6a"
     },
     {
       "file": "ep-0074.bin",
@@ -1100,9 +925,9 @@
       "seed": -2132656968,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "aa4268e6"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "3cc2bcf5"
     },
     {
       "file": "ep-0075.bin",
@@ -1110,9 +935,9 @@
       "seed": -1246079167,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "58b45103"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "dfbd90ab"
     },
     {
       "file": "ep-0076.bin",
@@ -1120,9 +945,9 @@
       "seed": -1120975865,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "84c8e54b"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "9c207f1e"
     },
     {
       "file": "ep-0077.bin",
@@ -1130,9 +955,9 @@
       "seed": 198656946,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "ae038e9d"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "f0041a3a"
     },
     {
       "file": "ep-0078.bin",
@@ -1140,9 +965,9 @@
       "seed": -1906174794,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "28752e33"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "6838626d"
     },
     {
       "file": "ep-0079.bin",
@@ -1150,9 +975,9 @@
       "seed": 108404913,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "bb458d41"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b41dccf9"
     },
     {
       "file": "ep-0080.bin",
@@ -1160,9 +985,9 @@
       "seed": 2008821196,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "5930baa2"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "3140fc95"
     },
     {
       "file": "ep-0081.bin",
@@ -1170,9 +995,9 @@
       "seed": 771319359,
       "pandaCount": 8,
       "rows": 6000,
-      "width": 644,
-      "bytes": 15456000,
-      "digest": "a53382bf"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "a1bfbdaa"
     },
     {
       "file": "ep-0082.bin",
@@ -1180,9 +1005,9 @@
       "seed": -792923389,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "b986b723"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "321b13aa"
     },
     {
       "file": "ep-0083.bin",
@@ -1190,9 +1015,9 @@
       "seed": 669382523,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "c33da6e1"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "7934ee58"
     },
     {
       "file": "ep-0084.bin",
@@ -1200,9 +1025,9 @@
       "seed": -253873108,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "781e1e5e"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "219402dc"
     },
     {
       "file": "ep-0085.bin",
@@ -1210,9 +1035,9 @@
       "seed": -1345135552,
       "pandaCount": 8,
       "rows": 6000,
-      "width": 644,
-      "bytes": 15456000,
-      "digest": "0c9e6a91"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "c2b0ccbc"
     },
     {
       "file": "ep-0086.bin",
@@ -1220,9 +1045,9 @@
       "seed": -325243450,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "54a18203"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "16db37c2"
     },
     {
       "file": "ep-0087.bin",
@@ -1230,9 +1055,9 @@
       "seed": 948245898,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "71f40a4d"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "90fd053d"
     },
     {
       "file": "ep-0088.bin",
@@ -1240,9 +1065,9 @@
       "seed": 477027013,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "e64a507b"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "50f03e69"
     },
     {
       "file": "ep-0089.bin",
@@ -1250,9 +1075,9 @@
       "seed": -156280852,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "f9acb1d5"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "455d0f2b"
     },
     {
       "file": "ep-0090.bin",
@@ -1260,9 +1085,9 @@
       "seed": -1996783815,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "eb896c6f"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b7c22dd6"
     },
     {
       "file": "ep-0091.bin",
@@ -1270,9 +1095,9 @@
       "seed": -1198251082,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "25775bcf"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "90c123c9"
     },
     {
       "file": "ep-0092.bin",
@@ -1280,9 +1105,9 @@
       "seed": 178649367,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "b6204e56"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "36ad9f12"
     },
     {
       "file": "ep-0093.bin",
@@ -1290,9 +1115,9 @@
       "seed": 281174966,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "a1625b2c"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "7b691222"
     },
     {
       "file": "ep-0094.bin",
@@ -1300,9 +1125,9 @@
       "seed": 364278714,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "8e22238a"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "56eb7c8e"
     },
     {
       "file": "ep-0095.bin",
@@ -1310,9 +1135,9 @@
       "seed": 1673033303,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "a5aa88ca"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b5b3b7ff"
     },
     {
       "file": "ep-0096.bin",
@@ -1320,9 +1145,9 @@
       "seed": 167113377,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "756747df"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "3b3e7f1d"
     },
     {
       "file": "ep-0097.bin",
@@ -1330,9 +1155,9 @@
       "seed": -190549887,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "84d8d61d"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "6900d094"
     },
     {
       "file": "ep-0098.bin",
@@ -1340,9 +1165,9 @@
       "seed": -161065836,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "34e3f4df"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "0d9fd94d"
     },
     {
       "file": "ep-0099.bin",
@@ -1350,9 +1175,9 @@
       "seed": 1339185644,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "3390202e"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "2f2a195b"
     },
     {
       "file": "ep-0100.bin",
@@ -1360,9 +1185,9 @@
       "seed": 416368276,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "6a87c847"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "a9a6a913"
     },
     {
       "file": "ep-0101.bin",
@@ -1370,9 +1195,9 @@
       "seed": 960852719,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "a7beb3be"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "87ae6eb1"
     },
     {
       "file": "ep-0102.bin",
@@ -1380,9 +1205,9 @@
       "seed": -816211930,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "9553a214"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "54ee86a6"
     },
     {
       "file": "ep-0103.bin",
@@ -1390,9 +1215,9 @@
       "seed": 458337665,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "814d8fd3"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "3ee66a09"
     },
     {
       "file": "ep-0104.bin",
@@ -1400,9 +1225,9 @@
       "seed": -713191378,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "e1eb0af5"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "6f6c5e99"
     },
     {
       "file": "ep-0105.bin",
@@ -1410,9 +1235,9 @@
       "seed": -1418926290,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "2f1ecb37"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "b54d966a"
     },
     {
       "file": "ep-0106.bin",
@@ -1420,9 +1245,9 @@
       "seed": 1155954872,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "417a9ffd"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "cbdba1e5"
     },
     {
       "file": "ep-0107.bin",
@@ -1430,9 +1255,9 @@
       "seed": 2019319961,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "f6130f55"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "c0e6f6aa"
     },
     {
       "file": "ep-0108.bin",
@@ -1440,9 +1265,9 @@
       "seed": -958737348,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "f767ce4f"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "644901e0"
     },
     {
       "file": "ep-0109.bin",
@@ -1450,9 +1275,9 @@
       "seed": 801260510,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "5d0c5617"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "2265b6d3"
     },
     {
       "file": "ep-0110.bin",
@@ -1460,9 +1285,9 @@
       "seed": -1662326159,
       "pandaCount": 7,
       "rows": 6000,
-      "width": 612,
-      "bytes": 14688000,
-      "digest": "e88f627b"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "7787c95d"
     },
     {
       "file": "ep-0111.bin",
@@ -1470,9 +1295,9 @@
       "seed": -1350010699,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "60b69b93"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "70751cad"
     },
     {
       "file": "ep-0112.bin",
@@ -1480,9 +1305,9 @@
       "seed": -366828184,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "50cefba1"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "e992fd64"
     },
     {
       "file": "ep-0113.bin",
@@ -1490,9 +1315,9 @@
       "seed": 24468105,
       "pandaCount": 9,
       "rows": 6000,
-      "width": 676,
-      "bytes": 16224000,
-      "digest": "232ef10c"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "d7fea902"
     },
     {
       "file": "ep-0114.bin",
@@ -1500,9 +1325,9 @@
       "seed": 1199474770,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "a094882b"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "777be377"
     },
     {
       "file": "ep-0115.bin",
@@ -1510,9 +1335,9 @@
       "seed": -1097624589,
       "pandaCount": 10,
       "rows": 6000,
-      "width": 708,
-      "bytes": 16992000,
-      "digest": "d26b1a61"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "75fb6156"
     },
     {
       "file": "ep-0116.bin",
@@ -1520,9 +1345,9 @@
       "seed": -138482074,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "1812a0a7"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "0601a0cc"
     },
     {
       "file": "ep-0117.bin",
@@ -1530,9 +1355,9 @@
       "seed": 2114933619,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "0497a36e"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "91e8afaf"
     },
     {
       "file": "ep-0118.bin",
@@ -1540,9 +1365,9 @@
       "seed": -164276439,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "fd7f17db"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "8219f0f5"
     },
     {
       "file": "ep-0119.bin",
@@ -1550,9 +1375,9 @@
       "seed": -222051247,
       "pandaCount": 6,
       "rows": 6000,
-      "width": 580,
-      "bytes": 13920000,
-      "digest": "657fcbf2"
+      "width": 334,
+      "bytes": 8016000,
+      "digest": "eb28d760"
     }
   ]
 }

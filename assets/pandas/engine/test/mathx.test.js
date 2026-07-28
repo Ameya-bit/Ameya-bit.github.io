@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import * as mathx from '../mathx.js';
 
 // sin/cos are ours, not Math's — see the header of mathx.js for why (Node and
@@ -40,11 +41,53 @@ test('sin and cos use only IEEE-754-pinned operations', () => {
 });
 
 test('unpinned transcendentals are not available to import', () => {
-  // exp / pow / atan2 were removed rather than left lying around: nothing in the
-  // sim needs them, and importing one would silently reopen the cross-engine hole.
-  assert.equal(mathx.exp, undefined);
+  // pow / atan2 stay absent rather than lying around: nothing in the sim needs them,
+  // and importing one would silently reopen the cross-engine hole. `exp` was added in
+  // Phase D — but pinned like sin/cos, not passed through, which the tests below hold
+  // it to. The rule was never "no exp", it was "nothing unpinned".
   assert.equal(mathx.pow, undefined);
   assert.equal(mathx.atan2, undefined);
+  assert.equal(typeof mathx.exp, 'function');
+});
+
+test('exp tracks the native one to an ULP over the range a softmax uses', () => {
+  // The only caller is the policy net's attention softmax, whose inputs are shifted
+  // so the largest is 0 — but the range checked here is far wider than that, because
+  // a pinned function that is only right where it is currently called is a trap for
+  // the next caller.
+  let worst = 0;
+  for (let i = 0; i <= 200000; i++) {
+    const x = -60 + (i / 200000) * 80;
+    const rel = Math.abs(mathx.exp(x) - Math.exp(x)) / Math.exp(x);
+    if (rel > worst) worst = rel;
+  }
+  assert.ok(worst < 4 * Number.EPSILON, `worst relative error ${worst.toExponential(3)}`);
+
+  assert.equal(mathx.exp(0), 1);
+  assert.ok(Number.isNaN(mathx.exp(NaN)));
+  assert.equal(mathx.exp(Infinity), Infinity);
+  assert.equal(mathx.exp(-Infinity), 0);
+  assert.equal(mathx.exp(1000), Infinity);
+  // Underflows to zero a few subnormals earlier than Math.exp does — stated in the
+  // module and pinned here so the boundary cannot drift unnoticed.
+  assert.equal(mathx.exp(-746), 0);
+});
+
+test('exp uses only IEEE-754-pinned operations', () => {
+  // The same guard the sin/cos test applies, extended to exp. Comments are stripped
+  // first: the module explains its own boundary behaviour by naming `Math.exp`, and
+  // prose about a hazard is not the hazard.
+  const src = readFileSync(new URL('../mathx.js', import.meta.url), 'utf8');
+  const code = src.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(code, /Math\s*\.\s*(pow|exp|log)/);
+  assert.doesNotMatch(code, /\*\*/);
+
+  // And the property those operations exist to guarantee: every scale factor is an
+  // exact power of two, so `exp` never multiplies by an approximation of one.
+  for (const k of [-1074, -1022, -60, -1, 0, 1, 60, 1023]) {
+    const scaled = mathx.exp(k * 0.6931471805599453); // ln 2
+    assert.ok(Number.isFinite(scaled), `2^${k} came out ${scaled}`);
+  }
 });
 
 test('hypot computes Euclidean distance', () => {
