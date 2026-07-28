@@ -85,6 +85,7 @@ imitation gap RL exists to close, and it is E3's, not E1's.
 | `eval.py` | Scores the *exported* model, so it measures the file the browser fetches. |
 | `export.py` | float16 blob + JSON manifest into `policy/weights/`. |
 | `reference.py` | The parity fixture: real frames, and PyTorch's logits for them. Writes to `trainer/parity/` — never beside the weights, because everything under `assets/pandas/` is a Quarto site resource and a local render would sweep 128 MB of fixture into `_site`. |
+| `vecenv.py` | **E0**: the live sim as a Python `VecEnv` — spawns `node ../vec-serve.js` and speaks its binary stdio protocol. What E3's PPO loop steps. `--bench` measures the bridge end to end (175k+ decisions/s at 8×64 on the dev machine). |
 
 ## Three things worth knowing before reading a number
 

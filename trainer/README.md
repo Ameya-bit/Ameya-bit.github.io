@@ -19,7 +19,7 @@ Zero dependencies, `node --test`.
 | **B2 — observation encoder (heading-cone FOV, sticky slots, frozen + bit-matched)** | ✅ done — in the engine, see below |
 | **B3 — per-tick ground-truth logging (FSM kind/phase/timers, cascade arm, claims)** | ✅ done |
 | **B4 — shard writer + manifest + JSONL sample** | ✅ done |
-| **B5 — worker_threads fan-out** | ⬜ (see throughput below — it was never needed for the cut) |
+| **B5 — worker_threads fan-out** | ✅ done (2026-07-28, as E0's `vec-host.js` — it was never needed for the cut) |
 | **B6 — cut the corpora, freeze the roster** | ✅ done |
 | **C1 — the game: scoring rules, the policy seam, the evaluator** | ✅ done |
 | **C2 — the oracle, the memoryless twins, the exploit bots** | ✅ done |
@@ -31,6 +31,7 @@ Zero dependencies, `node --test`.
 | **D2 — the BC clone, in [`py/`](py/README.md)** | ✅ done |
 | **pre-E — the decision-delay contract (`delayPolicy`, `--delay` here and in py/)** | ✅ done (2026-07-28) |
 | **E1 — the partial-obs BC warm-start (`train-wild`, `--delay 1`), exported in place** | ✅ done (2026-07-28) — see [py/README.md](py/README.md) |
+| **E0 — the on-policy rollout bridge (vec envs, worker pool, the Python pipe)** | ✅ done (2026-07-28) — 175k decisions/s at 8×64, see below |
 
 **Phase C's exit is met: all three checks pass** (`node evaluate.js --gate`, game v3).
 The memory gap is **87%** of the oracle against a 30% threshold; every exploit bot
@@ -43,8 +44,8 @@ conservative reading that turned out not to be a bound. **Phase D is unblocked.*
 
 **Phase B's exit is met.** The corpora are cut, the roster is frozen (and the freeze
 is a test — see below), the encoder's fixture check is green, and rollouts clear the
-≥50k ticks/s/core bar. B5 is the one milestone left open, and it is a Phase-E want,
-not a Phase-B need.
+≥50k ticks/s/core bar. B5 — the one milestone that stayed open, as a Phase-E want
+rather than a Phase-B need — closed on 2026-07-28 as E0's worker pool.
 
 ## ⚠️ D0 — every corpus was re-cut, and shard version 2 is why
 
@@ -155,10 +156,63 @@ because a corpus missing labels it could have had is the expensive mistake.
 | `planner.js` | **The yardstick body (C2)**: one score-maximising bot, run over each of those beliefs. |
 | `policies.js` | Everything the game is scored against: the incumbent, the floors, the yardsticks, the exploit bots. |
 | `evaluate.js` | Runs a policy over a set of episodes and reports the distribution. Also the CLI and the gate (`--gate`). |
+| `vec.js` | **Vectorized environments (E0)**: N episodes in lockstep on the stepper, decisions batched, the game's ledger as per-decision reward, auto-reset off the spec stream. |
+| `vec-worker.js` / `vec-host.js` | **The worker pool (B5, at last)**: W threads × M envs behind one async `step()`, byte-identical to the single process at any sharding. |
+| `vec-serve.js` | The fleet on stdio: one JSON handshake, then fixed-size binary records — Node's half of the Python bridge. |
+| `py/vecenv.py` | The Python half: `VecEnv.step(actions)` ⇄ `np.frombuffer`. What E3's PPO loop consumes. |
 | `scenario.js` | **Constructed episodes (C3)**: a bare stage, a hand-placed roster, the directors asleep, and a script that injects one event at one tick. |
 | `twins.js` | **The twin-episode battery (C3)**: three matched-pair sets, one per knowability tier, and exit check 3. |
 | `test/freeze.test.js` | Runs `checkContract` over every committed manifest — the roster freeze, enforced. |
 | `corpora/` | Cut corpora. Gitignored except manifests and the JSONL sample — a corpus is re-cuttable from its manifest, so the bytes need not be in git. |
+
+## The on-policy bridge (E0)
+
+BC trained from a static corpus; RL needs the live sim in the training loop, and
+the sim is JS while the gradients are Python. Nobody ports the sim (the plan's
+appendix is blunt about that), so the bridge is vectorized environments:
+
+```
+py/vecenv.py  ⇄ stdio, binary ⇄  vec-serve.js → vec-host.js → W × vec-worker.js → vec.js
+```
+
+`vec.js` runs N episodes in lockstep on `makeEpisodeStepper` — the episode loop
+of `rollout.js`, inverted so it pauses at every decision tick and the caller
+supplies the action (`runEpisode` is now implemented on top of it, so there is
+one loop and the corpora, the gate and the bridge all run it; `cut.js --verify`
+still re-cuts to the committed digests). Each env scores through `scoreSink`, and
+the per-decision reward is the delta of the ledger's running total — **the same
+ledger the gate reads is the reward PPO climbs**, with no second implementation
+to drift. Episode ends auto-reset off the spec's own PRNG stream (seeded by
+absolute env index, so any sharding of envs into workers is the same fleet — a
+test pins byte-identity between 2×2 workers and 1×4), first episodes are
+staggered so the fleet does not reset in phase, and `-1` as an action hands the
+decision to the rules expert (the deploy-time fallback, and what fills a delayed
+policy's pipeline).
+
+The wire is the corpus-shard philosophy on a pipe: one JSON handshake that says
+what the bytes mean, then fixed-size little-endian records — obs f32, rewards
+f32, dones u8, applied-actions i8, episode returns f32 out; actions i8 in. The
+Python reader is `np.frombuffer` and a reshape. Lockstep, deliberately: the
+batch is hundreds of envs so the round-trip amortises away, and determinism
+needs the ordering. The decision-delay contract stays on the *policy* side
+(feed the forward pass the previous frame, exactly as `data.py` pairs windows),
+so the env is agnostic and one bridge serves delay 0 and delay 1 alike.
+
+Measured end to end through Python (`uv run python vecenv.py --bench`), `wild`
+spec, expert-driven / random-driven:
+
+| workers × envs | decisions/s |
+|---|---|
+| 1 × 64 | 47–51k |
+| 2 × 64 | 81–87k |
+| 4 × 64 | 122–137k |
+| **8 × 64** | **176–201k** |
+
+Against the plan's 25–50k target: one worker meets it, eight are 4–8× over, and
+a 500M-step run is under an hour of environment time. The single-worker figure
+is the throughput table's own prediction (~116k `wild` ticks/s ÷ 2 ticks per
+decision, minus the encoder and the ledger), so the bridge added nothing
+measurable on top of the sim.
 
 ## The observation encoder is in the engine, not here
 

@@ -111,8 +111,23 @@ export function delayPolicy(policy, delay = 1) {
   };
 }
 
-// Run one episode. Returns the summary; the data goes to the sink.
-export function runEpisode({ seed, config = {}, sink = null, policy = null, rules = null, ...opts }) {
+// The episode loop, inverted: a stepper that pauses at every decision tick and
+// lets the caller supply the action. E0's vectorized environments need exactly
+// this — hundreds of episodes advancing in lockstep, their decisions batched to a
+// remote policy — and `runEpisode` below is reimplemented on top of it, so there
+// is one loop and the corpora, the gate and the vec bridge all run it.
+//
+//   const s = makeEpisodeStepper({ seed, config, sink });
+//   let at = s.start();                    // -> { state, tick } | null
+//   while (at) at = s.advance(action);     // action applied at `at.tick`; null = expert
+//   const summary = s.summary();
+//
+// The pause hands back the state the decision is acted FROM — tick t-1 — and the
+// action given to `advance` is applied during the step that produces tick t. That
+// is the only causally available information set: an action chosen from tick t
+// would have to know where its own step landed. The recorder's `decide` hook sees
+// this same state, so a corpus row is the decision as it was actually faced.
+export function makeEpisodeStepper({ seed, config = {}, sink = null, rules = null, ...opts }) {
   const { ticks, stride, warmup } = { ...DEFAULT_ROLLOUT, ...opts };
   const engine = makeEngine(config);
   let state = engine.init(seed);
@@ -122,29 +137,53 @@ export function runEpisode({ seed, config = {}, sink = null, policy = null, rule
   // out of. Null for a plain recording rollout, which has no referee at all.
   const ctx = { seed, cfg: engine.cfg, ticks, stride, warmup, rules };
   sink?.begin?.(ctx);
-  const act = bindPolicy(policy, ctx);
 
+  const end = warmup + ticks;
+  let t = 1;
   let samples = 0;
-  for (let t = 1; t <= warmup + ticks; t++) {
-    // The policy sees the state it is acting FROM — tick t-1 — and its action is
-    // applied during the step that produces tick t. That is the only causally
-    // available information set: an action chosen from tick t would have to know
-    // where its own step landed. The recorder is handed this same state through
-    // `decide`, so a corpus row is the decision as it was actually faced.
-    const decision = t % TICKS_PER_ACTION === 0;
-    if (decision) sink?.decide?.(state, t);
-    const action = act && decision ? act(state, t) : null;
+  let ended = false;
+
+  const doTick = (action) => {
+    if (t % TICKS_PER_ACTION === 0) sink?.decide?.(state, t);
     // No action: the rules expert drives, and what it applied lands on hat.action.
     state = engine.step(state, action);
     if (t > warmup && (t - warmup) % stride === 0) {
       sink?.sample?.(state, t - warmup);
       samples += 1;
     }
-  }
+    t += 1;
+  };
 
-  const summary = { seed, ticks, samples };
-  sink?.end?.(summary);
-  return summary;
+  // Advance through the non-decision ticks (the expert's reflexes still run; the
+  // seam only exists at the 10 Hz decision clock) and pause at the next decision.
+  const runToDecision = () => {
+    while (t <= end && t % TICKS_PER_ACTION !== 0) doTick(null);
+    return t <= end ? { state, tick: t } : null;
+  };
+
+  return {
+    ctx,
+    start: () => runToDecision(),
+    advance(action) {
+      if (t > end) return null;
+      doTick(action);
+      return runToDecision();
+    },
+    summary() {
+      const summary = { seed, ticks, samples };
+      if (!ended) { ended = true; sink?.end?.(summary); }
+      return summary;
+    },
+  };
+}
+
+// Run one episode. Returns the summary; the data goes to the sink.
+export function runEpisode({ policy = null, ...opts }) {
+  const stepper = makeEpisodeStepper(opts);
+  const act = bindPolicy(policy, stepper.ctx);
+  let at = stepper.start();
+  while (at) at = stepper.advance(act ? act(at.state, at.tick) : null);
+  return stepper.summary();
 }
 
 // Run many episodes through one sink, in order. Deterministic given the seeds.

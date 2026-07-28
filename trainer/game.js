@@ -387,6 +387,12 @@ function commit(L, rec, amount, room) {
 const sum = (xs) => xs.reduce((a, b) => a + b, 0);
 const mean = (xs) => (xs.length ? sum(xs) / xs.length : 0);
 
+// The ledger's running total. Exported for E0's vec bridge, whose per-decision
+// reward is the *delta* of this number across a decision's ticks — the same ledger
+// produces the episode score and the RL reward, which is the plan's requirement
+// that Phase E optimise exactly what the gate measures.
+export const ledgerScore = (L) => L.view - L.stepCost - L.rollCost - L.knockCost;
+
 // The score, its components, and the diagnostics that are the actual product of
 // this phase. The total is one number and one number cannot tell you *why* — a
 // policy that never leaves home and one that spends the episode being run over can
@@ -395,7 +401,7 @@ const mean = (xs) => (xs.length ? sum(xs) / xs.length : 0);
 export function report(L, rules, meta = {}) {
   const recs = [...L.seen.values()];
   const perMin = (v) => (L.ticks ? (v * 1200) / L.ticks : 0);
-  const total = L.view - L.stepCost - L.rollCost - L.knockCost;
+  const total = ledgerScore(L);
   return {
     ...meta,
     version: GAME_VERSION,

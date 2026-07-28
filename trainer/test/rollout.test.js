@@ -127,3 +127,56 @@ test('runEpisodes threads one sink across episodes in order', () => {
   assert.deepEqual(seen, [11, 22, 33]);
   assert.deepEqual(out.map((s) => s.seed), [11, 22, 33]);
 });
+
+// ---- the stepper (E0) ----
+//
+// `makeEpisodeStepper` is the same episode loop inverted: it pauses at every
+// decision tick and the caller supplies the action. `runEpisode` is reimplemented
+// on top of it, so these tests pin the inversion, not a second loop.
+
+test('a stepper-driven episode is identical to runEpisode with the same policy', async () => {
+  const { makeEpisodeStepper } = await import('../rollout.js');
+  const policy = {
+    init: () => (state, tick) => (tick % 6 === 0 ? ACTION.HOLD : null),
+  };
+  const viaRun = arraySink((s) => ({ x: hatOf(s).x, y: hatOf(s).y, a: hatOf(s).action }));
+  runEpisode({ seed: 515, config: { entrance: false }, ticks: 800, policy, sink: viaRun });
+
+  const viaStep = arraySink((s) => ({ x: hatOf(s).x, y: hatOf(s).y, a: hatOf(s).action }));
+  const stepper = makeEpisodeStepper({ seed: 515, config: { entrance: false }, ticks: 800, sink: viaStep });
+  const act = policy.init(stepper.ctx);
+  let at = stepper.start();
+  while (at) at = stepper.advance(act(at.state, at.tick));
+  const summary = stepper.summary();
+
+  assert.deepEqual(viaStep.rows, viaRun.rows);
+  assert.equal(summary.samples, 800 / TICKS_PER_ACTION);
+});
+
+test('the stepper pauses at every decision tick, with the state acted FROM', async () => {
+  const { makeEpisodeStepper } = await import('../rollout.js');
+  // Collect the states runEpisode hands its policy…
+  const seen = [];
+  runEpisode({
+    seed: 99, config: { entrance: false }, ticks: 200,
+    policy: { init: () => (s, t) => { seen.push({ t, x: hatOf(s).x }); return null; } },
+  });
+  // …and the pauses the stepper surfaces. Same ticks, same pre-step states.
+  const paused = [];
+  const stepper = makeEpisodeStepper({ seed: 99, config: { entrance: false }, ticks: 200 });
+  let at = stepper.start();
+  while (at) { paused.push({ t: at.tick, x: hatOf(at.state).x }); at = stepper.advance(null); }
+  assert.deepEqual(paused, seen);
+  assert.ok(paused.every((p) => p.t % TICKS_PER_ACTION === 0));
+});
+
+test('the stepper summary fires the sink end hook exactly once', async () => {
+  const { makeEpisodeStepper } = await import('../rollout.js');
+  let ends = 0;
+  const stepper = makeEpisodeStepper({ seed: 3, ticks: 40, sink: { end: () => { ends += 1; } } });
+  let at = stepper.start();
+  while (at) at = stepper.advance(null);
+  stepper.summary();
+  stepper.summary();
+  assert.equal(ends, 1);
+});
