@@ -486,12 +486,18 @@ def main() -> None:
             stats[k] /= max(1, n_grad_steps)
 
         if update % args.log_every == 0 or update == total_updates:
+            # `now` is this rollout's mean reward as score/min — instantaneous, no
+            # lag. `score/min` averages the last 64 *finished* episodes, which run
+            # 10 minutes each: it answers for the policy of ~an episode ago, and
+            # reading it as the current policy's level is how the shakedown's
+            # 2M-step peak-then-decline hid inside a smooth "improvement" curve.
+            now = float(roll.reward.mean()) * DECISIONS_PER_MIN
             recent = collector.finished[-64:]
             if recent:
                 spm = [r / (l / DECISIONS_PER_MIN) for r, l in recent]
-                ep_line = f"return {np.mean([r for r, _ in recent]):+8.1f}  score/min {np.mean(spm):+7.2f}"
+                ep_line = f"now {now:+7.2f}  ep score/min {np.mean(spm):+7.2f}"
             else:
-                ep_line = "no episodes finished yet"
+                ep_line = f"now {now:+7.2f}  no episodes finished yet"
             sps = env_steps / (time.time() - t_start)
             print(f"upd {update:>5}/{total_updates}  {env_steps / 1e6:7.2f}M steps  {sps / 1000:5.1f}k/s  "
                   f"{ep_line}  pi {stats['policy']:+.4f}  v {stats['value']:.3f}  "
@@ -503,6 +509,7 @@ def main() -> None:
                     "update": update, "env_steps": env_steps, "kl_coef": kl_coef,
                     "warming": warming, **{k: round(v, 6) for k, v in stats.items()},
                     "episodes": len(collector.finished),
+                    "now_score_per_min": round(now, 4),
                     "mean_return": float(np.mean([r for r, _ in recent])) if recent else None,
                     "mean_score_per_min": float(np.mean(spm)) if recent else None,
                     "limited_frac": float(roll.limited[valid].mean()),
