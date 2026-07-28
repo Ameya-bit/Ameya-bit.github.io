@@ -160,7 +160,8 @@ because a corpus missing labels it could have had is the expensive mistake.
 | `vec.js` | **Vectorized environments (E0)**: N episodes in lockstep on the stepper, decisions batched, the game's ledger as per-decision reward, auto-reset off the spec stream. |
 | `vec-worker.js` / `vec-host.js` | **The worker pool (B5, at last)**: W threads × M envs behind one async `step()`, byte-identical to the single process at any sharding. |
 | `vec-serve.js` | The fleet on stdio: one JSON handshake, then fixed-size binary records — Node's half of the Python bridge. |
-| `py/vecenv.py` | The Python half: `VecEnv.step(actions)` ⇄ `np.frombuffer`. What E3's PPO loop consumes. |
+| `py/vecenv.py` | The Python half: `VecEnv.step(actions)` ⇄ `np.frombuffer`. What `py/ppo.py` steps. |
+| `py/slotnet.py` / `py/warmstart.py` / `py/ppo.py` | **The Phase-E trainer (E3)**: the slot-GRU actor, its sequence-BC warm start, and the PPO recipe — see [`py/README.md`](py/README.md). |
 | `scenario.js` | **Constructed episodes (C3)**: a bare stage, a hand-placed roster, the directors asleep, and a script that injects one event at one tick. |
 | `twins.js` | **The twin-episode battery (C3)**: three matched-pair sets, one per knowability tier, and exit check 3. |
 | `test/freeze.test.js` | Runs `checkContract` over every committed manifest — the roster freeze, enforced. |

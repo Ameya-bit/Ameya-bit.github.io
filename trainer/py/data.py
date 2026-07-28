@@ -103,6 +103,59 @@ class Pool:
         return xs, ys
 
 
+class SeqPool:
+    """Contiguous decision windows for BPTT — Phase E's warm start samples these.
+
+    A sample is `length` consecutive decisions: the frame the net saw at each one
+    (`delay` rows behind the action, clamped at the episode start, exactly as
+    `Pool.batch` pairs them) and the action taken. The recurrent net starts each
+    window with zero memory, which is only *true* at an episode's first decision —
+    everywhere else the honest fix is `burn`: the leading `burn` decisions run
+    forward normally but are excluded from the loss, so the memory has warmed up
+    before any gradient reads it (the R2D2 compromise, at corpus scale).
+    """
+
+    def __init__(
+        self,
+        corpus: Corpus,
+        episodes: list[int],
+        *,
+        length: int,
+        burn: int = 0,
+        delay: int = 0,
+        size: int = 48,
+        seed: int = 0,
+    ):
+        self.pool = Pool(corpus, episodes, frames=1, delay=delay, size=size, seed=seed)
+        self.length = length
+        self.burn = burn
+        self.delay = delay
+
+    def rotate(self, n: int = 1) -> None:
+        self.pool.rotate(n)
+
+    def batch(self, n: int) -> tuple[np.ndarray, np.ndarray, int]:
+        """`(x, y, burn)` — `(n, burn+length, tokens, width)`, `(n, burn+length)` int64.
+
+        Loss belongs on `y[:, burn:]` only.
+        """
+        rng = self.pool.rng
+        corpus = self.pool.corpus
+        span = self.burn + self.length
+        which = rng.integers(len(self.pool._loaded), size=n)
+        xs = np.empty((n, span, corpus.tokens, corpus.obs_width), dtype=np.float32)
+        ys = np.empty((n, span), dtype=np.int64)
+        for ep in np.unique(which):
+            obs, act = self.pool._loaded[int(ep)]
+            hit = np.nonzero(which == ep)[0]
+            starts = rng.integers(max(1, len(act) - span + 1), size=hit.size)
+            idx = starts[:, None] + np.arange(span, dtype=np.int64)[None, :]
+            idx = np.minimum(idx, len(act) - 1)  # short episodes: clamp the tail
+            xs[hit] = obs[np.maximum(idx - self.delay, 0)]
+            ys[hit] = act[idx]
+        return xs, ys, self.burn
+
+
 def whole_episodes(
     corpus: Corpus, episodes: list[int], frames: int, stride: int = 1, delay: int = 0
 ):

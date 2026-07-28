@@ -73,19 +73,99 @@ it scores **−61.7/min on `natural` at 2.18 knocks/min** against the shipped cl
 penalty, no more. The gap to the expert (57.7/min, 1.27 knocks/min) is the
 imitation gap RL exists to close, and it is E3's, not E1's.
 
+## E3 — the PPO trainer (2026-07-28)
+
+Phase E's engine: `slotnet.py` + `warmstart.py` + `ppo.py`. The model is E2's pick
+made trainable — the single-frame spatial transformer with a d48 GRU per token,
+policy path 133,361 params (260 KB as float16, matching the priced kernel;
+`JsGru` reproduces `tools/bench-kernels.js`'s arithmetic to 6e-8 over a stepped
+trajectory, so the eventual export is a straight copy) — plus two heads the
+browser never sees: the critic, and setting 2's auxiliary predictor (own future
+observations, per token, at horizons 1/2/4, conditioned on the executed actions).
+
+```sh
+uv run python warmstart.py --steps 4000 --batch 256      # ~15 min; writes best.pt
+uv run python ppo.py --init runs/warmstart-slot/best.pt  # the recipe, defaults = the plan
+```
+
+**The warm start is re-learned in the new body** (E1's stacked-frame weights do
+not transfer), as sequence-BC over contiguous windows: 16 burn-in decisions warm
+the zero-initialised memory, the loss reads the next 48. Two findings from its
+first two runs:
+
+- **BPTT through 64 GRU steps blows up at BC's own learning rate.** At `train.py`'s
+  3e-4 the loss ran 0.59 → 2.0 at step ~1550 and settled in a near-HOLD basin the
+  cosine decay froze in place (final `roll_recall` 0.10, against 0.80 at its own
+  step 1000). At 1.5e-4 with clip 0.5 the same run is clean end to end. This is
+  the plan's "transformers may not train under RL" risk showing up in *supervised*
+  BPTT, which is why `warmstart.py` now writes `best.pt` — the checkpoint that
+  ships forward is the best one measured, never the last one trained.
+- **The recurrent clone learns the expert's cadence, which the stacked window
+  provably could not.** The expert's stride clock (`moveTimer`) is internal state
+  no observation exposes — but a net that carries memory can *count decisions
+  since its last stride*. Measured on `eval-natural`, against the E1 clone:
+
+  | question | slot warm-start | E1 (stacked, delay 1) |
+  |---|---|---|
+  | `move_f1` | **0.783** | 0.306 |
+  | `roll_recall` | **0.831** | 0.629 |
+  | `dir_given` | 0.517 | 0.555 |
+
+  The cadence was the D5 diagnosis ("it never pauses — it walks 45% more") and it
+  is largely closed *before RL* — carried memory doing real work on day one.
+
+**`ppo.py` is the locked recipe, and the delay contract is structural.** The
+rollout processes each frame once and steps the sampled action at the *next*
+decision; the first decision of every episode goes to the rules expert (`-1`)
+while the pipeline fills — the deployed timing, bit for bit. Those expert
+decisions land as `skip` slots: no forward ran, so the replay discards their
+memory update and every loss masks them. Recurrent replay uses rollout-snapshot
+initial states at `--bptt` (64) boundaries — R2D2's stored-state compromise; the
+chunk length is also the horizon credit can flow over, and must stay longer than
+the knock-to-classification span the flagship certificate needs. Critic-only
+warmup holds the actor at lr 0 for `--warmup-updates`; the leash
+(`--leash frac:coef,...`) is piecewise-linear over the run — tight, annealed
+loose mid-training so information-seeking is discoverable, re-tightened late;
+KL-to-anchor is computed against the *exported* E1 pair (`load_exported`), the
+same file the browser fetches, driven on a 4-frame ring primed by repetition
+exactly as `net.js` primes. `--aux-coef 0` is the setting-1 purist arm.
+
+**Validated end to end at real scale (10M steps, the default fleet and recipe):**
+**21.2k decisions/s** through env + inference + replay on the dev machine — a
+300M-step E5 run is ~4 hours, comfortably overnight — and the loop *learns*:
+score/min on `wild` climbed from **−90 (the warm start's level, delay 1) to
+−21** by 10M steps, while the anchor KL held at 0.23–0.27 through the entire
+leash sweep (the believability tether working: score quadrupled without leaving
+the clone's neighbourhood), the aux loss fell monotonically 0.049 → 0.022, and
+entropy never collapsed. The mechanism is visibly the D5 pathology being priced
+out — the ledger charges for exactly the aimless walking the clone over-does.
+Checkpoints land every `--save-every-steps` (2M): E4's probes read those. What
+a 10M-step run does **not** show is anything Phase E is actually for — the
+expert is at +21.8/min on this spec, the memory gap sits above *that* — so the
+numbers here validate the machinery, not the emergence; E5 owns the real runs.
+
+The known bill for scoring a slot-GRU candidate through `evaluate.js --gate`:
+the JS inference kernel for this architecture does not exist yet (`net.js` runs
+the stacked clone; `tools/bench-kernels.js` has the priced shape). It is Phase
+F's export work, and until then online scores come from the bridge's own ledger,
+which is the same referee by construction.
+
 ## What is here
 
 | File | Role |
 |---|---|
 | `corpus.py` | Reads a cut corpus from its manifest. The whole loader is `np.fromfile(...).reshape(-1, width)`, which is what B4 bought by making one file one episode. |
-| `data.py` | Stacked-frame windows out of a rotating pool of episodes — 6.7 GB does not fit, and 27 GB of materialised windows fits even less. |
-| `model.py` | The network, and the budget table that determined its shape. |
-| `train.py` | The BC run. |
+| `data.py` | Stacked-frame windows out of a rotating pool of episodes — 6.7 GB does not fit, and 27 GB of materialised windows fits even less. Also `SeqPool`, the same pool cut into contiguous windows for BPTT. |
+| `model.py` | The Phase-D network (stacked frames), and the budget table that determined its shape. Still the anchor's architecture. |
+| `train.py` | The BC run (Phase D / E1). |
+| `slotnet.py` | **E2's pick as a trainable model**: the single-frame spatial transformer + per-slot GRU, plus the trainer-only value and aux heads. The Phase-E actor. |
+| `warmstart.py` | **E3's opening move**: sequence-BC of the recurrent SlotNet on `train-wild`, delay 1 — the PPO init. |
+| `ppo.py` | **E3**: the PPO trainer — critic-only warmup, KL-to-frozen-E1 with the leash schedule, setting-2 aux loss, delay-1 on-policy rollouts on the E0 bridge. |
 | `metrics.py` | Scoring that is not dominated by HOLD. Read this before reading any number. |
 | `eval.py` | Scores the *exported* model, so it measures the file the browser fetches. |
 | `export.py` | float16 blob + JSON manifest into `policy/weights/`. |
 | `reference.py` | The parity fixture: real frames, and PyTorch's logits for them. Writes to `trainer/parity/` — never beside the weights, because everything under `assets/pandas/` is a Quarto site resource and a local render would sweep 128 MB of fixture into `_site`. |
-| `vecenv.py` | **E0**: the live sim as a Python `VecEnv` — spawns `node ../vec-serve.js` and speaks its binary stdio protocol. What E3's PPO loop steps. `--bench` measures the bridge end to end (175k+ decisions/s at 8×64 on the dev machine). |
+| `vecenv.py` | **E0**: the live sim as a Python `VecEnv` — spawns `node ../vec-serve.js` and speaks its binary stdio protocol. What `ppo.py` steps. `--bench` measures the bridge end to end (175k+ decisions/s at 8×64 on the dev machine). |
 
 ## Three things worth knowing before reading a number
 
