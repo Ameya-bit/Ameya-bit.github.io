@@ -29,11 +29,13 @@ reference the port is judged against.
 | **the `.stop` hit box — the last divergence from `pandas.js`** | ✅ closed |
 | **D3/D5 — `policy/net.js` + `policy/driver.js`: the trained clone, behind `?policy=nn`** | ✅ built, opt-in |
 
-**Phase D lands here as an opt-in brain, not a default.** `?policy=nn` fetches
+**Phase D lands here as an opt-in brain, and stays opt-in.** `?policy=nn` fetches
 `policy/weights/` after first paint and hands the hat panda to a 122k-parameter
 transformer; anything absent, stale or NaN falls back to the rules watcher without
-a visible event. It stays opt-in for the same reason `?engine=new` did: the
-character gate is Ameya's and has not been run. See [Phase D](#phase-d--the-trained-clone) below.
+a visible event. **It failed both of its judgement-call exits on 2026-07-28** — the
+character gate ("terrible at dodging") and the latency budget (**p99 2 ms in the
+browser** against 1 ms, where Node reads 567 µs). The parity and wire-size exits
+passed. The page keeps the rules watcher. See [Phase D](#phase-d--the-trained-clone) below.
 
 **This engine is now frozen against cut corpora.** Phase B's 17 GB of training and
 eval rollouts (`trainer/README.md`) are recordings of *this* machine, and every
