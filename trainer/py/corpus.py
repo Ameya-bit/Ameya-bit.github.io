@@ -69,6 +69,8 @@ class Corpus:
         self.n_actions = m["actions"]["count"]
         self.stride = m["rollout"]["stride"]
         self.field = {f["name"]: (f["at"], f["size"]) for f in self.obs_layout["fields"]}
+        # Truth label vocabularies (mode names, anomaly kinds) — {} on a --no-truth cut.
+        self.labels = m.get("truth", {}).get("labels", {})
 
     # ---- the row template, resolved ----
 
@@ -105,6 +107,26 @@ class Corpus:
                 f"({entry['rows']} rows x {entry['width']}). Re-cut or re-verify the corpus."
             )
         return raw.reshape(entry["rows"], entry["width"]), self.blocks(entry["pandaCount"])
+
+    def truth_fields(self, block: str) -> dict[str, int]:
+        """Column name -> index for a truth block (`slots` / `entities` / `global`)."""
+        for spec in self.manifest["row"]["blocks"]:
+            if spec["name"] == block and "fields" in spec:
+                return {name: i for i, name in enumerate(spec["fields"])}
+        raise KeyError(f"no fields recorded for block {block!r} — was this corpus cut --no-truth?")
+
+    def truth(self, index: int) -> tuple[np.ndarray, np.ndarray]:
+        """`(slots, entities)` for one episode — the labels a policy never sees.
+
+        slots is `(rows, 8, 4)` (which panda each obs token addressed — the join
+        Phase G's probes need); entities is `(rows, pandaCount, 32)` with sub-row
+        k pinned to panda id k. Column names come from `truth_fields`.
+        """
+        rows, blocks = self.load(index)
+        s, e = blocks["slots"], blocks["entities"]
+        slots = rows[:, s.at : s.at + s.size].reshape(-1, s.repeat, s.width)
+        ents = rows[:, e.at : e.at + e.size].reshape(-1, e.repeat, e.width)
+        return slots, ents
 
     def episode(self, index: int) -> tuple[np.ndarray, np.ndarray]:
         """`(obs, action)` for one episode.

@@ -295,6 +295,11 @@ def main() -> None:
                    help="KL-to-anchor coefficient as frac:coef points, piecewise linear")
     p.add_argument("--grad-clip", type=float, default=1.0)
     # bookkeeping
+    p.add_argument("--max-minutes", type=float, default=0,
+                   help="stop cleanly after this wall-clock budget (0 = run to --total-steps). "
+                        "The shakedown knob: run the real config, truncated — schedules still "
+                        "span --total-steps, so 10 minutes of a 300M run behaves exactly like "
+                        "the first 10 minutes of the real thing")
     p.add_argument("--save-every-steps", type=int, default=2_000_000)
     p.add_argument("--log-every", type=int, default=1)
     p.add_argument("--seed", type=int, default=20260728)
@@ -507,6 +512,13 @@ def main() -> None:
             save("latest")
             save(f"ckpt-{env_steps // 1_000_000:05d}M")
             next_save += args.save_every_steps
+
+        if args.max_minutes and (time.time() - t_start) / 60 >= args.max_minutes:
+            save("latest")
+            save(f"ckpt-{env_steps // 1_000_000:05d}M")
+            print(f"\nstopping at the --max-minutes budget ({args.max_minutes:g} min), "
+                  f"update {update}/{total_updates}")
+            break
 
     env.close()
     print(f"\ndone: {env_steps / 1e6:.1f}M env steps in {(time.time() - t_start) / 60:.1f} min; "

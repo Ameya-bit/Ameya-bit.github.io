@@ -150,6 +150,36 @@ the stacked clone; `tools/bench-kernels.js` has the priced shape). It is Phase
 F's export work, and until then online scores come from the bridge's own ledger,
 which is the same referee by construction.
 
+## E4 — checkpoint probes (2026-07-28)
+
+`probes.py` — the shortcut-hunt gauge, and the overlay's future feed. Linear
+probes (deliberately: one `nn.Linear` on standardised features, the same bar
+Phase G will hold) over every bound neighbour token's state, joined to that
+panda's ground truth through the corpus's `slots` block. Three questions —
+`kind` (9-way macro-F1), the `flagship` sleeper-vs-knocked discrimination, and
+`ttl` (ridge R² on log1p) — each read at two points (`feat`, the 96d the heads
+see; `mem`, the 48d carried GRU state the overlay chip will read) and split
+**visible vs held**, because a held token's observation is zeros-plus-`present`
+and anything decodable there is being carried, not seen.
+
+```sh
+uv run python probes.py                       # the warm start, vs the untrained twin
+uv run python probes.py --sweep runs/ppo-v1   # every ckpt-*.pt -> decodability trajectory
+```
+
+**The baseline is a twin, not zero, and it earns its keep immediately.** An
+untrained random-init net probed identically scores flagship 0.68 / ttl 0.35 on
+visible tokens (random recurrent features are a reservoir; OthelloGPT's
+untrained nets probed 66% vs 89%), so a lone decodability number means nothing —
+only the trained−untrained gap does. **First reading, on the 10M shakedown's
+checkpoints: score climbed −90 → −21 while every probe stayed flat at or
+slightly below the reservoir** — kind 0.19 vs 0.21, flagship 0.62 vs 0.68, held
+tier indistinguishable, held-ttl actively *negative* R². The early score gains
+are cheaper behaviour (walk less, get knocked less), not inference. That is the
+plan's predicted opening position, and it is exactly the signature this
+instrument exists to catch when it matters: an E5 run whose score rises while
+these numbers do not move has found an exploit, not a world model.
+
 ## What is here
 
 | File | Role |
@@ -161,6 +191,7 @@ which is the same referee by construction.
 | `slotnet.py` | **E2's pick as a trainable model**: the single-frame spatial transformer + per-slot GRU, plus the trainer-only value and aux heads. The Phase-E actor. |
 | `warmstart.py` | **E3's opening move**: sequence-BC of the recurrent SlotNet on `train-wild`, delay 1 — the PPO init. |
 | `ppo.py` | **E3**: the PPO trainer — critic-only warmup, KL-to-frozen-E1 with the leash schedule, setting-2 aux loss, delay-1 on-policy rollouts on the E0 bridge. |
+| `probes.py` | **E4**: linear probes per checkpoint — kind/flagship/ttl decodability, visible vs held, always against the untrained-twin reservoir. |
 | `metrics.py` | Scoring that is not dominated by HOLD. Read this before reading any number. |
 | `eval.py` | Scores the *exported* model, so it measures the file the browser fetches. |
 | `export.py` | float16 blob + JSON manifest into `policy/weights/`. |
