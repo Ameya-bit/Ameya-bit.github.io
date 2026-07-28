@@ -19,25 +19,32 @@ import { dirname, join } from 'node:path';
 
 import { makeNet, decodeFloat16 } from '../policy/net.js';
 
-const WEIGHTS = join(dirname(dirname(fileURLToPath(import.meta.url))), 'policy', 'weights');
-const need = ['policy.json', 'policy.bin', 'parity-bulk.json', 'parity-frames.f32', 'parity-logits.f32'];
+// The weights live with the page (they are what it fetches); the parity artefacts
+// live in trainer/parity, outside assets/, so a Quarto render never sweeps 128 MB
+// of test fixture into _site.
+const ENGINE = dirname(dirname(fileURLToPath(import.meta.url)));
+const WEIGHTS = join(ENGINE, 'policy', 'weights');
+const PARITY = join(ENGINE, '..', '..', '..', 'trainer', 'parity');
 
-for (const f of need) {
-  if (!existsSync(join(WEIGHTS, f))) {
+for (const [dir, f] of [
+  [WEIGHTS, 'policy.json'], [WEIGHTS, 'policy.bin'],
+  [PARITY, 'parity-bulk.json'], [PARITY, 'parity-frames.f32'], [PARITY, 'parity-logits.f32'],
+]) {
+  if (!existsSync(join(dir, f))) {
     console.error(`missing ${f} — run:  cd trainer/py && uv run python reference.py`);
     process.exit(1);
   }
 }
 
 const manifest = JSON.parse(readFileSync(join(WEIGHTS, 'policy.json'), 'utf8'));
-const bulk = JSON.parse(readFileSync(join(WEIGHTS, 'parity-bulk.json'), 'utf8'));
+const bulk = JSON.parse(readFileSync(join(PARITY, 'parity-bulk.json'), 'utf8'));
 if (bulk.weights !== manifest.digest) {
   console.error(`parity arrays were made against weights ${bulk.weights}, policy.bin is ${manifest.digest}`);
   process.exit(1);
 }
 
 const readF32 = (name) => {
-  const buf = readFileSync(join(WEIGHTS, name));
+  const buf = readFileSync(join(PARITY, name));
   return new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength >> 2);
 };
 

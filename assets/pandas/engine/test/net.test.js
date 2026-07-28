@@ -16,7 +16,11 @@ import { loadPolicy } from '../policy/load.js';
 import { makeObserver } from '../policy/obs.js';
 import { ACTION } from '../actions.js';
 
-const WEIGHTS = join(dirname(dirname(fileURLToPath(import.meta.url))), 'policy', 'weights');
+const ENGINE = dirname(dirname(fileURLToPath(import.meta.url)));
+const WEIGHTS = join(ENGINE, 'policy', 'weights');
+// The committed fixture lives in trainer/parity — outside assets/, where a Quarto
+// render cannot sweep it into _site (see reference.py's header).
+const FIXTURE = join(ENGINE, '..', '..', '..', 'trainer', 'parity', 'parity-fixture.json');
 const has = (f) => existsSync(join(WEIGHTS, f));
 const read = (f) => JSON.parse(readFileSync(join(WEIGHTS, f), 'utf8'));
 const blob = () => new Uint8Array(readFileSync(join(WEIGHTS, 'policy.bin')));
@@ -24,7 +28,7 @@ const blob = () => new Uint8Array(readFileSync(join(WEIGHTS, 'policy.bin')));
 // Every test here needs the exported policy, which is a build artefact of
 // `trainer/py`. Skipping rather than failing keeps the engine suite runnable in a
 // checkout that has not trained anything — but the skip is loud.
-const ready = has('policy.json') && has('policy.bin') && has('parity-fixture.json');
+const ready = has('policy.json') && has('policy.bin') && existsSync(FIXTURE);
 const opts = ready ? {} : { skip: 'no exported policy — run trainer/py/export.py' };
 
 test('float16 decode is exact for the values a weight file holds', () => {
@@ -83,7 +87,7 @@ test('a mismatched observation layout is refused at load, not at runtime', opts,
 
 test('JS logits match PyTorch on the committed fixture', opts, () => {
   const manifest = read('policy.json');
-  const fixture = read('parity-fixture.json');
+  const fixture = JSON.parse(readFileSync(FIXTURE, 'utf8'));
   assert.equal(fixture.weights.digest, manifest.digest,
     'fixture was generated against different weights — re-run trainer/py/reference.py');
 

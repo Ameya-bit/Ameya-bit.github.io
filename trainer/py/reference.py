@@ -2,10 +2,15 @@
 
     uv run python reference.py
 
-Writes `policy/weights/parity-fixture.json` — windows taken from the eval corpus,
-paired with the exported model's logits. `trainer/test/net.test.js` replays them
+Writes `trainer/parity/parity-fixture.json` — windows taken from the eval corpus,
+paired with the exported model's logits. `engine/test/net.test.js` replays them
 through the JS forward pass and compares. That is the Phase-D exit criterion made
 checkable: **action agreement JS vs PyTorch > 99.9%**.
+
+The parity artefacts live under `trainer/parity/`, NOT beside the weights: _quarto.yml
+lists assets/pandas/ as a site resource, so anything written there is copied into
+`_site` by a local render — and the bulk arrays are 128 MB of test fixture nobody's
+browser should ever be offered. Only `policy.bin` + `policy.json` belong under assets.
 
 Two decisions about what "parity" means here.
 
@@ -39,12 +44,14 @@ from export import load_exported
 
 HERE = Path(__file__).parent
 WEIGHTS = HERE.parent.parent / "assets" / "pandas" / "engine" / "policy" / "weights"
+PARITY = HERE.parent / "parity"
 
 
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--corpus", default=str(HERE.parent / "corpora" / "eval-bc.manifest.json"))
     p.add_argument("--weights", default=str(WEIGHTS))
+    p.add_argument("--out", default=str(PARITY), help="where the parity artefacts land")
     p.add_argument("--cases", type=int, default=64, help="frames written to the fixture")
     p.add_argument("--episodes", type=int, default=4)
     p.add_argument("--agreement", type=int, default=20000, help="frames for the agreement figure")
@@ -89,7 +96,9 @@ def main() -> None:
             for i in range(len(y))
         ],
     }
-    out = Path(args.weights) / "parity-fixture.json"
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / "parity-fixture.json"
     out.write_text(json.dumps(fixture) + "\n")
     kb = out.stat().st_size / 1024
     print(f"wrote {out.name}: {len(fixture['cases'])} cases, {kb:.0f} KB")
@@ -109,7 +118,7 @@ def main() -> None:
         ])
     # Raw little-endian float32, same reasoning as a corpus shard: the loader on the
     # other side should be one read and a reshape, not an .npy header parser.
-    d = Path(args.weights)
+    d = out_dir
     bx.astype("<f4").tofile(d / "parity-frames.f32")
     big_logits.astype("<f4").tofile(d / "parity-logits.f32")
     (d / "parity-bulk.json").write_text(json.dumps({

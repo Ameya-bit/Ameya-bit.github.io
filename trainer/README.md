@@ -29,6 +29,8 @@ Zero dependencies, `node --test`.
 | **D0 — the obs/action alignment, and the corpora re-cut against it** | ✅ done |
 | **D1 — the full-observation BC corpora (`train-bc`, `eval-bc`)** | ✅ done |
 | **D2 — the BC clone, in [`py/`](py/README.md)** | ✅ done |
+| **pre-E — the decision-delay contract (`delayPolicy`, `--delay` here and in py/)** | ✅ done (2026-07-28) |
+| **E1 — the partial-obs BC warm-start (`train-wild`, `--delay 1`), exported in place** | ✅ done (2026-07-28) — see [py/README.md](py/README.md) |
 
 **Phase C's exit is met: all three checks pass** (`node evaluate.js --gate`, game v3).
 The memory gap is **87%** of the oracle against a 30% threshold; every exploit bot
@@ -142,7 +144,7 @@ because a corpus missing labels it could have had is the expensive mistake.
 
 | File | Role |
 |---|---|
-| `rollout.js` | One episode of the engine, headless, into a sink. `runEpisode({seed, config, sink, policy, ticks, stride, warmup})`. |
+| `rollout.js` | One episode of the engine, headless, into a sink. `runEpisode({seed, config, sink, policy, ticks, stride, warmup})`; `delayPolicy(policy, n)` wraps a policy in the deployed pipelined-delay contract. |
 | `truth.js` | Per-tick ground truth (B3) + `recordEpisode`, which emits aligned `{tick, action, obs, truth}` rows. |
 | `corpus.js` | The three corpus specs (`natural` / `dense` / `wild`) as pure functions of a PRNG, plus deterministic episode seeding. |
 | `shard.js` | The shard format (B4): the row layout, the streaming writer, and the reader that decodes it back. |
@@ -395,12 +397,20 @@ and the engine's own bad-logit fallback. Leaving `policy` unset is byte-identica
 to before it existed: `cut.js --verify` re-cuts a committed shard to the same
 digest.
 
-⚠️ **One tick of alignment is unresolved, deliberately.** A policy sees the state
-it acts *from* (tick t−1) and its action lands on tick t — the only causally
-available information set. But the Phase-B corpora pair the action applied at tick
-t with the observation encoded *after* that step, so a BC policy fed `obs(t-1)`
-here is a tick off its training pairing. It cancels out of every comparison made in
-Phase C (all policies read the same states); it is Phase D's to settle.
+**The tick of alignment this section once flagged as unresolved was settled by D0**
+(the corpora are `alignment: decision` now — see the D0 section above), and a second
+timing contract joined it on 2026-07-28: **the deployed decision delay.** On the page
+the forward pass runs in a Web Worker on a pipelined schedule — the frame from
+decision k produces the action applied at decision k+1 — so the trainer carries the
+same contract: `delayPolicy(policy, 1)` (rollout.js) wraps any policy in it, and
+`node evaluate.js --delay 1` scores a whole gate run under it. The inner policy is
+still consulted every decision tick (its frame ring must stay consecutive); only the
+*application* of its answers shifts, and the first `delay` decisions fall to the
+rules expert exactly as the page behaves while the pipeline fills. The default stays
+0 so every C1–C5 number remains comparable. Priced on the shipped clone (trained
+synchronous): delay 1 costs it −64.7 → −68.6 score/min and 2.01 → 2.42 knocks/min —
+which is why Phase E trains with `--delay 1` (trainer/py) rather than discovering
+this after deployment.
 
 ### Calibration, and what the numbers already say
 

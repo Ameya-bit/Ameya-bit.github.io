@@ -27,9 +27,9 @@ WEIGHTS = HERE.parent.parent / "assets" / "pandas" / "engine" / "policy" / "weig
 
 @torch.no_grad()
 def run(model, corpus: Corpus, episodes: list[int], frames: int, stride: int = 2,
-        batch: int = 4096) -> dict[str, float]:
+        batch: int = 4096, delay: int = 0) -> dict[str, float]:
     logits, trues = [], []
-    for x, y in whole_episodes(corpus, episodes, frames, stride=stride):
+    for x, y in whole_episodes(corpus, episodes, frames, stride=stride, delay=delay):
         for i in range(0, len(y), batch):
             logits.append(model(torch.from_numpy(x[i : i + batch])).numpy())
         trues.append(y)
@@ -47,13 +47,20 @@ def main() -> None:
 
     model, manifest = load_exported(Path(args.weights))
     frames = manifest["config"]["frames"]
-    print(f"clone {manifest['digest']} trained on {manifest['trainedOn']}, step {manifest['step']}\n")
+    # Score under the pairing the policy was trained with — the manifest records it.
+    delay = int(manifest.get("delay", 0))
+    print(f"clone {manifest['digest']} trained on {manifest['trainedOn']}, "
+          f"step {manifest['step']}, delay {delay}\n")
 
-    for name, path in [("held-out wild", "train-bc"), ("eval natural", "eval-bc")]:
+    # The corpora must match the sensor the weights were trained against: a cone-120
+    # model scored on the 360° corpora would be reading a distribution it never saw.
+    trained_on = manifest["trainedOn"]
+    eval_pair = {"train-wild": "eval-natural", "train-bc": "eval-bc"}[trained_on]
+    for name, path in [("held-out wild", trained_on), ("eval natural", eval_pair)]:
         corpus = Corpus(HERE.parent / "corpora" / f"{path}.manifest.json")
         eps = (list(range(len(corpus) - args.holdout, len(corpus) - args.holdout + args.episodes))
-               if path == "train-bc" else list(range(args.episodes)))
-        m = run(model, corpus, eps, frames)
+               if path == trained_on else list(range(args.episodes)))
+        m = run(model, corpus, eps, frames, delay=delay)
         print(format_row(name, m))
         _, y = next(whole_episodes(corpus, eps[:1], frames, stride=2))
         base = always_hold(y)

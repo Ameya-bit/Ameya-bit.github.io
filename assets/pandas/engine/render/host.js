@@ -59,6 +59,9 @@ function computeFence(stage, cardSelector) {
  * @param {object} [opts.policy]       a `{ init(ctx) }` brain for the hat panda
  *                                     (Phase D's `?policy=nn`); default is the
  *                                     built-in rules expert
+ * @param {object} [opts.overlay]      a mounted belief overlay (render/overlay.js):
+ *                                     `sync(state)` after each stepped tick,
+ *                                     `destroy()` on teardown. Default: none.
  * @returns {{destroy: () => void, get state(): object}}
  */
 export function mountPandas(stage, opts = {}) {
@@ -124,6 +127,7 @@ export function mountPandas(stage, opts = {}) {
       act = policy.init({ seed, cfg: engine.cfg });
     } catch (err) {
       console.warn('[pandas] policy failed to start; the rules expert is driving', err);
+      policy.dispose?.();
       policy = null;
     }
   }
@@ -220,12 +224,16 @@ export function mountPandas(stage, opts = {}) {
 
     if (!state) return;
     acc += dt;
+    let stepped = false;
     while (acc >= TICK_MS) {
       prevState = state;
       state = engine.step(state, actionFor(state));
       acc -= TICK_MS;
+      stepped = true;
     }
     renderer.sync(prevState, state, acc / TICK_MS, dt, flourish.sync(state, dt));
+    // The overlay is a readout: it steps with the sim, not with the display.
+    if (stepped) opts.overlay?.sync(state);
   }
 
   function start() {
@@ -233,6 +241,7 @@ export function mountPandas(stage, opts = {}) {
     // The tableau is a still: draw it once and never schedule anything.
     if (state.cfg.reduced) {
       renderer.sync(state, state, 1, 0, flourish.sync(state, 0));
+      opts.overlay?.sync(state);
       return;
     }
     lastFrame = 0;
@@ -280,6 +289,8 @@ export function mountPandas(stage, opts = {}) {
       removeEventListener('resize', onResize);
       renderer?.clear();
       flourish?.destroy();
+      opts.overlay?.destroy();
+      policy?.dispose?.();
     },
     get state() {
       return state;
@@ -293,6 +304,9 @@ export function mountPandas(stage, opts = {}) {
     // He is mid-stride when it lands and that is fine: the driver's first decision
     // primes its history from the frame it is handed, the same way an episode starts.
     setPolicy(next) {
+      // A worker-backed policy owns a thread; replacing it without disposing it
+      // would leave that thread computing logits nobody will read.
+      if (policy && policy !== next) policy.dispose?.();
       policy = next ?? null;
       if (state) bindPolicy(worldSeed);
     },

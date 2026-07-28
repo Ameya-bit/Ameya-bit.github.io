@@ -161,6 +161,10 @@ def main() -> None:
     manifest = export(model, Path(args.out), meta={
         "trainedOn": corpus["name"],
         "step": int(ckpt.get("step", -1)),
+        # The decision-delay contract this policy was trained under (data.py). The
+        # page's worker driver runs delay=1 by construction; recording what the
+        # weights expect is what makes a mismatch a visible warning, not a mystery.
+        "delay": int(ckpt.get("delay", 0)),
         # What this policy is only valid against. The sensor is the important one:
         # the observation layout is what the first matrix multiplies.
         "engine": corpus["engine"],

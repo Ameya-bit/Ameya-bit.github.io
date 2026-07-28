@@ -50,17 +50,39 @@
 
 <script type="module">
   import { mountPandas } from '../render/host.js';
+  import { makeOverlay, truthProvider } from '../render/overlay.js';
   import { MODE, MODE_NAME, isDown, beginKnock } from '../state.js';
   import { Rng } from '../rng.js';
 
   const params = new URLSearchParams(location.search);
   const stage = document.getElementById('panda-stage');
+  // ?overlay=truth — the belief overlay on its ground-truth provider, same wiring
+  // as the real page (render/site.js). ⚠️ its *look* is only judged there: this
+  // page never loads styles.scss (the M5 lesson), though pandas.css it does.
+  const overlay = params.get('overlay') === 'truth' ? makeOverlay(stage, truthProvider()) : null;
   let run = mountPandas(stage, {
     cardSelector: '.hero-inner',
     seed: params.has('seed') ? Number(params.get('seed')) : undefined,
     reduced: params.has('reduced') ? params.get('reduced') !== '0' : undefined,
     areaPerPanda: params.has('density') ? Number(params.get('density')) : undefined,
+    ...(overlay ? { overlay } : {}),
   });
+
+  // ?policy=nn (worker, the shipped path) | nn-main (synchronous) — same wiring
+  // as render/site.js, so the clone is drivable here too. Judging how it *moves*
+  // still belongs on the real page.
+  if (params.get('policy') === 'nn' || params.get('policy') === 'nn-main') {
+    const { fetchPolicy, fetchWorkerPolicy } = await import('../render/policy-loader.js');
+    const load = params.get('policy') === 'nn'
+      ? fetchWorkerPolicy().catch((err) => {
+          console.warn('[stage] worker policy unavailable, trying the main thread', err);
+          return fetchPolicy();
+        })
+      : fetchPolicy();
+    load
+      .then((policy) => { run.setPolicy(policy); console.info('[stage] trained policy driving'); })
+      .catch((err) => console.warn('[stage] no policy; rules expert driving', err));
+  }
 
   // Shove the watcher over, so the hat-drop + fetch skit is watchable on demand
   // rather than whenever the field happens to catch him.

@@ -75,6 +75,42 @@ export function bindPolicy(policy, ctx) {
   throw new Error('policy must be a function (state, tick) -> action, or have init(ctx)');
 }
 
+// Wrap a policy in the deployed decision-delay contract.
+//
+// On the page the forward pass runs in a Web Worker: the frame encoded at decision
+// tick k is posted to the worker, and the action it produces is applied at decision
+// tick k+1 — one decision interval (100 ms) later. That is a *pipelined* delay, not a
+// race: the schedule is fixed, so behaviour does not depend on how fast the visitor's
+// machine happens to be. This wrapper is the same contract for a headless episode, so
+// the trainer can score — and Phase E can train — the timing a deployed policy
+// actually lives under. D0 is the reason this exists before any RL does: a one-tick
+// misalignment between what a policy sees and when its action lands was worth 93.3%
+// of the direction label, so the deploy-time shift has to be in the training loop,
+// not discovered after it.
+//
+// The inner policy is still consulted at every decision tick (its frame ring must
+// stay a run of consecutive observations); only the *application* of its answer is
+// shifted. The first `delay` decisions return null — the rules expert drives while
+// the pipeline fills, exactly as the page behaves while the first result is in
+// flight.
+export function delayPolicy(policy, delay = 1) {
+  if (!(Number.isInteger(delay) && delay >= 0)) {
+    throw new Error(`delay must be a non-negative integer, got ${delay}`);
+  }
+  if (delay === 0) return policy;
+  return {
+    describe: `${policy.describe ?? 'policy'} (delayed ${delay} decision${delay > 1 ? 's' : ''})`,
+    init(ctx) {
+      const act = bindPolicy(policy, ctx);
+      const queue = new Array(delay).fill(null);
+      return (state, tick) => {
+        queue.push(act(state, tick));
+        return queue.shift();
+      };
+    },
+  };
+}
+
 // Run one episode. Returns the summary; the data goes to the sink.
 export function runEpisode({ seed, config = {}, sink = null, policy = null, rules = null, ...opts }) {
   const { ticks, stride, warmup } = { ...DEFAULT_ROLLOUT, ...opts };

@@ -14,10 +14,11 @@
 /trainer/node_modules/
 
 # Parity reference arrays — regenerable with trainer/py/reference.py, 128MB of frames.
-# The committed contract is policy/weights/parity-fixture.json (16 cases).
-assets/pandas/engine/policy/weights/*.npy
-assets/pandas/engine/policy/weights/*.f32
-assets/pandas/engine/policy/weights/parity-bulk.json
+# The committed contract is trainer/parity/parity-fixture.json. Deliberately OUTSIDE
+# assets/: _quarto.yml lists assets/pandas/ as a site resource, so anything under it
+# is swept into _site by a local render — 250MB of test fixtures on the public site.
+/trainer/parity/*
+!/trainer/parity/parity-fixture.json
 
 # The Python training env and its run artefacts. The weights it exports ARE committed
 # (assets/pandas/engine/policy/weights) — they are what the page fetches.

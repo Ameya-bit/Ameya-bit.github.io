@@ -15,6 +15,15 @@ be one both sides implement identically — `net.js` primes its ring buffer the 
 way. Zero-padding would be a different rule and a worse one: an all-zero frame is a
 legal observation meaning "nothing present anywhere", which is a lie about the world
 rather than an absence of information about it.
+
+**`delay` trains the deployed timing.** On the page the forward pass runs in a Web
+Worker on a pipelined schedule: the frame posted at decision k produces the action
+applied at decision k+1. Under that contract the network answering for the action at
+row i only ever saw the window ending at row i-1, so `delay=1` pairs the window at
+`i - delay` with the action at `i`. D0 is the caution this option encodes: a one-tick
+gap between what the net sees and when its action lands was worth most of the
+direction label, so the deploy-time shift belongs in training, not discovered after
+it. 0 keeps the synchronous pairing the Phase-D clone was trained with.
 """
 
 from __future__ import annotations
@@ -44,12 +53,16 @@ class Pool:
         episodes: list[int],
         *,
         frames: int,
+        delay: int = 0,
         size: int = 48,
         seed: int = 0,
     ):
+        if not (isinstance(delay, int) and delay >= 0):
+            raise ValueError(f"delay must be a non-negative integer, got {delay!r}")
         self.corpus = corpus
         self.episodes = list(episodes)
         self.frames = frames
+        self.delay = delay
         self.size = min(size, len(self.episodes))
         self.rng = np.random.default_rng(seed)
         self._order = self.rng.permutation(len(self.episodes))
@@ -81,18 +94,25 @@ class Pool:
             obs, act = self._loaded[int(ep)]
             hit = np.nonzero(which == ep)[0]
             idx = self.rng.integers(len(act), size=hit.size)
-            xs[hit] = stack_windows(obs, idx, self.frames)
+            # Under the delay contract the window is `delay` rows behind the action,
+            # clamped at the episode's start (those first decisions are driven by the
+            # rules expert on the page while the pipeline fills, so the clamp is a
+            # harmless simplification, not a distribution the deployed net will meet).
+            xs[hit] = stack_windows(obs, np.maximum(idx - self.delay, 0), self.frames)
             ys[hit] = act[idx]
         return xs, ys
 
 
-def whole_episodes(corpus: Corpus, episodes: list[int], frames: int, stride: int = 1):
+def whole_episodes(
+    corpus: Corpus, episodes: list[int], frames: int, stride: int = 1, delay: int = 0
+):
     """Every window of the given episodes, in order, an episode at a time.
 
     Evaluation reads the distribution as it actually occurs — including the 86% of
-    decisions that are HOLD — rather than a rebalanced sample of it.
+    decisions that are HOLD — rather than a rebalanced sample of it. `delay` is the
+    deployed pairing (see the module header); evaluate with the same value trained.
     """
     for ep in episodes:
         obs, act = corpus.episode(ep)
         idx = np.arange(0, len(act), stride, dtype=np.int64)
-        yield stack_windows(obs, idx, frames), act[idx]
+        yield stack_windows(obs, np.maximum(idx - delay, 0), frames), act[idx]

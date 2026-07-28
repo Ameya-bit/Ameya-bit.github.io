@@ -28,6 +28,9 @@ reference the port is judged against.
 | **B2 — `policy/obs.js`: the observation encoder (Phase B, no site impact yet)** | ✅ done |
 | **the `.stop` hit box — the last divergence from `pandas.js`** | ✅ closed |
 | **D3/D5 — `policy/net.js` + `policy/driver.js`: the trained clone, behind `?policy=nn`** | ✅ built, opt-in |
+| **pre-E — `render/policy-worker.js` + `render/worker-driver.js`: the forward pass off the main thread, pipelined** | ✅ built; `?policy=nn` now runs it |
+| **pre-E — `render/overlay.js`: the belief overlay, on its ground-truth provider (`?overlay=truth`)** | ✅ built, opt-in |
+| **E1 — `policy/weights/` replaced: the partial-obs (`coneDeg` 120), delay-trained clone** | ✅ shipped 2026-07-28 |
 
 **Phase D lands here as an opt-in brain, and stays opt-in.** `?policy=nn` fetches
 `policy/weights/` after first paint and hands the hat panda to a 122k-parameter
@@ -36,6 +39,26 @@ a visible event. **It failed both of its judgement-call exits on 2026-07-28** �
 character gate ("terrible at dodging") and the latency budget (**p99 2 ms in the
 browser** against 1 ms, where Node reads 567 µs). The parity and wire-size exits
 passed. The page keeps the rules watcher. See [Phase D](#phase-d--the-trained-clone) below.
+
+**The latency failure's fix landed the same day (pre-E work, 2026-07-28): the
+forward pass moved to a Web Worker.** `?policy=nn` now runs the pipelined worker
+path — the frame from decision k produces the action applied at decision k+1, a
+fixed schedule rather than a race — and `?policy=nn-main` keeps the synchronous
+main-thread driver for A/B. The budget changes with the thread: off the main thread
+the deadline is the 100 ms decision period, and `tools/policy-bench.html` now
+measures both arms (headless Chrome: worker round-trip p99 0.7 ms — ~71× headroom
+against the deadline; the main-thread p99 on a real page remains Ameya's number).
+The same contract exists headless (`delayPolicy` in trainer/rollout.js,
+`--delay` in evaluate.js and trainer/py) so **Phase E trains the timing the page
+deploys** — D0's lesson applied before RL rather than after it. The dodging
+failure is untouched by any of this: that is the reward's to fix, in Phase E.
+
+**E1 (2026-07-28): the weights behind `?policy=nn` are now that policy.** The clone
+was re-trained on the cone-masked corpus (`train-wild`, `coneDeg` 120) under
+`--delay 1` and exported in place — the loader builds its observer from the
+manifest's recorded params, so the cone arrived with the weights and no code
+changed. Parity 24,000/24,000 against the new export (digest `1f0d343e13a8aea9`);
+trainer/py/README.md carries the numbers. This is also E3's KL anchor.
 
 **This engine is now frozen against cut corpora.** Phase B's 17 GB of training and
 eval rollouts (`trainer/README.md`) are recordings of *this* machine, and every
@@ -297,14 +320,16 @@ differently in Chrome than in Node would move actions the trainer never saw.
 ## Phase D — the trained clone
 
 `?policy=nn` replaces the rules watcher with a network that learned to imitate it.
-Four files, all opt-in and none of them on the default path:
+All opt-in and none of it on the default path:
 
 | File | Role |
 |---|---|
 | `policy/net.js` | The forward pass, by hand. 4 layers × 9 tokens × d48, ~122k parameters. Typed arrays, zero per-tick allocation, weights kept in PyTorch's `[out, in]` layout so the kernel walks both operands stride-1. |
 | `policy/load.js` | Manifest + blob → a running net, with the compatibility checks that make a layout mismatch a load-time error rather than a plausible-looking wrong answer. |
-| `policy/driver.js` | The seam adapter: slot memory, the frame ring, the sampler, and the fallback. |
-| `render/policy-loader.js` | `fetch` and the `?policy=` switch. Browser-only, which is why it is under `render/`. |
+| `policy/driver.js` | The synchronous seam adapter: slot memory, the frame ring, the sampler, and the fallback. What the trainer runs, and what `?policy=nn-main` ships. |
+| `render/policy-worker.js` | The forward pass in a Web Worker — the net and the frame ring live there; frames go in, logits come back. Owns the in-worker half of `tools/policy-bench.html`. |
+| `render/worker-driver.js` | The pipelined seam adapter around that worker: the answer to the frame from decision k is applied at k+1, misses fall back to the rules expert, and a machine that cannot keep up retires the policy for the visit. Tested in Node with a fake worker (`test/worker-driver.test.js`). |
+| `render/policy-loader.js` | `fetch`, worker spawn-and-ready, and the `?policy=` switch. Browser-only, which is why it is under `render/`. |
 
 **The model reads pandas, not timesteps.** Tokens are the encoder's 9 slots; the last
 4 decision frames are *stacked into each token's features* rather than laid along the
@@ -369,6 +394,9 @@ asking 10 times a second forever.
 | `render/cels.js` | Cel tables — which of the 13 columns and 5 rows an `(anim, dir)` draws, and the 140 ms frame cadence. |
 | `render/renderer.js` | Engine state → DOM, once per frame: transforms + depth, facings, cels, state classes, rider seats and tilt. Interpolates between the two held ticks. |
 | `render/flourish.js` | The two hand-authored beats: the gaze flourish (a drawn facing) and the hat-drop/fetch skit (drives the 17-way seam). |
+| `render/policy-worker.js` | The forward pass off the main thread (see Phase D above). |
+| `render/worker-driver.js` | The pipelined seam adapter for it. |
+| `render/overlay.js` | The belief overlay: per-panda chips saying what something believes about them, behind a provider seam (`?overlay=truth` mounts the ground-truth provider; Phase G's probes are the intended tenant). |
 | `render/tableau.js` | The reduced-motion still, built as an ordinary state so the ordinary renderer draws it. |
 | `render/host.js` | `mountPandas(stage)` — the fixed-timestep loop, pause (hidden tab / off-screen), resize re-framing, density, reduced-motion branch. |
 | `render/site.js` | The homepage entry point — loaded on every visit that does not ask for `?engine=old`. |
@@ -397,10 +425,10 @@ npm run lint:determinism                 # ban check on engine sources
 node tools/bake-art.js --check           # the baked art still matches pandas.js
 node tools/obs-fixture.js --check        # the observation encoder still matches its fixture
 node tools/golden.js --engine ./engine.js --ticks 10000   # deterministic trace digest
-npm run serve                            # dev server -> /tools/stage.html (real sprites)
+npm run serve                            # dev server -> /tools/stage.html (real sprites; ?policy=nn|nn-main, ?overlay=truth)
                                          #            -> /tools/preview.html (schematic + set-piece buttons)
-                                         #            -> /tools/policy-bench.html (Phase D's <1ms budget)
-node tools/parity-net.mjs                # Phase D: JS vs PyTorch action agreement
+                                         #            -> /tools/policy-bench.html (both budgets: main thread and worker)
+node tools/parity-net.mjs                # Phase D: JS vs PyTorch action agreement (arrays from trainer/parity/)
 ```
 
 The suite is deterministic and should be green every time. It was not, until

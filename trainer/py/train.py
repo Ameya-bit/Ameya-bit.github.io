@@ -50,11 +50,11 @@ def pick_device(name: str) -> torch.device:
 
 @torch.no_grad()
 def score(model: PandaNet, corpus: Corpus, episodes: list[int], device, frames: int,
-          stride: int = 4, batch: int = 4096) -> dict[str, float]:
+          stride: int = 4, batch: int = 4096, delay: int = 0) -> dict[str, float]:
     """Argmax predictions over whole episodes, in the order they happened."""
     model.eval()
     preds, trues = [], []
-    for x, y in whole_episodes(corpus, episodes, frames, stride=stride):
+    for x, y in whole_episodes(corpus, episodes, frames, stride=stride, delay=delay):
         for i in range(0, len(y), batch):
             xb = torch.from_numpy(x[i : i + batch]).to(device)
             preds.append(model(xb).argmax(-1).cpu().numpy())
@@ -77,6 +77,9 @@ def main() -> None:
     p.add_argument("--holdout", type=int, default=40, help="training episodes kept back")
     p.add_argument("--eval-every", type=int, default=2000)
     p.add_argument("--eval-episodes", type=int, default=8)
+    p.add_argument("--delay", type=int, default=0,
+                   help="decision-delay contract: pair the window at row i-delay with "
+                        "the action at row i (1 = the deployed Web Worker pipeline)")
     p.add_argument("--seed", type=int, default=20260728)
     p.add_argument("--device", default="auto")
     p.add_argument("--out", default=str(HERE / "runs" / "bc"))
@@ -90,8 +93,9 @@ def main() -> None:
     train_corpus = Corpus(args.train)
     eval_corpus = Corpus(args.eval)
     print(f"train {train_corpus}\neval  {eval_corpus}\ndevice {device}")
-    if train_corpus.obs_layout["params"]["coneDeg"] != 360:
-        print("⚠ training corpus is not full-observation — Phase D clones on the open mask")
+    cone = train_corpus.obs_layout["params"]["coneDeg"]
+    if cone != 360:
+        print(f"partial observation: coneDeg {cone} — the deployed sensor (Phase E trains on the cone)")
 
     cfg = Config(tokens=train_corpus.tokens, obs_width=train_corpus.obs_width,
                  n_actions=train_corpus.n_actions)
@@ -103,7 +107,8 @@ def main() -> None:
     training = list(range(n_train - args.holdout))
     if args.smoke:
         training, holdout = training[:8], holdout[:2]
-    pool = Pool(train_corpus, training, frames=cfg.frames, size=args.pool, seed=args.seed)
+    pool = Pool(train_corpus, training, frames=cfg.frames, delay=args.delay,
+                size=args.pool, seed=args.seed)
 
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd,
                             betas=(0.9, 0.95))
@@ -141,13 +146,16 @@ def main() -> None:
             pool.rotate()
 
         if step % args.eval_every == 0 or step == args.steps:
-            held = score(model, train_corpus, holdout[: args.eval_episodes], device, cfg.frames)
-            nat = score(model, eval_corpus, list(range(args.eval_episodes)), device, cfg.frames)
+            held = score(model, train_corpus, holdout[: args.eval_episodes], device,
+                         cfg.frames, delay=args.delay)
+            nat = score(model, eval_corpus, list(range(args.eval_episodes)), device,
+                        cfg.frames, delay=args.delay)
             print(f"\n  --- step {step} ---")
             print(format_row("held-out wild", held))
             print(format_row("eval natural", nat))
             history.append({"step": step, "wild": held, "natural": nat})
-            torch.save({"cfg": cfg.dict(), "model": model.state_dict(), "step": step},
+            torch.save({"cfg": cfg.dict(), "model": model.state_dict(), "step": step,
+                        "delay": args.delay},
                        out / "checkpoint.pt")
 
     # The baseline every number above is read against, computed on the same episodes.

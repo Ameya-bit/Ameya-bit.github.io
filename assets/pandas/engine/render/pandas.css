@@ -118,3 +118,49 @@
   display: block;
   fill: #7c5322;
 }
+
+/* ---- the belief overlay (render/overlay.js) ----
+ *
+ * A readout, not a character: chips step with the sim at 20 Hz and never glide,
+ * and the layer never takes a pointer. The tones are semantic — danger / safe /
+ * down / note — because the flagship distinction (a sleeper vs a freshly-knocked
+ * panda, identical cels) should be loud in colour before it is legible in text. */
+
+.panda_engine .belief_layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000; /* over even a mid-hop flyer: a readout outranks what it reads */
+  font: 10px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.panda_engine .belief_badge {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  color: rgba(26, 26, 26, 0.55);
+  background: rgba(250, 248, 243, 0.75);
+  border: 1px solid rgba(26, 26, 26, 0.18);
+}
+
+.panda_engine .belief_chip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  translate: -50% -100%;
+  padding: 1px 6px 2px;
+  border-radius: 3px;
+  white-space: nowrap;
+  color: #faf8f3;
+  background: rgba(26, 26, 26, 0.72);
+}
+
+.panda_engine .belief_chip .belief_detail { opacity: 0.65; margin-left: 0.5em; }
+.panda_engine .belief_chip .belief_detail:empty { display: none; }
+
+.panda_engine .belief_chip[data-tone='danger'] { background: rgba(155, 34, 22, 0.85); }
+.panda_engine .belief_chip[data-tone='safe'] { background: rgba(21, 98, 60, 0.85); }
+.panda_engine .belief_chip[data-tone='down'] { background: rgba(90, 86, 78, 0.85); }

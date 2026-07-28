@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { runEpisode, runEpisodes, arraySink, hatOf } from '../rollout.js';
-import { isValidAction } from '../../assets/pandas/engine/actions.js';
+import { runEpisode, runEpisodes, delayPolicy, arraySink, hatOf } from '../rollout.js';
+import { ACTION, isValidAction } from '../../assets/pandas/engine/actions.js';
 import { TICKS_PER_ACTION } from '../../assets/pandas/engine/tick.js';
 
 test('an episode is a pure function of (seed, config)', () => {
@@ -62,6 +62,57 @@ test('the expert actually decides — the log is not all HOLD', () => {
   const kinds = new Set(sink.rows);
   assert.ok(kinds.size > 3, `expert emitted only ${kinds.size} distinct actions`);
   assert.ok(sink.rows.some((a) => a >= 1 && a <= 8), 'never stepped');
+});
+
+test('delayPolicy returns the answer computed one decision earlier', () => {
+  // The wrapper never reads the state, so its contract is testable in isolation:
+  // what comes out at consultation k must be what the inner policy said at k-1,
+  // and the first `delay` consultations must be null — the rules expert drives
+  // while the pipeline fills, exactly as the page behaves before the worker's
+  // first result lands.
+  const probe = { init: () => (state, tick) => tick };
+  const act = delayPolicy(probe, 1).init({});
+  assert.equal(act('s', 2), null);
+  assert.equal(act('s', 4), 2);
+  assert.equal(act('s', 6), 4);
+
+  const two = delayPolicy(probe, 2).init({});
+  assert.equal(two('s', 2), null);
+  assert.equal(two('s', 4), null);
+  assert.equal(two('s', 6), 2);
+});
+
+test('a delayed policy still shapes the episode through the seam', () => {
+  // Integration: the wrapper composes with runEpisode — the inner policy is
+  // consulted once per decision tick, and its (shifted) answers actually drive.
+  const asked = [];
+  const probe = {
+    init: () => (state, tick) => {
+      asked.push(tick);
+      return ACTION.HOLD; // never limited, never illegal
+    },
+  };
+  const held = arraySink((s) => hatOf(s).action);
+  runEpisode({
+    seed: 77, config: { entrance: false }, ticks: 400,
+    policy: delayPolicy(probe, 1), sink: held,
+  });
+  assert.equal(asked.length, 400 / TICKS_PER_ACTION);
+  // Decision 1 fell back to the expert; every one after applied the probe's HOLD.
+  assert.ok(held.rows.slice(1).every((a) => a === ACTION.HOLD));
+
+  // …and that is not what the expert would have done on its own (see the
+  // 'expert actually decides' test above, same seed family).
+  const expertRows = arraySink((s) => hatOf(s).action);
+  runEpisode({ seed: 77, config: { entrance: false }, ticks: 400, sink: expertRows });
+  assert.notDeepEqual(held.rows, expertRows.rows);
+});
+
+test('delayPolicy(_, 0) is the policy itself, and a bad delay throws', () => {
+  const p = { init: () => () => ACTION.HOLD };
+  assert.equal(delayPolicy(p, 0), p);
+  assert.throws(() => delayPolicy(p, -1), /non-negative integer/);
+  assert.throws(() => delayPolicy(p, 1.5), /non-negative integer/);
 });
 
 test('sinks are optional at every level', () => {

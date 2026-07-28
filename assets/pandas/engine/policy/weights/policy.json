@@ -3,7 +3,7 @@
   "dtype": "float16",
   "elements": 121601,
   "bytes": 243202,
-  "digest": "1abefd88ceab2580",
+  "digest": "1f0d343e13a8aea9",
   "config": {
     "tokens": 9,
     "obs_width": 37,
@@ -476,8 +476,9 @@
       "count": 17
     }
   ],
-  "trainedOn": "train-bc",
+  "trainedOn": "train-wild",
   "step": 72000,
+  "delay": 1,
   "engine": {
     "seeds": 4,
     "ticks": 2000,
@@ -589,8 +590,8 @@
       "slots": 8,
       "sightRange": 520,
       "peripheralR": 130,
-      "coneDeg": 360,
-      "occludeFence": false,
+      "coneDeg": 120,
+      "occludeFence": true,
       "holdTicks": 40,
       "hysteresisPx": 40
     }

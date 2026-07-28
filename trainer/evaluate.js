@@ -29,7 +29,7 @@
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
-import { runEpisode, DEFAULT_ROLLOUT } from './rollout.js';
+import { runEpisode, delayPolicy, DEFAULT_ROLLOUT } from './rollout.js';
 import { scoreSink, makeRules, DEFAULT_RULES, GAME_VERSION } from './game.js';
 import {
   policyByName, POLICIES, YARDSTICKS, EXPLOITS, REWARD_EXPLOITS, ACTION_EXPLOITS,
@@ -325,10 +325,15 @@ function main() {
     ticks: args.ticks === undefined ? DEFAULT_EVAL.ticks : Number(args.ticks),
     rules: parseRules(args.rules),
   };
+  // `--delay 1` scores every policy under the deployed decision-delay contract
+  // (see delayPolicy in rollout.js). 0 — the default — is the synchronous seam the
+  // C1–C5 numbers were measured on, and stays the default so those stay comparable.
+  const delay = args.delay === undefined ? 0 : Number(args.delay);
 
   const results = names.map((name) => {
     const started = process.hrtime.bigint();
-    const r = evaluatePolicy({ ...opts, policy: policyByName(name), name });
+    const r = evaluatePolicy({ ...opts, policy: delayPolicy(policyByName(name), delay), name });
+    if (delay > 0) r.delay = delay;
     r.seconds = Number(process.hrtime.bigint() - started) / 1e9;
     return r;
   });
