@@ -22,7 +22,7 @@ Zero dependencies, `node --test`.
 | **B5 — worker_threads fan-out** | ⬜ (see throughput below — it was never needed for the cut) |
 | **B6 — cut the corpora, freeze the roster** | ✅ done |
 | **C1 — the game: scoring rules, the policy seam, the evaluator** | ✅ done |
-| **C2 — the oracle, the memoryless twin, the exploit bots** | ⬜ |
+| **C2 — the oracle, the memoryless twins, the exploit bots** | ✅ done |
 | **C3 — the twin-episode battery, one set per knowability tier** | ⬜ |
 | **C4 — the memory gap, measured against the exit threshold** | ⬜ |
 
@@ -91,8 +91,10 @@ because a corpus missing labels it could have had is the expensive mistake.
 | `cut.js` | Episodes → shards + manifest + JSONL sample. Also the CLI (`--dry-run`, `--verify`) and `checkContract`, the freeze (B6). |
 | `bench.js` | Throughput per spec against the exit bar. |
 | `game.js` | **The viewing game (C1)**: the scoring rules, and the sink that keeps the ledger. |
-| `policies.js` | The policies the game is scored against. C1 ships `expert` / `still` / `random`; C2 adds the yardsticks. |
-| `evaluate.js` | Runs a policy over a set of episodes and reports the distribution. Also the CLI. |
+| `percept.js` | **The three information sets (C2)**: what each yardstick is allowed to believe, and the oracle's time-remaining estimator. |
+| `planner.js` | **The yardstick body (C2)**: one score-maximising bot, run over each of those beliefs. |
+| `policies.js` | Everything the game is scored against: the incumbent, the floors, the yardsticks, the exploit bots. |
+| `evaluate.js` | Runs a policy over a set of episodes and reports the distribution. Also the CLI and the gate (`--gate`). |
 | `test/freeze.test.js` | Runs `checkContract` over every committed manifest — the roster freeze, enforced. |
 | `corpora/` | Cut corpora. Gitignored except manifests and the JSONL sample — a corpus is re-cuttable from its manifest, so the bytes need not be in git. |
 
@@ -374,16 +376,121 @@ Three findings already worth having, none of them flattering:
    curriculum corpus currently teaches freezing. That is a reward-*shape* problem,
    not a magnitude one — the plan's appendix is blunt that per-tick proximity
    rewards breed parking equilibria and that the fix is the shape.
-3. **The camping machinery does not close camping.** Diminishing returns and the
-   cap are per incident, and a crowd supplies a stream of *fresh* incidents, each
-   paying full early-arrival rate. `still` collects 382 points a run without
-   deciding anything. This is the spawn-centroid camping the plan named, and it
-   needs a structural answer (a global rate, an arrival requirement, a travel
-   term) rather than a bigger penalty.
+3. **Camping earns a surprising amount of gross income.** Diminishing returns and
+   the cap are per incident, and a crowd supplies a stream of *fresh* ones, each
+   paying full early-arrival rate: `still` collects 382 points a run without
+   deciding anything. ~~So the anti-camping machinery does not close camping.~~
+   **Corrected by C2's exploit bots:** net of cost it does. Every camping bot scores
+   *below* the do-nothing floor and far below the reactive ceiling — the gross
+   income is real and the strategy still loses. The finding that survives is the
+   narrower one: gross view income is a bad diagnostic, and the ledger's components
+   have to be read together.
 
-All three are C2/C3's to settle — the phase exit is explicitly "iterate the game
-knobs and re-run" — and they are recorded here rather than tuned away, because a
-default chosen to hide a finding is a default nobody can reason about.
+These are recorded rather than tuned away — a default chosen to hide a finding is a
+default nobody can reason about — and (1) and (2) are still open at C2.
+
+## The yardstick gate (C2)
+
+The phase's question is not "can something score well" but **how much of this game
+can only be won by inferring hidden state**. That is a difference between two
+scores, which is a trap: build two bots and the gap you measure is the gap between
+how hard you tried on each. So there is **one planner** (`planner.js`) and **three
+percepts** (`percept.js`), and the arms differ only in what they may read.
+
+| arm | may read |
+|---|---|
+| **`oracle`** | true state, the incident feed, and every FSM's own countdown — what each thing is, how long it has run, how long it has left |
+| **`reactiveTruth`** | the same, minus everything temporal. The **conservative** ceiling: it strictly dominates any memoryless policy reading observations, so the gap above it is a lower bound no 2-frame network can close |
+| **`reactiveObs`** | one observation frame, visible slots only, no feed, no memory. The honest analogue of the plan's memoryless twin |
+
+The planner prices each candidate as expected points, using the **exact integral of
+the game's own diminishing-returns curve** — the oracle must be limited by
+information, not by optimising something other than what it is paid.
+
+### `node evaluate.js --gate` — 24 × 12000 of `natural`
+
+| policy | score/min | ±se | view | cost | cover | tick-cov | late | knock/m | down% |
+|---|---|---|---|---|---|---|---|---|---|
+| `oracle` | **85.3** | 6.5 | 1527 | 674 | 39.3% | 28.5% | 66 | 1.35 | 11.9% |
+| `reactiveTruth` | 81.3 | 8.5 | 1466 | 653 | 38.6% | 26.4% | 67 | 1.31 | 11.8% |
+| `reactiveObs` | 10.2 | 3.8 | 465 | 363 | 13.8% | 7.7% | 53 | 0.87 | 7.9% |
+| `expert` | 30.4 | 8.1 | 1084 | 779 | 33.1% | 19.2% | 77 | 1.27 | 14.1% |
+| `camper` | −53.4 | 7.7 | 348 | 881 | 12.4% | 6.0% | 44 | 1.40 | 12.2% |
+| `parker` | −50.9 | 7.9 | 857 | 1366 | 32.9% | 14.2% | 77 | 2.71 | 23.9% |
+| `cowerer` | −13.5 | 4.8 | 171 | 305 | 6.6% | 2.6% | 43 | 0.75 | 9.5% |
+| `still` | −4.4 | 6.1 | 382 | 427 | 12.3% | 6.2% | 48 | 1.07 | 9.7% |
+| `speeder` | 107.2 | 9.7 | 1963 | 892 | 44.3% | 35.0% | 38 | 1.66 | 14.7% |
+
+**Exit check 1 — the memory gap.** Reported twice, because the two ceilings do not
+agree and the disagreement is the result:
+
+- **full gap** (over `reactiveObs`): 75.1 = **88% of the oracle**. Threshold 30% —
+  **passes** with enormous room.
+- **conservative gap** (over `reactiveTruth`): 4.0 = **5%**. **Fails.**
+
+**Exit check 2 — the exploit bots.** All four sit *below* the reactive ceiling
+(climb −85% to −20% on the ceiling→oracle line, against a ≤25% bar) — **pass**. The
+`speeder` climbs to 129%, out-scoring the oracle itself — **fail**, and it is in the
+battery precisely so the check can say so.
+
+### What the gate actually found
+
+**1. All of the value is in knowing *which* panda is worth watching. None of it is
+in knowing *how long*.** Removing every temporal quantity from a policy that keeps
+the feed and true state costs it 5% — and it stays at ~5% under every knob turned
+at it (`stepCost` 6×, `anticipationTau` 5× harsher, both together). The diagnosis
+is structural, not a magnitude: **the feed re-tells you what is live every tick, so
+nothing has to be predicted.** Commitment is reversible — retargeting costs a few
+strides — so optimism beats prediction, which is also why `reactiveTruth` scores a
+hair *above* the oracle: the oracle correctly skips trips its estimate says will not
+pay, and is occasionally wrong, while the optimist just goes.
+
+That is a real problem for the plan. The anticipation economy — the arrival
+multiplier and the duration posterior, called "the money" in the spec — is currently
+worth nothing, and the "statistically inferable" tier of the knowability spine has
+no teeth. Making it bite means making commitment *irreversible* rather than
+expensive: pay only after a minimum dwell, or pay on arrival rather than per tick.
+Neither is a knob that exists yet.
+
+**2. The identity tier, by contrast, is nearly the whole game.** `reactiveObs`
+scores 10.2 against 85.3 while looking at the same world, because it cannot tell a
+sleeper from a panda that was just run over and prices both at the measured base
+rate for "down" — 0.21. Its passivity is not timidity: forcing it to chase harder
+(zero switch margin, quadrupled dwell, no risk aversion) moves it to 5–7, never
+further. It is not that it will not go; it is that it does not know where.
+
+**3. The action space has no speed limit, and the game does not price one.**
+`applyHatAction` executes a STEP as one immediate 50px stride with no cadence
+check — pacing lives in the policy by design. Measured: a policy that strides every
+decision tick travels **25 px/tick, 5.5× the expert and 2.5× a zoomies**, and the
+movement cost cannot restrain it because it is charged per stride and so per
+*pixel*, not per second. `speeder` is the oracle with that brake off and it scores
+**+26%**. This is the one exploit the gate found, it is an action-space hole rather
+than a reward one, and it will be a character-gate failure long before it is a
+scoring problem. The yardsticks all hold themselves to the expert's cadence so they
+measure the game a deployed policy will actually play.
+
+**4. Camping is not profitable, and gross view income is a bad diagnostic.** All
+three camping bots lose money — `parker`, which stands where incidents cluster, is
+floored 2.71 times a minute for its trouble, because the place where incidents
+overlap is the place you get run over. This corrects C1's third finding above.
+
+**A note on the oracle's time estimates.** `remainingOf` in `percept.js` is a second
+implementation of arithmetic that lives in `anomalies.js`, which `truth.js`'s header
+warns against — but truth's exact `ttl` comes from a second pass over the same
+episode, and an oracle acting on it would change the episode the label came from.
+The first attempt used `aTimer` alone; that is the *sub-phase* countdown, not the
+anomaly's life (for a loop it reads 8 ticks when 200 remain), so the oracle skipped
+every loop, moonwalk and spinner and **scored below the strictly-less-informed
+reactive arm** — which is how the bug was found. `test/percept.test.js` now holds
+the estimator to truth's exact `ttl` per kind, with a per-kind error bound that says
+what each one can honestly know: exact for a sleeper, starer and loop, and loose for
+a spinner (whose stagger count is drawn only when the spin ends) and a zoomies
+(which crashes into a wall the estimator projects but a hero card it does not).
+
+The one engine change C2 needed: `anomalies.js` now **exports** its sub-phase
+constants as `PHASE`, so the estimator reads them rather than copying the numbers.
+Behaviour-free — the golden digest is unmoved at `d4a2d47b`.
 
 ### The policies (C1's three)
 
@@ -427,9 +534,10 @@ node --test                        # unit tests
 node bench.js                      # throughput vs the exit bar
 node bench.js --ticks 60000 --episodes 12
 
-# score policies on the game (C1)
+# score policies on the game (C1) and run the yardstick gate (C2)
+node evaluate.js --gate                            # the headline run: gap + exploit checks
 node evaluate.js                                   # every policy, natural, 24 episodes
-node evaluate.js --policy expert --episodes 64
+node evaluate.js --policy oracle,reactiveObs --episodes 64
 node evaluate.js --spec dense --ticks 6000
 node evaluate.js --policy expert --json            # the full per-episode reports
 node evaluate.js --rules knockPenalty=25,payAll=0  # turn a knob and re-read

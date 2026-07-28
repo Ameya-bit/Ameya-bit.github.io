@@ -286,7 +286,7 @@ differently in Chrome than in Node would move actions the trainer never saw.
 | `geometry.js` | Pure bounds / hero-card fence / `applyPos` (per-axis, x commits before the y-check, like the original). |
 | `state.js` | Entity factory, `MODE`/`ANIM`/`KNOCK` enums, `isDown`, `easeVisual`/`snapVisual` (the CSS transition, restart semantics and all), `spawnEntities` + the entrance's off-stage placement and `advanceEntrance`. |
 | `collision.js` | Model-space corner-proximity collision (replaces `getBoundingClientRect`); i-frames while the hat rolls. |
-| `anomalies.js` | The 8 tier-1 FSMs (`startAnomaly`/`updateAnomaly`) + shared grounded fall→lie→stand tail. |
+| `anomalies.js` | The 8 tier-1 FSMs (`startAnomaly`/`updateAnomaly`) + shared grounded fall→lie→stand tail. Exports its sub-phase constants as `PHASE` for Phase C's oracle, which estimates time-remaining off the FSM scratch (`trainer/percept.js`, held to ground truth by a test). |
 | `director.js` | Tier-1 scheduler (pick kind≠last + eligible candidate), the shared `isFreeRoamer` pool test, and the incident queue (`emitIncident`/`pruneIncidents`). |
 | `stack.js` | Tier 2: the tower — director, mount walk + hop, parade with accumulating sway, topple. Exports `riderSway` for the renderer. |
 | `cascade.js` | Tier 3: the arming clock, the nearest-neighbour sweep (`igniteCascade`/claims/scheduled falls), `cascadeKnock`, the liveness backstop. |

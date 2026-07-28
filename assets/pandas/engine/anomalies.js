@@ -26,15 +26,25 @@ const KIND_MODE = [
 
 // Sub-phase constants (distinct across all modes so a phase check never needs the
 // mode). Grounded phases are shared.
-const G_FALL = 10;
-const G_LIE = 11;
-const G_STAND = 12;
-const T_SKID = 1;
-const SP_SPIN = 2;
-const SP_STAGGER = 3;
-const Z_DASH = 4;
-const H_STRIDE = 5;
-const H_POP = 6;
+//
+// Exported as `PHASE` for the one reader outside this module that legitimately needs
+// them: Phase C's privileged oracle (`trainer/percept.js`), which estimates how much
+// longer an anomaly will run from the FSM's own scratch. It is a read-only mirror of
+// the arithmetic below and is held to it by a test against ground truth — but a
+// mirror with the phase numbers copied into it would be a mirror that silently
+// drifts, so the numbers live here and only here.
+export const PHASE = Object.freeze({
+  G_FALL: 10,
+  G_LIE: 11,
+  G_STAND: 12,
+  T_SKID: 1,
+  SP_SPIN: 2,
+  SP_STAGGER: 3,
+  Z_DASH: 4,
+  H_STRIDE: 5,
+  H_POP: 6,
+});
+const { G_FALL, G_LIE, G_STAND, T_SKID, SP_SPIN, SP_STAGGER, Z_DASH, H_STRIDE, H_POP } = PHASE;
 
 // ---- helpers ----
 

@@ -31,7 +31,7 @@ import { resolve } from 'node:path';
 
 import { runEpisode, DEFAULT_ROLLOUT } from './rollout.js';
 import { scoreSink, makeRules, DEFAULT_RULES, GAME_VERSION } from './game.js';
-import { policyByName, POLICIES } from './policies.js';
+import { policyByName, POLICIES, YARDSTICKS, EXPLOITS } from './policies.js';
 import { configFactory, episodeSeeds, SPECS } from './corpus.js';
 
 export const DEFAULT_EVAL = Object.freeze({
@@ -122,6 +122,72 @@ export function evaluatePolicy({
   };
 }
 
+// ---- the gate (C2) ----
+
+// Phase C's first two exit checks, computed rather than eyeballed.
+//
+// The memory gap is reported **twice**, because there are two defensible reactive
+// ceilings and they do not agree:
+//
+//   conservative — `reactiveTruth`, which sees everything true about the current
+//     tick and nothing temporal. It strictly dominates any memoryless policy
+//     reading observations, so the gap above it is a *lower bound*: no 2-frame
+//     network can close it, whatever it turns out to be.
+//   full — `reactiveObs`, one observation frame with no feed and no memory. This is
+//     the honest analogue of the plan's memoryless twin, and the gap above it is
+//     what a world model could in principle be worth.
+//
+// The exploit check is the plan's wording made arithmetic: where does each bot sit
+// on the line from the reactive ceiling (0) to the oracle (1)?
+export const GATE = Object.freeze({
+  gapThreshold: 0.30, // D3's initial proposal: the gap must be ≥30% of the oracle
+  exploitCeiling: 0.25, // "much nearer the reactive ceiling than the oracle"
+});
+
+export function gapReport(results) {
+  const by = Object.fromEntries(results.map((r) => [r.name, r.scorePerMin.mean]));
+  const oracle = by.oracle;
+  const conservative = by.reactiveTruth;
+  const full = by.reactiveObs;
+  const frac = (ceiling) => (oracle - ceiling) / Math.abs(oracle);
+  const climb = (v, ceiling) => (v - ceiling) / (oracle - ceiling);
+  return {
+    oracle,
+    conservative: { ceiling: conservative, gap: oracle - conservative, frac: frac(conservative) },
+    full: { ceiling: full, gap: oracle - full, frac: frac(full) },
+    exploits: results
+      .filter((r) => EXPLOITS.includes(r.name) || r.name === 'speeder')
+      .map((r) => ({
+        name: r.name,
+        score: r.scorePerMin.mean,
+        climb: climb(r.scorePerMin.mean, full),
+        ok: climb(r.scorePerMin.mean, full) <= GATE.exploitCeiling,
+      })),
+  };
+}
+
+function printGap(g) {
+  const pct = (v) => `${(v * 100).toFixed(0)}%`;
+  const verdict = (ok) => (ok ? 'PASS' : 'FAIL');
+  console.log('\nthe memory gap — Phase C exit check 1');
+  console.log(`  oracle                       ${fx(g.oracle, 8)} /min`);
+  console.log(`  reactive ceiling, truth      ${fx(g.conservative.ceiling, 8)}  (conservative — no memoryless`);
+  console.log(`  reactive ceiling, obs        ${fx(g.full.ceiling, 8)}   policy can beat the first)`);
+  console.log(
+    `  gap, conservative            ${fx(g.conservative.gap, 8)} = ${pct(g.conservative.frac).padStart(4)} of oracle` +
+    `   vs ${pct(GATE.gapThreshold)}: ${verdict(g.conservative.frac >= GATE.gapThreshold)}`,
+  );
+  console.log(
+    `  gap, full                    ${fx(g.full.gap, 8)} = ${pct(g.full.frac).padStart(4)} of oracle` +
+    `   vs ${pct(GATE.gapThreshold)}: ${verdict(g.full.frac >= GATE.gapThreshold)}`,
+  );
+  console.log('\nthe exploit bots — Phase C exit check 2');
+  console.log(`  (0 = at the reactive ceiling, 1 = at the oracle; must be under ${pct(GATE.exploitCeiling)})`);
+  for (const e of g.exploits) {
+    console.log(`  ${e.name.padEnd(14)} ${fx(e.score, 8)}   ${pct(e.climb).padStart(6)}   ${verdict(e.ok)}`);
+  }
+}
+
 // ---- the CLI ----
 
 const fx = (v, w = 8, d = 1) => v.toFixed(d).padStart(w);
@@ -157,7 +223,7 @@ function parseArgs(argv) {
     const a = argv[i];
     if (!a.startsWith('--')) throw new Error(`unexpected argument: ${a}`);
     const key = a.slice(2);
-    if (key === 'json') { args.json = true; continue; }
+    if (key === 'json' || key === 'gate') { args[key] = true; continue; }
     const value = argv[++i];
     if (value === undefined) throw new Error(`--${key} needs a value`);
     args[key] = value;
@@ -185,7 +251,10 @@ export function parseRules(spec) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  const names = args.policy ? args.policy.split(',') : Object.keys(POLICIES);
+  // `--gate` is the phase's headline run: the three yardsticks, the exploit bots,
+  // and the incumbent to read them against.
+  const gateSet = [...YARDSTICKS, 'expert', ...EXPLOITS, 'speeder'];
+  const names = args.gate ? gateSet : args.policy ? args.policy.split(',') : Object.keys(POLICIES);
   const opts = {
     spec: args.spec ?? DEFAULT_EVAL.spec,
     corpusSeed: args.seed === undefined ? DEFAULT_EVAL.corpusSeed : Number(args.seed),
@@ -220,6 +289,7 @@ function main() {
     'cover = incidents he showed up to; tick-cov = share of live incident-ticks in range;\n' +
     'late  = mean incident age on arrival, ticks (20/s).',
   );
+  if (args.gate) printGap(gapReport(results));
   console.log(`\n${results.map((r) => `${r.name} ${r.seconds.toFixed(1)}s`).join('  ')}`);
 }
 
