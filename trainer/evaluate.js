@@ -33,6 +33,7 @@ import { runEpisode, DEFAULT_ROLLOUT } from './rollout.js';
 import { scoreSink, makeRules, DEFAULT_RULES, GAME_VERSION } from './game.js';
 import { policyByName, POLICIES, YARDSTICKS, EXPLOITS } from './policies.js';
 import { configFactory, episodeSeeds, SPECS } from './corpus.js';
+import { certifyReport, printCertificate } from './twins.js';
 
 export const DEFAULT_EVAL = Object.freeze({
   spec: 'natural',
@@ -289,7 +290,13 @@ function main() {
     'cover = incidents he showed up to; tick-cov = share of live incident-ticks in range;\n' +
     'late  = mean incident age on arrival, ticks (20/s).',
   );
-  if (args.gate) printGap(gapReport(results));
+  if (args.gate) {
+    printGap(gapReport(results));
+    // Exit check 3 lives in twins.js and is run from here so that `--gate` is the
+    // whole gate rather than two of its three parts. It costs a fraction of a
+    // second — the batteries are a few hundred ticks of a bare stage, not episodes.
+    printCertificate(certifyReport({ rules: makeRules(opts.rules) }));
+  }
   console.log(`\n${results.map((r) => `${r.name} ${r.seconds.toFixed(1)}s`).join('  ')}`);
 }
 

@@ -23,8 +23,8 @@ Zero dependencies, `node --test`.
 | **B6 — cut the corpora, freeze the roster** | ✅ done |
 | **C1 — the game: scoring rules, the policy seam, the evaluator** | ✅ done |
 | **C2 — the oracle, the memoryless twins, the exploit bots** | ✅ done |
-| **C3 — the twin-episode battery, one set per knowability tier** | ⬜ |
-| **C4 — the memory gap, measured against the exit threshold** | ⬜ |
+| **C3 — the twin-episode battery, one set per knowability tier** | ✅ done |
+| **C4 — the game-shape iteration C2 and C3 now demand** | ⬜ |
 
 **Phase B's exit is met.** The corpora are cut, the roster is frozen (and the freeze
 is a test — see below), the encoder's fixture check is green, and rollouts clear the
@@ -95,6 +95,8 @@ because a corpus missing labels it could have had is the expensive mistake.
 | `planner.js` | **The yardstick body (C2)**: one score-maximising bot, run over each of those beliefs. |
 | `policies.js` | Everything the game is scored against: the incumbent, the floors, the yardsticks, the exploit bots. |
 | `evaluate.js` | Runs a policy over a set of episodes and reports the distribution. Also the CLI and the gate (`--gate`). |
+| `scenario.js` | **Constructed episodes (C3)**: a bare stage, a hand-placed roster, the directors asleep, and a script that injects one event at one tick. |
+| `twins.js` | **The twin-episode battery (C3)**: three matched-pair sets, one per knowability tier, and exit check 3. |
 | `test/freeze.test.js` | Runs `checkContract` over every committed manifest — the roster freeze, enforced. |
 | `corpora/` | Cut corpora. Gitignored except manifests and the JSONL sample — a corpus is re-cuttable from its manifest, so the bytes need not be in git. |
 
@@ -504,6 +506,141 @@ Every policy must be a pure function of what it is handed — no `Math.random`, 
 wall clock. A score that is not reproducible is not a measurement, and a test pins
 that an episode is a pure function of (seed, config, policy).
 
+## The twin-episode battery (C3)
+
+Checks 1 and 2 are differences of *scores*: how much a piece of information is
+worth, averaged over 24 draws of the eval corpus. Check 3 is a difference of
+*behaviour* on a matched pair, and it answers a question no average can:
+
+> **Can this policy tell these two situations apart at all?**
+
+The plan's wording: "matched episode pairs identical in every current observable,
+differing only in hidden history. A policy that approaches one and ignores the
+other has *behaviorally proven* the inference, no probes required. One battery per
+knowability tier."
+
+| tier | the pair | the hidden difference |
+|---|---|---|
+| **identity** (fully inferable) | a sleeper vs a panda that was just run over, lying in the same cels on the same pixel | one is a live tier-1 incident; the other is worth nothing, because **ordinary knocks pay nothing** |
+| **duration** (statistically inferable) | a nap that just started vs one with 30 ticks left | how long it has been lying there — and therefore whether the walk can pay |
+| **unknowable** (provably uninferable) | a cascade armed vs not armed | nothing observable, ever. The negative control |
+
+Each battery is 12 pairs, varying the subject's bearing over the 8 sprite axes and
+its distance over 300/340/380 px. The whole thing runs in **0.2 s**, which is why
+it is inside `evaluate.js --gate` rather than beside it.
+
+### How a pair is built, and what makes it a twin
+
+`scenario.js` builds a stage rather than sampling one: a bare 1240×900 room with no
+hero card, a hand-placed roster, and all three directors' clocks pushed past the end
+of time (`QUIET`) — silenced rather than bypassed, so a scenario is a state that
+`step` treats exactly like any other. A script hook injects the one event the
+experiment is about, at an exact tick, through the engine's own `startAnomaly` /
+`beginKnock`. Nothing here is a corpus and nothing here is training data.
+
+Three details are load-bearing:
+
+- **The hat is frozen until his cue.** The policy is consulted on every decision
+  tick from the first — so a policy with memory has seen the whole lead-in, which is
+  where the answer lives — but its action is discarded and replaced with HOLD until
+  `decideAt`. Without that the two arms diverge during the lead-in (in one of them
+  there is already something worth walking to) and by the decision tick the frames
+  no longer match. Frozen means the hand is held, not the eyes shut.
+- **The identity is asserted, not assumed.** Before any verdict, both arms are
+  re-run with the hat held still and their observation frames at `decideAt` are
+  diffed. A mismatch throws and names the token and field. The whole battery rests
+  on "these two are the same picture"; a claim nobody checks is one refactor away
+  from being false.
+- **`impact` is 85 here rather than the shipped 80.** A knock carries its slide
+  across `fallTicks` = 17 ticks as `slide / fallTicks` per tick, and 85/17 = 5
+  exactly — so the knocked twin lands on precisely the pixel the sleeping twin was
+  placed on, with no float residue in the last bit of a `relX`. The check above
+  would catch it either way; a scenario that has to be lucky is one that will one
+  day not be.
+
+**The knock arm has no collider on stage**, and that is a stated simplification
+rather than a hidden one. A real contact knocks *both* bodies, and matching two arms
+through a mutual knock would mean matching two subjects instead of one. What is kept
+is the tell that carries the information: an ordinary knock **slides** its victim
+85 px away from the struck side across the fall cels, and a sleeper lies down where
+it stood. Those 17 ticks are the whole of the difference, they are on screen in both
+arms, and from the tick the fall ends the two worlds are the same picture.
+
+### The statistic
+
+    discrimination = approach(hot) − approach(cold)          ∈ [−1, 1]
+
+where `approach` is the fraction of the *closable* distance to the site (the trip
+minus `viewRadius`, which is his to make) that he closed during the 90-tick window.
+1 = he arrived; 0 = he never set off. A policy that walks to both, or to neither,
+scores 0 — which is the honest verdict on a policy that cannot tell them apart.
+
+Attendance in `viewRadius` is reported alongside it but is not the verdict: an arm
+can stop paying mid-window (a stale nap ends), and the certificate is about what he
+committed to at the decision tick, not what the commitment turned out to be worth.
+
+### `node twins.js` — 12 pairs per tier
+
+`d` is the discrimination; `hot`/`cold` are the two approaches it is made of; `split`
+counts pairs on which the policy's *action stream* differed between the arms at all.
+
+| policy | identity `d` | hot / cold | duration `d` | hot / cold | unknowable `d` | split |
+|---|---|---|---|---|---|---|
+| `oracle` | **1.00** | 1.00 / 0.00 | **1.00** | 1.00 / 0.00 | 0.00 | 0/12 |
+| `reactiveTruth` | **1.00** | 1.00 / 0.00 | 0.00 | 1.00 / 1.00 | 0.00 | 0/12 |
+| `reactiveObs` | 0.00 | 1.00 / 1.00 | 0.00 | 1.00 / 1.00 | 0.00 | 0/12 |
+| `expert` | 0.16 | 0.94 / 0.79 | −0.00 | 0.94 / 0.95 | 0.00 | 0/12 |
+| `speeder` | 1.00 | 1.00 / 0.00 | 0.67 | 1.00 / 0.33 | 0.00 | 0/12 |
+| `still` | 0.00 | 0.00 / 0.00 | 0.00 | 0.00 / 0.00 | 0.00 | 0/12 |
+
+**Exit check 3 — PASS.** The oracle discriminates on both knowable tiers at ceiling
+(1.00, every pair), the memoryless twin is blind on both, and nothing moves a muscle
+differently on the unknowable one. Stable at 24 pairs and under `viewRadius=130`.
+
+### What the battery found
+
+**1. The flagship certificate is clean, and the split between the two knowable tiers
+is exactly the split between the two reactive ceilings.** `reactiveTruth` — the
+conservative ceiling, which keeps the incident feed and loses every temporal
+quantity — passes `identity` at 1.00 and fails `duration` at 0.00. That is the
+boundary between "which panda is worth watching" and "how long it will last" drawn
+by behaviour rather than by a score difference, and it corroborates C2's headline
+from an independent direction.
+
+**2. The duration tier is decidable, and C2 showed it is worth 5%.** Those are not
+in tension and together they are the diagnosis: the information is *there* — the
+oracle separates a fresh nap from a nearly-over one on every single pair — but **the
+live distribution almost never forces the choice**, because the feed re-announces
+what is live every tick and retargeting costs a few strides. The tier does not need
+to be made knowable. It needs to be made *consequential*, which is C4's work: pay
+only after a minimum dwell, or pay on arrival rather than per tick.
+
+**3. The shipped watcher fails the flagship certificate — and not for lack of
+information.** `expert` reads the incident feed and still scores 0.16 on `identity`,
+approaching the worthless twin on 0.79 of the trip (and on one pair going *further*
+toward it, −0.17). The reason is its ambient behaviour: with nothing flagged nearby
+it walks to the nearest panda and studies it, and a body on the ground is the most
+interesting thing on a bare stage. **This matters for Phase D**: BC from this expert
+teaches indiscriminate approach, which is precisely the superstition the plan warns
+about, now measured instead of predicted.
+
+**4. Speed erodes the anticipation economy, a second time.** `speeder` — the oracle
+with C2's action-space brake off — scores 0.67 on `duration` against the oracle's
+1.00, because at 25 px/tick the trip is short enough that even a 30-tick nap is
+worth taking. The same hole C2 priced at +26% of score also *removes* the pressure
+to predict, which is a stronger argument for closing it than the score was.
+
+**5. The negative control has real stakes and stays at zero.** The armed arm's
+cascade genuinely fires four ticks after the window (the battery asserts that it
+did, and that the unarmed arm's did not) — so the two arms are on materially
+different futures, and no policy, privileged or otherwise, changed a single action.
+The tighter form of the check is what makes it worth having: on this tier the two
+arms agree on every observable byte for the whole window, so `identical` is asked
+rather than `blind`, and one differing action anywhere would be leakage.
+
+**No engine change was needed.** C3 is entirely trainer-side; the golden digest is
+unmoved at `d4a2d47b` and the 170 engine tests are untouched.
+
 ## Corpus specs
 
 A spec is `(rng) -> config overrides`. Diversity is not tidiness here — it is the
@@ -534,13 +671,20 @@ node --test                        # unit tests
 node bench.js                      # throughput vs the exit bar
 node bench.js --ticks 60000 --episodes 12
 
-# score policies on the game (C1) and run the yardstick gate (C2)
-node evaluate.js --gate                            # the headline run: gap + exploit checks
+# score policies on the game (C1) and run the whole Phase-C gate (C2 + C3)
+node evaluate.js --gate                            # the headline run: all three exit checks
 node evaluate.js                                   # every policy, natural, 24 episodes
 node evaluate.js --policy oracle,reactiveObs --episodes 64
 node evaluate.js --spec dense --ticks 6000
 node evaluate.js --policy expert --json            # the full per-episode reports
 node evaluate.js --rules knockPenalty=25,payAll=0  # turn a knob and re-read
+
+# the twin-episode battery (C3) on its own — 0.2 s for all three tiers
+node twins.js                                      # exit check 3
+node twins.js --pairs 24                           # every bearing x distance
+node twins.js --tier identity --verbose            # every policy, pair by pair
+node twins.js --tier duration --policy oracle,expert
+node twins.js --json
 
 # cut a corpus: shards under corpora/<name>/, manifest + sample beside it
 node cut.js --spec natural --name eval-natural --episodes 120 --ticks 12000
