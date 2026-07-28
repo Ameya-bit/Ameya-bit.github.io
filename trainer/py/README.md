@@ -224,18 +224,27 @@ peak-then-decline as a smooth climb. Fixed after it fooled us once.
    income-earning trajectories (walk to the anomaly, arrive early, dwell) are
    too rare under its own behaviour for the advantage signal to find them.
 
-**Where it stands.** Two escalation arms ran as 10-minute shakedowns: **C**
-(actor lr 3e-5 → 1e-4) and **D** (lr 1e-4 + the `dense` curriculum spec, the
-plan's own lever — incident-rich worlds steepen the income gradient). Results
-in `runs/arms-cd.log` / `runs/ppo-armC-lr1e4` / `runs/ppo-armD-dense`. If
-either climbs above the plateau band, it earns the long run (same auto-sweep,
-same kill rule). If both stay flat, the next levers are game-side and are a
-design decision, not a hyperparameter: reward shaping toward approach
-(potential-based, the plan's "only if reward starves" clause — it is starving),
-a curriculum schedule (dense → wild), an exploration mechanism the KL anchor
-currently suppresses, or a better-behaved anchor (the frozen recurrent warm
-start rather than the E1 stacked clone). Checkpoint archives for all runs and
-arms are under `runs/` and re-scoreable at any time.
+**Where it stands.** Two escalation arms ran as 10-minute shakedowns and
+**both stayed in the plateau band**: **C** (actor lr 3e-5 → 1e-4; natural
+−16…+4) and **D** (lr 1e-4 + training on the `dense` spec; natural −6…−18,
+wild −8…−36 with knocks up to ~1.9 — crowd exposure made it slightly more
+knock-prone, not more enterprising). So the plateau is neither learning-rate-
+limited nor broken by crude density exposure. **The measured mechanism** (ledger
+decomposition, fresh worlds): the stuck policy moves on **2%** of decisions
+(expert: 12%) and grosses 15.9/min against the expert's 106.9 — while the warm
+start moves the *most* (16%) and earns the *least* (5.5/min), because
+undirected walking pays worse than standing still. Every intermediate policy
+between "still" and "directed" scores below both endpoints: a valley, and an
+80–100-decision earn chain (infer → walk → arrive → dwell) the policy never
+samples at 2% movement. Next levers, in order: (1) the cheap credit-side
+diagnostic — critic explained variance, GAE λ (0.95 ≈ 20-decision horizon vs
+the 100-decision chain), BPTT length — to separate "gradient absent" from
+"gradient invisible"; (2) if absent: potential-based shaping toward live
+incidents (the plan's "only if reward starves" clause — the decomposition above
+is starvation), a dense→wild curriculum *schedule*, and a small entropy floor
+so rediscovered movement survives. The anchor swap is deprioritised: at coef
+0.1 the anchor barely binds (the no-KL arm behaved identically). Checkpoint
+archives for all runs and arms are under `runs/` and re-scoreable at any time.
 
 ## What is here
 
