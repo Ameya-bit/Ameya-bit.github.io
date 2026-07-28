@@ -180,6 +180,63 @@ plan's predicted opening position, and it is exactly the signature this
 instrument exists to catch when it matters: an E5 run whose score rises while
 these numbers do not move has found an exploit, not a world model.
 
+## E5, iteration 1 (2026-07-28) — the loop found a trap, and it is C5's
+
+The first day of real runs did not produce a candidate; it produced a diagnosis,
+which is what the shortcut-hunt loop is for. Status: **stopped by rule, awaiting
+a design decision** (see "where it stands" below).
+
+**The instrument set** (all landed today): `eval_slot.py` scores any checkpoint
+online — fresh worlds (corpus seed the training never saw), deployed timing,
+softmax sampling, the gate's ledger — at ~10 s per checkpoint; `probes.py` reads
+decodability; during a long run a background loop auto-scores each checkpoint as
+it lands. The training log leads with `now` (this rollout's mean reward as
+score/min) because the rolling episode average — episodes take ten minutes —
+lagged a full policy-generation behind and painted the first run's
+peak-then-decline as a smooth climb. Fixed after it fooled us once.
+
+**What every run and arm did, on `natural` (anchors: expert +57.7, `still`
++23.9, E1 clone −61.7):**
+
+| policy | score/min | knocks/min (proxy) |
+|---|---|---|
+| recurrent warm start (BC) | −76 | ~2.2 |
+| any arm, ~2M steps (post-warmup) | −10 … +11 | ~1.0–1.3 |
+| leash 1.0 (plan default), 13M | −23 … −30, still falling | ~1.3 |
+| leash 0 / leash 0.1, 13M | plateau −5 … −25 | ~1.0–1.4 |
+| leash 0.1, **58M** (run e5-b) | **−7.3 ± 3.6 vs −10.0 ± 3.9 at 4M — zero progress** | ~1.1 |
+
+**Three findings.**
+1. **All the money arrives immediately.** Warmup + a few conservative updates
+   take the BC clone from −89/−76 to roughly break-even by nudging thin HOLD
+   margins — it stops paying for aimless walking, and its knock rate drops
+   *below the expert's* (~1.1 vs 1.27). Real, replicated across every arm.
+2. **The plan's tight-early leash (coef 1.0) actively degrades from that peak**
+   (to −25/−30 by 13M on both specs); coef 0.1 or 0 holds flat instead. The
+   long run therefore carried `--leash 0:0.1,1:0.1`.
+3. **Nothing climbs out of the plateau.** e5-b ran 58M steps under the gentle
+   tether and moved 2.7 ± 5.3 — nothing — and was stopped by the pre-registered
+   rule (flat at 60M ⇒ kill). The probes agree: decodability flat at the
+   untrained-reservoir baseline throughout. **This is the trap C5 predicted**:
+   since `knockPenalty` 40 → 20, "freezing loses everywhere but is no longer
+   worthless," and the policy has found *still-with-reflexes* — safe, income-
+   free, and a local optimum a conservative gradient cannot leave, because
+   income-earning trajectories (walk to the anomaly, arrive early, dwell) are
+   too rare under its own behaviour for the advantage signal to find them.
+
+**Where it stands.** Two escalation arms ran as 10-minute shakedowns: **C**
+(actor lr 3e-5 → 1e-4) and **D** (lr 1e-4 + the `dense` curriculum spec, the
+plan's own lever — incident-rich worlds steepen the income gradient). Results
+in `runs/arms-cd.log` / `runs/ppo-armC-lr1e4` / `runs/ppo-armD-dense`. If
+either climbs above the plateau band, it earns the long run (same auto-sweep,
+same kill rule). If both stay flat, the next levers are game-side and are a
+design decision, not a hyperparameter: reward shaping toward approach
+(potential-based, the plan's "only if reward starves" clause — it is starving),
+a curriculum schedule (dense → wild), an exploration mechanism the KL anchor
+currently suppresses, or a better-behaved anchor (the frozen recurrent warm
+start rather than the E1 stacked clone). Checkpoint archives for all runs and
+arms are under `runs/` and re-scoreable at any time.
+
 ## What is here
 
 | File | Role |
