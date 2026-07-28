@@ -25,6 +25,16 @@ Zero dependencies, `node --test`.
 | **C2 — the oracle, the memoryless twins, the exploit bots** | ✅ done |
 | **C3 — the twin-episode battery, one set per knowability tier** | ✅ done |
 | **C4 — close the action-space holes, price commitment, re-run the gate** | ✅ done |
+| **C5 — the risk economy, and what the conservative ceiling is actually worth** | ✅ done |
+
+**Phase C's exit is met: all three checks pass** (`node evaluate.js --gate`, game v3).
+The memory gap is **87%** of the oracle against a 30% threshold; every exploit bot
+sits below the yardstick it would have to beat; the twin-episode battery separates
+the oracle from both memoryless arms on each knowable tier and nobody moves on the
+unknowable one. Two things changed in C5 to get there, both written up below:
+`knockPenalty` fell 40 → 20 because **85% of what it charged for was ambient**, and
+the verdict on check 1 now rests on the plan's own memoryless twin rather than on a
+conservative reading that turned out not to be a bound. **Phase D is unblocked.**
 
 **Phase B's exit is met.** The corpora are cut, the roster is frozen (and the freeze
 is a test — see below), the encoder's fixture check is green, and rollouts clear the
@@ -304,8 +314,9 @@ Everything else in `DEFAULT_RULES` exists to move money out of *reaction* and in
 | `incidentCap` | 280 | The hard ceiling on top. Raised from 120 by C4 to leave room for `arrivalPay` plus some view income on one incident. |
 | `dwellMin` | 120 | **C4.** An incident pays *nothing* until it has been attended for 120 unbroken ticks; the pay accrues into escrow and is released whole on completion. Walking away — or the incident ending first — forfeits the lot. 6 s is a coin flip against the measured duration distribution (p10 20 / median 115 / p90 334), so a clockless arm's flat prior is wrong about half the time it matters. |
 | `dwellGrace` | 20 | How long a lapse a visit survives. Not a softener: with strict contiguity the *oracle* failed 24.7 of 33 commitments, because subjects move and one tick of drift outside the radius reset the run. That scored tracking, not prediction. |
-| `arrivalPay` | 120 | **C4.** A lump sum on completion, scaled by the arrival multiplier — "pay on arrival rather than per tick" as a knob. Not optional at `dwellMin` 120: a dwell only ever removes income, and without the bounty the shipped expert falls to −26.7/min and below `still`, which is C1's own disqualifying condition. With it the expert lands on 32.3, within noise of the 30.4 it scored under C1. |
+| `arrivalPay` | 120 | **C4.** A lump sum on completion, scaled by the arrival multiplier — "pay on arrival rather than per tick" as a knob. Not optional at `dwellMin` 120: a dwell only ever removes income, and without the bounty the shipped expert falls to −26.7/min and below `still`, which is C1's own disqualifying condition. With it the expert landed on 32.3 under the C4 economy, within noise of the 30.4 it scored under C1 — and on 57.7 under C5's. |
 | `stepCost` | 0.5 | A stage crossing ≈ 24 strides ≈ 12 points, about a quarter of what one incident is typically worth. Enough that a trip is a wager, not a free option. |
+| `knockPenalty` | 20 | **C5, down from C1's 40.** The +view/−hit ratio D3 leaves open. It halved because **85% of what it charged for was ambient**: the do-nothing floor pays 425 of the oracle's 501-point knock bill on `natural` × 96, so the term was pricing proximity to pandas rather than recklessness — and the incidents are on the pandas. Halving it puts the incumbent above the do-nothing floor on `natural` and `wild` and leaves the exploit battery and the memory gap where they were. |
 | `payAll` | true | Pay every incident in range, leaving the `R_VIEW`-intersection parking exploit open on purpose for C2's bots. Measured: turning it off costs the expert **4%** of income on `natural` and 3% on `dense` — at this radius incidents rarely overlap, so the exploit is small before anyone tries to work it. |
 
 Two decisions that look small and are not:
@@ -356,7 +367,8 @@ ticks/s, ~0.9 s for the whole set.
 | `still` | −4.4 | 6.1 | 382 | 427 | 12.3% | 6.2% | 48 | 1.07 | 9.7% |
 | `random` | −357.6 | 2.3 | 254 | 3830 | 18.1% | 3.4% | 72 | 2.68 | 23.8% |
 
-`knockPenalty` was set from this table, at **40**. It is the +view/−hit ratio D3
+`knockPenalty` was set from this table, at **40** — ⚠️ **it is 20 now; C5 halved it,
+and every score in this C1 section is at 40.** It is the +view/−hit ratio D3
 leaves open and the knob most likely to move as C2's bots arrive; 40 makes the
 knock term ~40% of the expert's gross income, on top of the ~14% of the episode he
 spends grounded earning nothing. It also leaves the incumbent clearly positive,
@@ -373,7 +385,9 @@ Three findings already worth having, none of them flattering:
 1. **Standing still is not safe.** `still` is knocked 1.07 times a minute against
    the expert's 1.27 — the field walks into *him*. The knock penalty is therefore
    close to a constant tax on existing rather than a price on recklessness, which
-   is most of why the next finding happens.
+   is most of why the next finding happens. **Confirmed and quantified by C5**: 85%
+   of the oracle's knock bill is what the do-nothing floor pays. `knockPenalty` fell
+   to 20 on that measurement.
 2. **Under crowding, cowering beats working.** On `dense` the expert scores −47.4
    and `still` −36.5. Break-even is measured, not estimated: the two tie exactly at
    `knockPenalty=29` on `dense` and at `knockPenalty=215` on `natural`. So the game
@@ -381,6 +395,11 @@ Three findings already worth having, none of them flattering:
    curriculum corpus currently teaches freezing. That is a reward-*shape* problem,
    not a magnitude one — the plan's appendix is blunt that per-tick proximity
    rewards breed parking equilibria and that the fix is the shape.
+   ⚠️ **The conclusion is void; the observation is not.** C5 asked the same question
+   of a policy that plays well and found the oracle scoring **153.0 against `still`'s
+   −4.6** on `dense`. The game does not price activity out of the market under
+   crowding — *this watcher's* activity is priced out, because it fails 82% of its
+   commitments there. See "the crowding finding, re-priced".
 3. **Camping earns a surprising amount of gross income.** Diminishing returns and
    the cap are per incident, and a crowd supplies a stream of *fresh* ones, each
    paying full early-arrival rate: `still` collects 382 points a run without
@@ -412,7 +431,7 @@ The planner prices each candidate as expected points, using the **exact integral
 the game's own diminishing-returns curve** — the oracle must be limited by
 information, not by optimising something other than what it is paid.
 
-### `node evaluate.js --gate` — 24 × 12000 of `natural`
+### `node evaluate.js --gate` — the C2 game, 24 × 12000 of `natural`
 
 | policy | score/min | ±se | view | cost | cover | tick-cov | late | knock/m | down% |
 |---|---|---|---|---|---|---|---|---|---|
@@ -786,6 +805,11 @@ at 95%) ever made. C4 does not quietly relax the threshold — the gate still pr
 FAIL — but the number to carry into Phase E is that **the duration tier is now worth
 17% of a much larger pie, against ~0% when C3 closed.**
 
+*(C5 finished the argument with a measurement C4 did not have: the conservative
+reading is not a bound at all — it is **−19% on `wild`** — so it now carries no
+verdict, and the gate passes on the full gap. The decomposition above survives
+intact and is why the diagnostic is still printed.)*
+
 Still open, and explicitly *not* fixed by C4's knobs:
 
 - **Cowering still wins under crowding.** On `dense` the expert scores −55.0 against
@@ -799,6 +823,216 @@ Still open, and explicitly *not* fixed by C4's knobs:
 - **Standing still is not safe** (C1's finding (1)): `still` is knocked 1.07/min
   against the expert's 1.27, so `knockPenalty` remains closer to a tax on existing
   than a price on recklessness. Same recalibration.
+
+*(Both are C5's, below. The first turned out to be a claim about the incumbent rather
+than about the game; the second turned out to be true, and larger than one knock rate
+suggests.)*
+
+
+## Closing Phase C (C5)
+
+C4 left two findings open and one exit check split. C5 measured all three instead of
+arguing about them, and the phase closes: **`node evaluate.js --gate` now prints PASS
+on all three checks** (game v3). One rule changed — `knockPenalty` 40 → 20 — and one
+verdict moved, from a conservative ceiling that turned out not to be a bound onto the
+memoryless twin the plan actually named.
+
+Every number in this section is on the corrected C4 instrument. The 24-episode runs
+are the committed eval set (`natural`, seed 20260727 — the same worlds as
+`eval-natural`); where a claim was close enough to the noise to matter it is re-run at
+**96 episodes** and labelled, because C5's first reading of the crowded regime at 24
+said the opposite of the 96-episode one.
+
+### The knock penalty was mostly a tax on existing — 85% of it
+
+C1 suspected this from a single number: `still` is floored 1.07 times a minute against
+the expert's 1.27, so most of the risk looked like it came with the room rather than
+with the decisions. C5 priced the bill instead. `natural` × 96, `knockPenalty` 40,
+knockdown points paid per episode:
+
+| policy | knock bill | knocks/min | share of the oracle's bill |
+|---|---|---|---|
+| `cowerer` | 277 | 0.69 | 55% |
+| `still` | 425 | 1.06 | **85%** |
+| `oracle` | 501 | 1.25 | 100% |
+| `expert` | 567 | 1.42 | 113% |
+
+**85% of what the oracle pays in knockdowns is what it would have paid for standing
+still**, and on `wild` and `dense` it is 80%. Only the remaining 15–20% is anything a
+policy chose — and the cheapest way to cut even that is `cowerer`'s: leave the crowd.
+Which is the shape problem stated exactly. The penalty is not pricing recklessness; it
+is pricing **proximity to pandas**, and the incidents are on the pandas, so at 40 it
+was quietly subtracting a density-scaled constant from the one behaviour the pay
+exists to buy. Worse for Phase E than for the gate: PPO sees this ledger per tick, and
+a term that is 85% noise is 85% variance in the advantage estimate.
+
+The sweep, 24 × 12000 per cell, three specs (`gapFull` = the memory gap over the
+memoryless twin):
+
+| pen | | oracle | rTruth | rObs | expert | cowerer | still | camper | roller | speeder | gapCons | gapFull |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **0** | natural | 215.4 | 206.8 | 48.0 | 83.1 | 16.4 | 45.3 | 2.3 | 105.0 | 226.9 | 4% | 78% |
+| **10** | natural | 198.0 | 201.0 | 42.7 | 70.4 | 8.9 | 34.6 | −11.7 | 95.7 | 213.2 | −2% | 78% |
+| **20** | natural | 197.5 | 168.1 | 25.5 | 57.7 | 1.4 | 23.9 | −25.6 | 80.2 | 207.3 | 15% | **87%** |
+| **40** | natural | 175.4 | 146.1 | 9.5 | 32.3 | −13.6 | 2.6 | −53.6 | 66.5 | 168.6 | 17% | 95% |
+| **80** | natural | 114.0 | 79.4 | −31.8 | −18.5 | −43.6 | −40.1 | −109.4 | 14.4 | 110.4 | 30% | 128% |
+| **20** | dense | 162.4 | 113.9 | 7.5 | −1.6 | −8.0 | −2.4 | −34.7 | 57.2 | 156.7 | 30% | 95% |
+| **40** | dense | 106.6 | 73.8 | −23.2 | −55.0 | −33.1 | −36.2 | −84.4 | 9.8 | 111.7 | 31% | 122% |
+| **20** | wild | 137.3 | 127.9 | 23.2 | 27.8 | −1.9 | 3.5 | −45.5 | 80.3 | 157.8 | 7% | 83% |
+| **40** | wild | 107.8 | 127.8 | −28.3 | −13.2 | −23.3 | −19.6 | −87.7 | 42.0 | 125.9 | **−19%** | 126% |
+
+**20 is where the ordering the penalty exists to enforce survives and the ambient
+constant is halved.** Below it the exploit bots start climbing (`camper` from −25.6 to
++2.3 as the penalty vanishes, since parking in a crowd stops costing anything) and the
+memory gap sags with them; above it the incumbent drowns. It is adopted as the
+default.
+
+**What it costs, stated rather than buried.** The do-nothing floor rises from 2.6 to
+23.9/min on the eval set — 41% of the incumbent's score, where it was 8%. Freezing
+loses to watching on every spec now, but it is no longer *worthless*, and Phase E
+should expect a shallower gradient out of it than C4's numbers implied.
+
+### The crowding finding, re-priced — it was about the incumbent, not the game
+
+C1's finding (2), carried through C4, was that "the game as specified prices activity
+out of the market at high density" and that the curriculum "currently teaches
+freezing". The evidence was that the expert scored below `still` on `dense`. C5's
+first move was to ask the same question of a player that knows what it is doing, and
+the answer is not close (`dense` × 96):
+
+| | oracle | expert | still | cowerer |
+|---|---|---|---|---|
+| `knockPenalty` 40 | **107.7** | −63.1 | −39.3 | −31.2 |
+| `knockPenalty` 20 | **153.0** | −9.2 | −4.6 | −6.3 |
+
+**Under crowding the game pays an informed player 157 points a minute over standing
+still.** It does not price activity out of the market; it prices *this watcher's*
+activity out of the market. The expert's collapse is a triage failure and the ledger
+says which one: on `dense` it fails **81.8%** of its commitments against the oracle's
+49.0%, arrives 87 ticks late against 68, walks twice as far (242 points of strides
+against 113) and collects a third of the view income (717 against 2075). It is a bot
+hand-tuned for the live density, wandering.
+
+**So C5 does not chase this the rest of the way, and the reason is a rule about which
+mistakes are allowed.** `knockPenalty` 20 takes the deficit on `dense` from 23.8
+points to 4.6 — an 80% cut — but the expert is still slightly behind `still` there
+(−9.2 against −4.6), and the arithmetic says it stays behind until the penalty drops
+below ~15. Tuning to that number would be tuning the game to flatter a badly-triaging
+incumbent, which is the one thing this phase has consistently refused to do. What is
+adopted is what the *ambient* measurement justifies on its own; where that leaves the
+expert is a report, not a target.
+
+The margin does close on the two specs that carry weight, and `wild` is the one Phase
+E trains on (96 episodes):
+
+| | oracle | expert | still | cowerer |
+|---|---|---|---|---|
+| `natural`, pen 40 | 168.3 | 30.5 | −9.9 | −11.7 |
+| `natural`, pen 20 | 202.0 | **58.9** | 11.3 | 2.1 |
+| `wild`, pen 40 | 115.5 | −22.2 | −32.1 | −29.4 |
+| `wild`, pen 20 | 157.2 | **21.8** | −0.6 | −5.7 |
+
+At 40 the BC anchor Phase E warm-starts from scored −22.2 on its own training
+distribution, below every floor in the table. At 20 it scores 21.8 and is first. That
+is the change's real justification.
+
+### The conservative ceiling is not a bound, and now carries no verdict
+
+Through C4 the gate printed two verdicts on exit check 1. The conservative one rested
+on an argument about information: `reactiveTruth` sees everything true about the
+current tick, so it strictly dominates any memoryless policy reading observations, so
+the gap above it must be a lower bound on the memory gap. The argument is sound about
+**information sets** and says nothing about achieved **scores** unless the planner
+underneath is optimal. It is not. Two measurements:
+
+1. **On `wild` the conservative gap is −19%** (`knockPenalty` 40, 24 × 12000): the
+   clockless arm out-scores the oracle outright, 127.8 to 107.8. A lower bound on a
+   non-negative quantity cannot be negative. The mechanism is the one C2 already
+   named — optimism beats prediction when the feed re-announces what is live every
+   tick — and it is a property of the planner, not of the information.
+2. **One unprincipled planner knob walks it from 17% to 6%.** The planner declines any
+   trip that prices out negative (`value <= 0`) and stands still instead. Standing
+   still is not actually free, so C5 swept the floor it compares against
+   (`knockPenalty` 40, 24 × 12000, the pre-C5 default):
+
+| spec | floor | oracle | rTruth | rObs | gapCons | gapFull |
+|---|---|---|---|---|---|---|
+| natural | 0 (shipped) | 175.4 | 146.1 | 9.5 | **17%** | 95% |
+| natural | −10 | 168.4 | 158.5 | 39.0 | **6%** | 77% |
+| natural | −∞ | 168.4 | 153.4 | 39.0 | 9% | 77% |
+| dense | 0 | 106.6 | 73.8 | −23.2 | 31% | 122% |
+| dense | −10 | 118.1 | 50.2 | 2.7 | 58% | 98% |
+| wild | 0 | 107.8 | 127.8 | −28.3 | −19% | 126% |
+| wild | −10 | 107.0 | 92.7 | 6.0 | 13% | 94% |
+
+The conservative reading moves between −19% and +58% depending on a threshold nobody
+has a principled value for. **The full gap never leaves 77–126% across every cell.**
+That is the difference between a measurement and an artefact, and it is why the
+verdict now sits on the full gap alone — which is also, word for word, what the plan
+asked for: "train a deliberately memoryless twin… the gap between them is the exact
+quantity of score only a world model can claim." `reactiveObs` *is* that twin.
+
+The conservative number keeps being printed, because C4's separate point about it
+stands and is worth seeing every run: `reactiveTruth` is handed **identity** free by
+the incident feed, so what it prices is the **duration tier alone** — 15% under the
+C5 economy, against ~0% when C3 closed. It is a diagnostic with no `ok` field, and
+`test/planner.test.js` pins that, since an `ok` is how it would quietly become a
+threshold again.
+
+**The floor stays at 0 in the shipped planner.** Declining a negative-EV trip is the
+principled rule; the sweep is evidence about the instrument's fragility, not a
+proposal. The related limitation is worth recording for whoever reads an oracle number
+as a ceiling: the planner is **myopic**, and being among the pandas has option value
+it never prices (a new incident may open next to you while you stand there). Measured
+over 12 episodes, the oracle is inside the pay radius for only **26–27%** of ticks
+while something is live somewhere for 74–79%, and out of the money it uses roughly an
+eighth of the stride opportunities the engine grants it. On `natural` that reticence is
+worth points; on `dense` removing it gains 11. The oracle is an upper bound on
+*information*, not on play.
+
+### `node evaluate.js --gate` — the C5 game, 24 × 12000 of `natural`
+
+| policy | score/min | ±se | view | cost | cover | tick-cov | late | knock/m |
+|---|---|---|---|---|---|---|---|---|
+| `oracle` | 197.5 | 13.5 | 2321 | 346 | 29.7% | 27.1% | 60 | 1.18 |
+| `reactiveTruth` | 168.1 | 14.6 | 2224 | 543 | 46.4% | 30.9% | 68 | 1.65 |
+| `reactiveObs` | 25.5 | 5.1 | 425 | 170 | 12.8% | 6.5% | 56 | 0.75 |
+| `expert` | 57.7 | 10.8 | 1102 | 525 | 33.1% | 19.2% | 77 | 1.27 |
+| `camper` | −25.6 | 8.0 | 346 | 602 | 12.4% | 6.0% | 44 | 1.40 |
+| `parker` | −29.5 | 9.0 | 529 | 824 | 32.9% | 14.2% | 77 | 2.71 |
+| `cowerer` | 1.4 | 4.9 | 169 | 155 | 6.6% | 2.6% | 43 | 0.75 |
+| `still` | 23.9 | 7.7 | 453 | 213 | 12.3% | 6.2% | 48 | 1.07 |
+| `speeder` | 207.3 | 14.5 | 2427 | 354 | 30.2% | 27.8% | 58 | 1.21 |
+| `roller` | 80.2 | 11.3 | 1157 | 355 | 22.6% | 15.9% | 61 | 1.20 |
+
+- **Exit check 1 — PASS.** Memory gap **172.0 = 87% of the oracle** against a 30%
+  threshold. Diagnostic: the duration tier alone is 15%.
+- **Exit check 2 — PASS.** Every reward exploit is below the reactive ceiling
+  (`camper` −30%, `parker` −32%, `cowerer` −14%, `still` −1%); neither unbraked twin
+  beats the oracle it copies (`speeder` +5%, `roller` −59%).
+- **Exit check 3 — PASS.** Unmoved by the new economy: oracle 1.00 on both knowable
+  tiers, both memoryless arms blind on both, and not one action differed on the
+  provably-uninferable one.
+
+**Phase C's exit is met. Phase D is unblocked.**
+
+### What C5 leaves open
+
+- **`speeder` beats the oracle by 15% on `wild`** while losing to it by 4% on
+  `natural`, and it is **not** the limiter leaking: over 24 episodes of `wild` it
+  strides *fewer* times than the oracle (6311 against 6731) and still scores higher.
+  It is the same body with its stride clock in a different phase, so what the number
+  measures is chaotic sensitivity — an episode set of this sim is worth about ±15% to
+  a policy that changes nothing about how it decides. The gate is defined on
+  `natural`, where the check binds. Read it as the noise floor for any comparison
+  between two near-identical policies, and as a second reason not to have gated on a
+  15% conservative gap.
+- **The planner's myopia**, above: it holds when nothing prices positive, and prices
+  no option value for being where the next incident will open. Fixing it properly is a
+  research project (it is a value function), and every arm shares the flaw, so the gap
+  is not biased by it — but no oracle number here is a ceiling on *play*.
+- **`still` at 23.9/min on `natural`.** The do-nothing floor is no longer near-zero.
+  Watched in Phase E as a possible plateau rather than treated as a defect now.
 
 
 ## Corpus specs

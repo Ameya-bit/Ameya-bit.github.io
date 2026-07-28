@@ -52,9 +52,11 @@ test('the engine, not the yardstick, is what caps the stride rate', () => {
 });
 
 test('the oracle clears the memoryless observer by a wide margin', () => {
-  // Phase C exit check 1, in miniature. The threshold is 30% of the oracle; the
-  // measured value at 24 episodes is ~88%, so a fixture-sized run should be nowhere
-  // near the line and this test should never be delicate.
+  // Phase C exit check 1, in miniature — and after C5 this *is* the check, since the
+  // verdict is on the memoryless twin the plan named. The threshold is 30% of the
+  // oracle; the measured value at 24 episodes is ~87%, and it holds between 77% and
+  // 95% across every instrument variant C5 tried, so a fixture-sized run should be
+  // nowhere near the line and this test should never be delicate.
   const o = evaluatePolicy({ ...SET, policy: oraclePolicy, name: 'oracle' });
   const r = evaluatePolicy({ ...SET, policy: reactiveObsPolicy, name: 'reactiveObs' });
   const gap = (o.scorePerMin.mean - r.scorePerMin.mean) / Math.abs(o.scorePerMin.mean);
@@ -80,7 +82,7 @@ test('exit check 2 — no reward exploit climbs, and no unbraked twin beats the 
   }
 });
 
-test('gapReport reports both ceilings and does not silently pick one', () => {
+test('gapReport reports both ceilings and gives a verdict on exactly one', () => {
   const fake = (name, mean) => ({ name, scorePerMin: { mean } });
   const g = gapReport([
     fake('oracle', 100), fake('reactiveTruth', 90), fake('reactiveObs', 10), fake('camper', 5),
@@ -89,9 +91,44 @@ test('gapReport reports both ceilings and does not silently pick one', () => {
   assert.equal(g.full.gap, 90);
   assert.ok(Math.abs(g.conservative.frac - 0.1) < 1e-9);
   assert.ok(Math.abs(g.full.frac - 0.9) < 1e-9);
+  // C5: the verdict is on the full gap, and the conservative reading carries none.
+  // It is a diagnostic — not a bound, since it is measurably negative on `wild` —
+  // and giving it an `ok` is how it would quietly become a threshold again.
+  assert.equal(g.full.ok, true);
+  assert.equal(g.conservative.ok, undefined);
   // camper sits below the reactive ceiling, so its climb is negative and it passes.
   assert.equal(g.exploits[0].name, 'camper');
   assert.ok(g.exploits[0].climb < 0 && g.exploits[0].ok);
+});
+
+test('a shortfall on the full gap fails the gate, whatever the diagnostic says', () => {
+  // The other half of the same claim: a leaky game must still be caught. Here the
+  // conservative reading is flattering (a 50% gap) and the one that counts is not.
+  const fake = (name, mean) => ({ name, scorePerMin: { mean } });
+  const g = gapReport([fake('oracle', 100), fake('reactiveTruth', 50), fake('reactiveObs', 80)]);
+  assert.equal(g.full.ok, false);
+  assert.ok(g.conservative.frac > GATE.gapThreshold);
+});
+
+test('the shipped economy keeps the incumbent above the do-nothing floor', () => {
+  // C1's disqualifying condition, as a measurement rather than a paragraph: a game
+  // the shipped watcher loses is a game where doing nothing looks like a strategy.
+  // C4 held this on `natural` alone; C5's `knockPenalty` 20 is what makes it true on
+  // the training distribution too, which is the one that matters for Phase E.
+  //
+  // Two specs, deliberately — and deliberately **not** `dense`. There the incumbent
+  // is still a few points *behind* the floor (−9.2 against −4.6 at 96 episodes, down
+  // from −63.1 against −39.3 at `knockPenalty` 40), and C5's finding is that this is
+  // a fact about a watcher hand-tuned for the live density rather than about the
+  // game: on the same worlds the oracle scores 153.0. Pricing the knock low enough
+  // to put a badly-triaging bot ahead of standing still would be tuning the game to
+  // flatter the incumbent. See trainer/README.md, "the crowding finding, re-priced".
+  for (const spec of ['natural', 'wild']) {
+    const of = (name) => evaluatePolicy({ ...SET, spec, policy: policyByName(name), name })
+      .scorePerMin.mean;
+    const expert = of('expert');
+    assert.ok(expert > of('still'), `${spec}: the incumbent lost to the do-nothing floor`);
+  }
 });
 
 test('every policy emits only legal actions, and none of them throws', () => {

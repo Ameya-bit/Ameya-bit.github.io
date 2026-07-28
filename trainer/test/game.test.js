@@ -290,11 +290,11 @@ test('`arrivalPay` lands on completion, scaled by how late he was', () => {
   assert.ok(late.components.view > 0, 'showing up late still beats not showing up');
 });
 
-test('the C4 defaults leave the incumbent above the do-nothing floor', () => {
-  // C1's disqualifying condition, kept as a test rather than a paragraph: a game the
-  // shipped watcher loses is a game where doing nothing looks like a strategy. Every
-  // dwell setting that pushes the conservative memory gap past 30% fails this, which
-  // is the finding C4 closes on.
+test('the shipped economy is shaped the way C4 and C5 left it', () => {
+  // The structural half of C1's disqualifying condition — a game the shipped watcher
+  // loses is a game where doing nothing looks like a strategy. The measured half
+  // (expert above `still` on `natural` and `wild`) lives in planner.test.js, since it
+  // takes episodes to see.
   assert.ok(DEFAULT_RULES.dwellMin > 0, 'the commitment economy is on by default');
   assert.ok(DEFAULT_RULES.arrivalPay > 0, 'and a completed commitment pays it back');
   assert.ok(DEFAULT_RULES.incidentCap > DEFAULT_RULES.arrivalPay,

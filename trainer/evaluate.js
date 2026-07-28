@@ -132,13 +132,30 @@ export function evaluatePolicy({
 // The memory gap is reported **twice**, because there are two defensible reactive
 // ceilings and they do not agree:
 //
-//   conservative — `reactiveTruth`, which sees everything true about the current
-//     tick and nothing temporal. It strictly dominates any memoryless policy
-//     reading observations, so the gap above it is a *lower bound*: no 2-frame
-//     network can close it, whatever it turns out to be.
 //   full — `reactiveObs`, one observation frame with no feed and no memory. This is
-//     the honest analogue of the plan's memoryless twin, and the gap above it is
-//     what a world model could in principle be worth.
+//     the plan's memoryless twin, word for word ("train a deliberately memoryless
+//     twin… the gap between them is the exact quantity of score only a world model
+//     can claim"), and **the gate returns its verdict on this one.**
+//   conservative — `reactiveTruth`, which sees everything true about the current
+//     tick and nothing temporal. Reported as a **diagnostic, with no verdict**: it
+//     is the duration tier's own price tag, and it is not a bound on anything.
+//
+// ⚠️ **Why the conservative reading lost its threshold (C5, and it is not a
+// relaxation).** Through C4 it carried a verdict on the argument that `reactiveTruth`
+// strictly dominates any memoryless observer, so the gap above it must be a lower
+// bound on the memory gap. That argument is about *information sets*; it says
+// nothing about achieved **scores** unless the planner underneath is optimal, and it
+// is not. C5 measured the consequence twice over: on `wild` the clockless arm
+// out-scores the oracle outright (a gap of **−19%**, and a lower bound on a
+// non-negative quantity cannot be negative), and on `natural` one unprincipled
+// planner knob — whether it declines a negative-EV trip or takes it anyway — walks
+// the number from 17% to 6% while the full gap holds between 77% and 95% across
+// every variant and all three specs. So the conservative gap is dominated by how
+// well the shared planner happens to play, not by what the arms are allowed to know.
+// The full gap is the robust measurement and it is also the one the plan asked for.
+// C4's separate point still stands and is why the diagnostic is worth printing:
+// `reactiveTruth` is handed *identity* free by the incident feed, so what it prices
+// is the duration tier alone.
 //
 // The exploit check is the plan's wording made arithmetic: where does each bot sit
 // on the line from the reactive ceiling (0) to the oracle (1)?
@@ -176,8 +193,15 @@ export function gapReport(results) {
   const climb = (v, ceiling) => (v - ceiling) / (oracle - ceiling);
   return {
     oracle,
+    // No `ok`, deliberately — see the header. A caller that wants a verdict on the
+    // memory gap has exactly one place to get it, and it is `full`.
     conservative: { ceiling: conservative, gap: oracle - conservative, frac: frac(conservative) },
-    full: { ceiling: full, gap: oracle - full, frac: frac(full) },
+    full: {
+      ceiling: full,
+      gap: oracle - full,
+      frac: frac(full),
+      ok: frac(full) >= GATE.gapThreshold,
+    },
     exploits: results
       .filter((r) => REWARD_EXPLOITS.includes(r.name))
       .map((r) => ({
@@ -203,16 +227,18 @@ function printGap(g) {
   const verdict = (ok) => (ok ? 'PASS' : 'FAIL');
   console.log('\nthe memory gap — Phase C exit check 1');
   console.log(`  oracle                       ${fx(g.oracle, 8)} /min`);
-  console.log(`  reactive ceiling, truth      ${fx(g.conservative.ceiling, 8)}  (conservative — no memoryless`);
-  console.log(`  reactive ceiling, obs        ${fx(g.full.ceiling, 8)}   policy can beat the first)`);
-  console.log(
-    `  gap, conservative            ${fx(g.conservative.gap, 8)} = ${pct(g.conservative.frac).padStart(4)} of oracle` +
-    `   vs ${pct(GATE.gapThreshold)}: ${verdict(g.conservative.frac >= GATE.gapThreshold)}`,
-  );
+  console.log(`  reactive ceiling, obs        ${fx(g.full.ceiling, 8)}   (the plan's memoryless twin)`);
   console.log(
     `  gap, full                    ${fx(g.full.gap, 8)} = ${pct(g.full.frac).padStart(4)} of oracle` +
-    `   vs ${pct(GATE.gapThreshold)}: ${verdict(g.full.frac >= GATE.gapThreshold)}`,
+    `   vs ${pct(GATE.gapThreshold)}: ${verdict(g.full.ok)}`,
   );
+  console.log('\n  diagnostic — reactiveTruth (the feed kept, every clock stripped). NOT a bound:');
+  console.log('  it prices the duration tier alone, and goes negative on wild. See C5.');
+  console.log(
+    `  reactive ceiling, truth      ${fx(g.conservative.ceiling, 8)}` +
+    `   gap ${fx(g.conservative.gap, 6)} = ${pct(g.conservative.frac).padStart(4)} of oracle`,
+  );
+  console.log(`\n  exit check 1: ${verdict(g.full.ok)}`);
   console.log('\nthe exploit bots — Phase C exit check 2');
   console.log(`  reward exploits: 0 = at the reactive ceiling, 1 = at the oracle; under ${pct(GATE.exploitCeiling)}`);
   for (const e of g.exploits) {
@@ -222,6 +248,7 @@ function printGap(g) {
   for (const e of g.unbraked) {
     console.log(`  ${e.name.padEnd(14)} ${fx(e.score, 8)}   ${pct(e.excess).padStart(6)}   ${verdict(e.ok)}`);
   }
+  console.log(`\n  exit check 2: ${verdict([...g.exploits, ...g.unbraked].every((e) => e.ok))}`);
 }
 
 // ---- the CLI ----

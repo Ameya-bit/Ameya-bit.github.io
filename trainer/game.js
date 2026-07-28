@@ -66,7 +66,7 @@ import { hatOf } from './rollout.js';
 
 // Bumped whenever a rule changes what a number means, so a stored score can never
 // be compared across a rules change by accident.
-export const GAME_VERSION = 2; // C4: the commitment economy
+export const GAME_VERSION = 3; // C5: the risk economy re-priced (knockPenalty 40 → 20)
 
 export const DEFAULT_RULES = Object.freeze({
   // --- the pay ---
@@ -159,10 +159,33 @@ export const DEFAULT_RULES = Object.freeze({
   stepCost: 0.5,
   rollCost: 2, // per dive-roll: committed, i-framed, and on a cooldown — not free.
   // Per knockdown, on top of the ~5.6 s of grounded time it costs (which is itself
-  // ~15% of the episode's earning capacity for the expert). Calibrated on `natural`
-  // — see trainer/README.md; this is the +view/−hit ratio D3 leaves open, and the
-  // single knob most likely to move as C2's bots come in.
-  knockPenalty: 40,
+  // ~15% of the episode's earning capacity for the expert). This is the +view/−hit
+  // ratio D3 leaves open, and the knob C1 flagged as the one most likely to move.
+  //
+  // **It moved in C5, 40 → 20, because most of what it charges for is not a
+  // decision.** C1 suspected the penalty was "closer to a constant tax on *existing*
+  // than a price on recklessness" from one number (`still` is floored 1.07/min
+  // against the expert's 1.27). C5 measured the bill instead: over `natural` × 24,
+  // the do-nothing floor pays **427 points** of knockdowns and the oracle pays 468 —
+  // so **91% of the oracle's knock bill is the ambient rate for standing in a field
+  // of pandas**, and only 9% is anything it chose. On `dense` it is 78%. A term that
+  // is mostly ambient does not price care; it prices *proximity to pandas*, and the
+  // incidents are on the pandas, so at 40 it was quietly subtracting a
+  // density-scaled constant from the exact behaviour the pay is trying to buy.
+  //
+  // The consequence was C1's finding (2), which C4 left open: under crowding the
+  // shipped watcher scored below `still`. 20 halves the ambient constant without
+  // touching the ordering the penalty exists to enforce, and it fixes that on every
+  // spec at once — `natural` 57.7 vs 23.9, `dense` −1.6 vs −2.4, `wild` 27.8 vs 3.5,
+  // incumbent first in each. The exploit battery is unmoved (`cowerer` 1.4 and
+  // `camper` −25.6 are still far below the reactive ceiling; `speeder` +5% and
+  // `roller` −59% against the oracle), and the full memory gap stays at 87%.
+  //
+  // What it costs, stated rather than buried: the do-nothing floor rises from 2.6 to
+  // 23.9/min on `natural`, which is 41% of the incumbent's score where it was 8%.
+  // Freezing is a worse strategy than watching everywhere now, but it is no longer
+  // *worthless*, and Phase E should expect a shallower gradient out of it.
+  knockPenalty: 20,
 });
 
 export function makeRules(overrides = {}) {
