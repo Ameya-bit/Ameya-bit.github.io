@@ -31,6 +31,7 @@ reference the port is judged against.
 | **pre-E — `render/policy-worker.js` + `render/worker-driver.js`: the forward pass off the main thread, pipelined** | ✅ built; `?policy=nn` now runs it |
 | **pre-E — `render/overlay.js`: the belief overlay, on its ground-truth provider (`?overlay=truth`)** | ✅ built, opt-in |
 | **E1 — `policy/weights/` replaced: the partial-obs (`coneDeg` 120), delay-trained clone** | ✅ shipped 2026-07-28 |
+| **E2 — `tools/bench-kernels.js` + `tools/policy-bench.mjs`: the memory candidates, priced under throttle** | ✅ done 2026-07-28 — pick: per-slot GRU |
 
 **Phase D lands here as an opt-in brain, and stays opt-in.** `?policy=nn` fetches
 `policy/weights/` after first paint and hands the hat panda to a 122k-parameter

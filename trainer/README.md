@@ -32,6 +32,7 @@ Zero dependencies, `node --test`.
 | **pre-E — the decision-delay contract (`delayPolicy`, `--delay` here and in py/)** | ✅ done (2026-07-28) |
 | **E1 — the partial-obs BC warm-start (`train-wild`, `--delay 1`), exported in place** | ✅ done (2026-07-28) — see [py/README.md](py/README.md) |
 | **E0 — the on-policy rollout bridge (vec envs, worker pool, the Python pipe)** | ✅ done (2026-07-28) — 175k decisions/s at 8×64, see below |
+| **E2 — the memory architecture, priced before training** | ✅ done (2026-07-28) — pick: per-slot GRU; engine `tools/bench-kernels.js` + `tools/policy-bench.mjs`, all three candidates 45–50× inside the worker deadline at 4× throttle |
 
 **Phase C's exit is met: all three checks pass** (`node evaluate.js --gate`, game v3).
 The memory gap is **87%** of the oracle against a 30% threshold; every exploit bot

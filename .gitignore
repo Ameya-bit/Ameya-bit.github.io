@@ -12,6 +12,9 @@
 !/trainer/corpora/*.manifest.json
 !/trainer/corpora/*.sample.jsonl
 /trainer/node_modules/
+# npm-linked playwright for the browser gates (parity.mjs, policy-bench.mjs) —
+# a runtime ask, never a dependency.
+/assets/pandas/engine/node_modules/
 
 # Parity reference arrays — regenerable with trainer/py/reference.py, 128MB of frames.
 # The committed contract is trainer/parity/parity-fixture.json. Deliberately OUTSIDE
