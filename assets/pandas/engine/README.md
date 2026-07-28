@@ -219,10 +219,21 @@ optional action for it; everything else is autonomous.
   action *is* what moved him. `rulesAction` is re-exported for querying the expert
   directly, but note it **mutates** the hat's brain (it is the expert, not a
   dry-run); the side-effect-free path is reading `hat.action` off the stepped state.
-- **Pacing lives in the policy, not the engine.** A STEP is one 50px stride applied
-  immediately; the rules expert emits STEP only at its stride cadence and HOLDs
-  between, so it moves at the right speed. A learned policy sets its own rhythm the
-  same way. This is why the interface is 17 discrete actions rather than a velocity.
+- **Pacing lives in the policy; the *ceiling* lives in the body.** A STEP is one 50px
+  stride and the policy chooses when to ask for one — that is why the interface is 17
+  discrete actions rather than a velocity. But `limitAction` caps how often an
+  externally-supplied action can land: one stride per `hatAlert` ticks, and no
+  dive-roll inside `rollReadyAt`. Both limits already existed and were enforced by the
+  rules expert on itself (`rulesAction` HOLDs while `moveTimer` runs; its reflex checks
+  the cooldown) and by nothing else, so the seam ran on an honour system. C4 of
+  design/panda-policy-net.md priced ignoring them at **+26%** over a privileged oracle
+  for unlimited strides and **+22%** for unlimited rolls — the latter also granting
+  immunity to knockdowns, since the collision pass skips ROLLING. A blocked action
+  becomes HOLD and `hat.action` records the HOLD, keeping the BC contract intact. The
+  ceiling is the expert's own full-alert cadence rather than its calm one, precisely so
+  a clone can still reproduce the alert strides recorded in the corpora.
+  **Behaviour-free for the expert:** it never asks for either, which `hat.test.js`
+  asserts over 4000 decisions.
 
 ## The observation encoder (`policy/obs.js`, B2)
 

@@ -162,6 +162,22 @@ export const cowerer = standAt(
 // hole is worth.
 export const speeder = makePlanner({ percept: oracle, options: { strideEvery: 2 } });
 
+// The roll exploit, priced — the same species as `speeder` and a worse one. The
+// dive-roll's limiter (`rollReadyAt`, 52 ticks) is checked by the rules expert's
+// own reflex and by nothing else, so `applyHatAction` will begin a roll on any
+// decision tick a policy asks for one. A roll carries 92px over 5 ticks (18 px/tick
+// against the expert's 4.5) and `engine.js` skips ROLLING in the collision pass, so
+// a policy that simply travels by rolling is faster than the speed exploit *and*
+// cannot be knocked down at all — it buys immunity to `knockPenalty` for 2 points.
+// This is the oracle with that brake off. `strideEvery: 1` is not the speed hole
+// smuggled back in — a policy that never strides is not throttled by the stride
+// cadence, and asking every decision tick is what it takes to make the *cooldown*
+// the only rule being broken. The roll's own 5 ticks are the throttle that remains.
+export const roller = makePlanner({
+  percept: oracle,
+  options: { travel: 'roll', strideEvery: 1 },
+});
+
 export const POLICIES = Object.freeze({
   expert,
   still,
@@ -173,11 +189,25 @@ export const POLICIES = Object.freeze({
   parker,
   cowerer,
   speeder,
+  roller,
 });
 
 // The three arms the memory gap is computed from, in ceiling-first order.
 export const YARDSTICKS = Object.freeze(['oracle', 'reactiveTruth', 'reactiveObs']);
-export const EXPLOITS = Object.freeze(['camper', 'parker', 'cowerer', 'still']);
+
+// The exploit battery, in two families, because they fail for different reasons and
+// a fix for one is no evidence about the other:
+//
+//   REWARD_EXPLOITS — degenerate optima of the *ledger*. Legal play; the question
+//     is whether the game is shaped so that standing around beats watching.
+//   ACTION_EXPLOITS — holes in the *action space*. These do not out-think the game,
+//     they out-run it: they ask the body for something the shipped character can
+//     never do, and the ledger has no term that could price it. C4 closes these in
+//     the engine rather than the ledger; they stay in the battery as regression
+//     bots, and a non-zero climb from either is now a bug in the limiter.
+export const REWARD_EXPLOITS = Object.freeze(['camper', 'parker', 'cowerer', 'still']);
+export const ACTION_EXPLOITS = Object.freeze(['speeder', 'roller']);
+export const EXPLOITS = Object.freeze([...REWARD_EXPLOITS, ...ACTION_EXPLOITS]);
 
 export function policyByName(name) {
   const p = POLICIES[name];

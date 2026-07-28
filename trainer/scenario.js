@@ -144,8 +144,12 @@ export function addRoamer(state, x, y, { dir = 0, parked = true, moveSpeed = 18 
 // allowed to move. `onTick` is called after the script with the settled state.
 export function runScenario({
   engine, state: state0, policy = null, ticks, script = null, freezeUntil = 0, onTick = null,
+  rules = null,
 }) {
-  const ctx = { seed: state0.rng, cfg: engine.cfg, ticks, stride: 1, warmup: 0 };
+  // `rules` reaches the policy the same way it does in `runEpisode` — a yardstick
+  // must price the game it is scored under here too, or the battery certifies a
+  // policy playing a game nobody is running.
+  const ctx = { seed: state0.rng, cfg: engine.cfg, ticks, stride: 1, warmup: 0, rules };
   const act = bindPolicy(policy, ctx);
   let state = state0;
   for (let t = 1; t <= ticks; t++) {

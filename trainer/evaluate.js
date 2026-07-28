@@ -31,7 +31,9 @@ import { resolve } from 'node:path';
 
 import { runEpisode, DEFAULT_ROLLOUT } from './rollout.js';
 import { scoreSink, makeRules, DEFAULT_RULES, GAME_VERSION } from './game.js';
-import { policyByName, POLICIES, YARDSTICKS, EXPLOITS } from './policies.js';
+import {
+  policyByName, POLICIES, YARDSTICKS, EXPLOITS, REWARD_EXPLOITS, ACTION_EXPLOITS,
+} from './policies.js';
 import { configFactory, episodeSeeds, SPECS } from './corpus.js';
 import { certifyReport, printCertificate } from './twins.js';
 
@@ -47,7 +49,7 @@ export function scoreEpisode({ seed, config = {}, ticks, policy = null, rules = 
   const sink = scoreSink(rules);
   // stride 1 is not a default here, it is a requirement: pay is per tick and the
   // knock edge is one tick wide. `scoreSink.begin` refuses anything else.
-  runEpisode({ seed, config, ticks, stride: 1, sink, policy });
+  runEpisode({ seed, config, ticks, stride: 1, sink, policy, rules: sink.rules });
   return sink.report({ seed });
 }
 
@@ -140,9 +142,29 @@ export function evaluatePolicy({
 //
 // The exploit check is the plan's wording made arithmetic: where does each bot sit
 // on the line from the reactive ceiling (0) to the oracle (1)?
+//
+// ⚠️ **That line is the right ruler for only one of the two exploit families**, which
+// C4 learned the hard way. The plan's wording — "much nearer the reactive ceiling
+// than the oracle" — assumes a bot that wins *without knowing anything*, which is
+// what a reward exploit is: `camper` and `cowerer` are ignorant by construction, and
+// a high climb from one means the ledger pays for something other than watching.
+// An **action** exploit is the opposite animal. `speeder` and `roller` are the
+// privileged oracle with one brake taken off, so their information is the oracle's
+// and a climb near 1 is what they score *when the exploit is closed*. Measured
+// against the reactive ceiling, a working limiter reads as a 100% failure.
+//
+// So each family is scored against the thing it would have to beat to be a problem:
+//
+//   reward exploits — `climb` off the reactive ceiling, ≤ `exploitCeiling`. Did an
+//     ignorant bot get near the oracle's score?
+//   action exploits — `excess` over the **oracle itself**, ≤ `exploitExcess`. Did
+//     taking a brake off beat the identical policy that left it on? This is a
+//     regression test on `limitAction` (engine hat.js) and nothing else, and the
+//     tolerance is roughly one standard error at 24 episodes rather than a judgement.
 export const GATE = Object.freeze({
   gapThreshold: 0.30, // D3's initial proposal: the gap must be ≥30% of the oracle
   exploitCeiling: 0.25, // "much nearer the reactive ceiling than the oracle"
+  exploitExcess: 0.10, // an unbraked twin may not out-score the oracle it copies
 });
 
 export function gapReport(results) {
@@ -157,12 +179,21 @@ export function gapReport(results) {
     conservative: { ceiling: conservative, gap: oracle - conservative, frac: frac(conservative) },
     full: { ceiling: full, gap: oracle - full, frac: frac(full) },
     exploits: results
-      .filter((r) => EXPLOITS.includes(r.name) || r.name === 'speeder')
+      .filter((r) => REWARD_EXPLOITS.includes(r.name))
       .map((r) => ({
         name: r.name,
         score: r.scorePerMin.mean,
         climb: climb(r.scorePerMin.mean, full),
         ok: climb(r.scorePerMin.mean, full) <= GATE.exploitCeiling,
+      })),
+    // The unbraked twins, against the braked policy they are a copy of. See GATE.
+    unbraked: results
+      .filter((r) => ACTION_EXPLOITS.includes(r.name))
+      .map((r) => ({
+        name: r.name,
+        score: r.scorePerMin.mean,
+        excess: (r.scorePerMin.mean - oracle) / Math.abs(oracle),
+        ok: (r.scorePerMin.mean - oracle) / Math.abs(oracle) <= GATE.exploitExcess,
       })),
   };
 }
@@ -183,9 +214,13 @@ function printGap(g) {
     `   vs ${pct(GATE.gapThreshold)}: ${verdict(g.full.frac >= GATE.gapThreshold)}`,
   );
   console.log('\nthe exploit bots — Phase C exit check 2');
-  console.log(`  (0 = at the reactive ceiling, 1 = at the oracle; must be under ${pct(GATE.exploitCeiling)})`);
+  console.log(`  reward exploits: 0 = at the reactive ceiling, 1 = at the oracle; under ${pct(GATE.exploitCeiling)}`);
   for (const e of g.exploits) {
     console.log(`  ${e.name.padEnd(14)} ${fx(e.score, 8)}   ${pct(e.climb).padStart(6)}   ${verdict(e.ok)}`);
+  }
+  console.log(`  action exploits: the oracle with one brake off, vs the oracle; under ${pct(GATE.exploitExcess)}`);
+  for (const e of g.unbraked) {
+    console.log(`  ${e.name.padEnd(14)} ${fx(e.score, 8)}   ${pct(e.excess).padStart(6)}   ${verdict(e.ok)}`);
   }
 }
 
@@ -254,7 +289,7 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
   // `--gate` is the phase's headline run: the three yardsticks, the exploit bots,
   // and the incumbent to read them against.
-  const gateSet = [...YARDSTICKS, 'expert', ...EXPLOITS, 'speeder'];
+  const gateSet = [...YARDSTICKS, 'expert', ...EXPLOITS];
   const names = args.gate ? gateSet : args.policy ? args.policy.split(',') : Object.keys(POLICIES);
   const opts = {
     spec: args.spec ?? DEFAULT_EVAL.spec,

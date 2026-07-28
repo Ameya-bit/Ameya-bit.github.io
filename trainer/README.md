@@ -24,7 +24,7 @@ Zero dependencies, `node --test`.
 | **C1 — the game: scoring rules, the policy seam, the evaluator** | ✅ done |
 | **C2 — the oracle, the memoryless twins, the exploit bots** | ✅ done |
 | **C3 — the twin-episode battery, one set per knowability tier** | ✅ done |
-| **C4 — the game-shape iteration C2 and C3 now demand** | ⬜ |
+| **C4 — close the action-space holes, price commitment, re-run the gate** | ✅ done |
 
 **Phase B's exit is met.** The corpora are cut, the roster is frozen (and the freeze
 is a test — see below), the encoder's fixture check is green, and rollouts clear the
@@ -301,7 +301,10 @@ Everything else in `DEFAULT_RULES` exists to move money out of *reaction* and in
 | `viewRadius` | 180 | Comfortably outside the expert's own study standoff (`inspectNear` = 140) — the reward must not fight the character. At 130 his shipped vantage stops paying and income halves. |
 | `anticipationTau` | 200 | The arrival multiplier is `tau / (tau + incident age on arrival)`, **fixed at arrival for the whole incident**. 200 ticks ≈ one stage crossing, so showing up "a crossing late" halves the rate. The wager moves onto time-remaining. |
 | `diminishHalf` | 100 | Rate halves after 5 s banked on one incident. Total pay grows logarithmically, so camping is worthless *structurally* rather than penalised after the fact — and principle #3 of [panda-chaos.md](../design/panda-chaos.md) (watch a while, then move on) becomes arithmetic. |
-| `incidentCap` | 120 | The hard ceiling on top. It binds on long, fully-attended incidents only — 0–2 per episode for the expert. |
+| `incidentCap` | 280 | The hard ceiling on top. Raised from 120 by C4 to leave room for `arrivalPay` plus some view income on one incident. |
+| `dwellMin` | 120 | **C4.** An incident pays *nothing* until it has been attended for 120 unbroken ticks; the pay accrues into escrow and is released whole on completion. Walking away — or the incident ending first — forfeits the lot. 6 s is a coin flip against the measured duration distribution (p10 20 / median 115 / p90 334), so a clockless arm's flat prior is wrong about half the time it matters. |
+| `dwellGrace` | 20 | How long a lapse a visit survives. Not a softener: with strict contiguity the *oracle* failed 24.7 of 33 commitments, because subjects move and one tick of drift outside the radius reset the run. That scored tracking, not prediction. |
+| `arrivalPay` | 120 | **C4.** A lump sum on completion, scaled by the arrival multiplier — "pay on arrival rather than per tick" as a knob. Not optional at `dwellMin` 120: a dwell only ever removes income, and without the bounty the shipped expert falls to −26.7/min and below `still`, which is C1's own disqualifying condition. With it the expert lands on 32.3, within noise of the 30.4 it scored under C1. |
 | `stepCost` | 0.5 | A stage crossing ≈ 24 strides ≈ 12 points, about a quarter of what one incident is typically worth. Enough that a trip is a wager, not a free option. |
 | `payAll` | true | Pay every incident in range, leaving the `R_VIEW`-intersection parking exploit open on purpose for C2's bots. Measured: turning it off costs the expert **4%** of income on `natural` and 3% on `dense` — at this radius incidents rarely overlap, so the exploit is small before anyone tries to work it. |
 
@@ -640,6 +643,163 @@ rather than `blind`, and one differing action anywhere would be leakage.
 
 **No engine change was needed.** C3 is entirely trainer-side; the golden digest is
 unmoved at `d4a2d47b` and the 170 engine tests are untouched.
+
+## Closing the game (C4)
+
+C2 and C3 each ended in a demand rather than a verdict. C4 answers both, and in the
+course of doing so found that **three of the four things standing between the game
+and its exit were in the instrument, not the game.**
+
+### The action space had two holes, and they are closed in the body
+
+`applyHatAction` executed a STEP as one immediate 50px stride and began a dive-roll
+on request, checking neither the stride cadence nor the roll cooldown. Both limits
+existed; both were enforced by the rules expert *on itself* (`rulesAction` HOLDs
+while `moveTimer` runs, its reflex checks `rollReadyAt`) and by nothing else, so the
+seam ran on an honour system that only the incumbent honoured. Priced before closing:
+
+| bot | what it ignores | score/min | vs oracle |
+|---|---|---|---|
+| `oracle` | — | 85.3 | — |
+| `speeder` | the stride cadence — 25 px/tick, 5.5× the expert | 107.2 | **+26%** |
+| `roller` | the roll cooldown — 288 rolls an episode against the expert's 8 | 103.9 | **+22%** |
+
+`roller` is new here and is the worse of the two: `engine.js` skips ROLLING in the
+collision pass, so travelling by dive-roll is faster than walking *and* buys immunity
+to `knockPenalty` for 2 points a roll. Neither is a reward bug, so no knob in
+`game.js` could have priced them — the ledger pays for where he is, and these buy
+position with motion the character does not possess. C3 had already found the cost
+that mattered most: at 25 px/tick even a 30-tick nap is worth the trip, so the speed
+hole *removed* the pressure to predict (`speeder` scored 0.67 on the duration twins
+against the oracle's 1.00). A hole that erodes the thing Phase E exists to grow has
+to close in the body.
+
+`limitAction` (engine `hat.js`) now applies both limits to any externally-supplied
+action; a blocked action becomes HOLD and is *logged* as HOLD, because the BC
+contract is that `hat.action` is what actually moved him. The ceiling is `hatAlert`,
+the expert's own full-alert cadence — deliberately not the calm one, because the
+corpora are recordings of expert actions and a clone must be able to reproduce the
+alert strides in its own training data. Pacing still lives in the policy; only the
+ceiling moved. **Behaviour-free for the expert**, which is asserted rather than
+assumed: a test replays 4000 expert decisions through the limiter and none is
+refused, both frozen corpora re-cut to their committed digests, and the golden digest
+is unmoved at `d4a2d47b`.
+
+### Exit check 2 was asking action exploits the wrong question
+
+The plan's wording — "much nearer the reactive ceiling than the oracle" — assumes a
+bot that wins *without knowing anything*. `camper` and `cowerer` are that. `speeder`
+and `roller` are the opposite animal: they are the privileged oracle with one brake
+off, so their information *is* the oracle's, and a climb near 1 is what they score
+when the exploit is **closed**. Measured against the reactive ceiling, a working
+limiter reads as a 100% failure. The two families are now scored against the thing
+each would have to beat to be a problem — reward exploits against the reactive
+ceiling, action exploits against the oracle itself — and check 2 passes outright.
+
+### Three bugs in the instrument, one of which invalidated a published finding
+
+**1. The yardsticks priced the wrong game.** The planners are constructed once, at
+module load, against `DEFAULT_RULES`; `--rules` changed only the referee. Every knob
+sweep ever run therefore measured policies that had never seen the knob. C4's first
+reading of `dwellMin` showed *identical stride and knock costs at every setting*,
+which is what finally exposed it — the trajectories were byte-for-byte the same.
+⚠️ **This invalidates C2's published claim** that the conservative gap "stays at ~5%
+under every knob turned at it (`stepCost` ×6, `anticipationTau` ×5 harsher, both at
+once)". Those sweeps moved the referee and left the policies alone. `runEpisode` now
+hands the episode's rules to the policy through `ctx`, and a test pins it.
+
+**2. The planner kept its book in the wrong units.** It is consulted once per
+*decision* tick and incremented `banked` by 1, while the referee counts *engine*
+ticks — so it believed every visit was half as long as it was. Harmless to the gap
+(all three arms shared the error) but it made the dwell arithmetic meaningless.
+Correcting it alone moved the conservative gap from −5% to 18%.
+
+**3. A guess was being treated as a short countdown.** An arm with no clock
+substitutes `priorRemaining`; treating that point estimate as *known* turns
+`est - travel < dwellMin` into a hard refusal, and at the shipped defaults that is
+every trip costing more than ~30 ticks of travel. The clockless arm went catatonic —
+it stopped walking to the flagship battery's sleeper at all, failing exit check 3 —
+and the enormous conservative gap it produced was mostly paralysis. An uncertain arm
+now bets the **survival curve** (memoryless, mean `est`) and finds out by winning or
+losing. Erring this way keeps the gap conservative, which is the direction
+`percept.js` says a gate must err in.
+
+### The commitment economy, and what it actually bought
+
+`dwellMin` + `arrivalPay` make commitment irreversible rather than merely expensive:
+a trip pays nothing unless the incident is still running 120 ticks after he arrives,
+so what a trip is worth turns on hidden state and on nothing else. Measured on the
+corrected instrument, `natural` × 24 × 12000:
+
+| rules | oracle | rTruth | rObs | expert | still | conservative gap |
+|---|---|---|---|---|---|---|
+| C1–C3 defaults (`dwellMin` 0) | 83.3 | 87.5 | 1.9 | 30.4 | −4.4 | **−5%** |
+| `dwellMin` 60 / `arrivalPay` 60 | 148.8 | 137.9 | 4.6 | 56.8 | −1.6 | 7% |
+| **shipped: 120 / 120** | **175.4** | **146.1** | **9.5** | **32.3** | **2.6** | **17%** |
+| 180 / 180 | 136.5 | 108.8 | −6.3 | 3.3 | −5.2 | 20% |
+| 240 / 240 | 75.1 | 57.9 | −10.3 | −41.5 | −20.3 | 23% |
+| 300 / 300 | 93.0 | 34.6 | −14.5 | −54.4 | −29.3 | 63% |
+
+Two things to read off this. First, **the default game was worse than C2 reported**:
+on a correctly-priced instrument the clockless arm *beats* the oracle (−5%), which is
+"optimism beats prediction" in its purest form. Second, **the commitment economy
+works but does not reach 30%**: it takes the conservative gap from negative to 17%
+while leaving the incumbent where C1 calibrated it, and every setting that clears the
+threshold does so by putting the shipped watcher below the do-nothing floor — C1's
+own disqualifying condition, now a test rather than a paragraph.
+
+### `node evaluate.js --gate` — the C4 game, 24 × 12000 of `natural`
+
+| policy | score/min | ±se | cover | tick-cov | late | knock/m |
+|---|---|---|---|---|---|---|
+| `oracle` | 175.4 | 13.8 | 29.5% | 26.6% | 57 | 1.17 |
+| `reactiveTruth` | 146.1 | 16.0 | 42.7% | 29.5% | 65 | 1.50 |
+| `reactiveObs` | 9.5 | 6.9 | 15.0% | 7.9% | 48 | 0.89 |
+| `expert` | 32.3 | 11.6 | 33.1% | 19.2% | 77 | 1.27 |
+| `camper` | −53.6 | 9.1 | 12.4% | 6.0% | 44 | 1.40 |
+| `parker` | −83.7 | 9.8 | 32.9% | 14.2% | 77 | 2.71 |
+| `cowerer` | −13.6 | 6.4 | 6.6% | 2.6% | 43 | 0.75 |
+| `still` | 2.6 | 8.6 | 12.3% | 6.2% | 48 | 1.07 |
+| `speeder` | 168.6 | 15.3 | 28.9% | 26.7% | 58 | 1.25 |
+| `roller` | 66.5 | 11.0 | 23.8% | 16.8% | 61 | 1.18 |
+
+- **Exit check 1 — split, and the split is narrower than it was.** Full gap **95%**
+  (PASS). Conservative gap **17%** against a 30% threshold (FAIL), up from a corrected
+  −5%. The honest reading is in the next section.
+- **Exit check 2 — PASS, outright.** Every reward exploit sits below the reactive
+  ceiling; `speeder` is −4% and `roller` −62% against the oracle, so the limiter binds.
+- **Exit check 3 — PASS.** Unchanged by the new economy: oracle 1.00 on both knowable
+  tiers, both memoryless twins blind on both, and not one action differed on the
+  provably-uninferable one.
+
+### What C4 concludes, and what it leaves open
+
+**The conservative threshold is being asked of the wrong quantity, and that is now
+measurable rather than arguable.** `reactiveTruth` is handed *identity* for free by
+the incident feed — it always knows which pandas are live incidents — so the gap
+above it prices the duration tier **alone**. C3 established that both knowable tiers
+require memory (a 2-frame reader cannot tell a sleeper from a panda that was run over
+once the fall is finished). So the memory gap decomposes: identity is ~78% of the
+oracle and duration is 17%, and demanding 30% from duration by itself is a stronger
+ask than the plan's own wording ("oracle − the memoryless twin", which is `reactiveObs`
+at 95%) ever made. C4 does not quietly relax the threshold — the gate still prints
+FAIL — but the number to carry into Phase E is that **the duration tier is now worth
+17% of a much larger pie, against ~0% when C3 closed.**
+
+Still open, and explicitly *not* fixed by C4's knobs:
+
+- **Cowering still wins under crowding.** On `dense` the expert scores −55.0 against
+  `still`'s −36.2 (it was −47.4 vs −36.5 under C1), so the commitment economy makes
+  the crowded regime slightly worse rather than better. This is C1's finding (2), and
+  it is a cost-side problem: a probe at `knockPenalty` 20 puts the expert at −1.6
+  against `still`'s −2.4 on `dense` and finally ahead. Not adopted here — it moves
+  `natural` too and the recalibration is its own piece of work — but it is the lead.
+  ⚠️ **This matters for Phase E**, whose training corpus `wild` is dense-ish, so the
+  curriculum still teaches freezing.
+- **Standing still is not safe** (C1's finding (1)): `still` is knocked 1.07/min
+  against the expert's 1.27, so `knockPenalty` remains closer to a tax on existing
+  than a price on recklessness. Same recalibration.
+
 
 ## Corpus specs
 

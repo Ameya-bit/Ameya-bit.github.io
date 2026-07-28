@@ -66,7 +66,7 @@ import { hatOf } from './rollout.js';
 
 // Bumped whenever a rule changes what a number means, so a stored score can never
 // be compared across a rules change by accident.
-export const GAME_VERSION = 1;
+export const GAME_VERSION = 2; // C4: the commitment economy
 
 export const DEFAULT_RULES = Object.freeze({
   // --- the pay ---
@@ -95,11 +95,62 @@ export const DEFAULT_RULES = Object.freeze({
   anticipationTau: 200,
   minArrivalMult: 0.05,
 
+  // --- commitment (C4) ---
+  // Ticks of *contiguous* attention an incident must receive before any of it pays.
+  // Pay accrues into escrow meanwhile and is released in full on completion;
+  // walking away first, or the incident ending first, forfeits the lot.
+  //
+  // This is the knob C2 and C3 jointly demanded, and the reasoning is worth keeping
+  // because it is not the obvious one. The duration tier is *decidable* — C3's
+  // oracle separates a fresh nap from one with 30 ticks left on every single pair —
+  // and worth only 5% of score, which sounds like a contradiction and is not. The
+  // information is there; the live distribution never forces him to use it. The feed
+  // re-announces what is live every tick, so nothing has to be predicted, and
+  // commitment is *reversible*: a wrong guess costs a few strides, so optimism beats
+  // prediction and an arm with no clock at all scores within 5% of the oracle.
+  //
+  // A dwell makes the wrong guess expensive. What he is paid for a trip now depends
+  // on whether the thing is still going `dwellMin` ticks after he gets there, which
+  // is a question about hidden state and about nothing else. 0 = off, and off is
+  // exactly the C1–C3 game.
+  //
+  // 120 ticks = 6 s, chosen off the measured distribution rather than by feel: over
+  // every live incident-tick of `natural`, time-remaining runs p10 20 / median 115 /
+  // p90 334, so a 6 s commitment is a coin-flip (49% of live incident-ticks outlive
+  // it) and the flat prior a clockless arm must use is wrong about half the time it
+  // matters. Shorter and the optimist is simply right; longer and nobody can play.
+  dwellMin: 120,
+  // How long a lapse a visit survives before it counts as walking away, in ticks.
+  //
+  // Not a softener — a correction, and one the first draft got wrong in a way worth
+  // recording. With a strictly contiguous dwell the *oracle* failed 24.7 of its 33
+  // commitments and forfeited more than it earned, a worse failure rate than the arm
+  // with no clock at all. Nothing was wrong with its predictions: subjects **move**,
+  // he holds his vantage at `standoff` 140 against a `viewRadius` of 180, and a
+  // single tick of drift outside the radius while he steps to follow reset the run
+  // to zero. Strict contiguity was scoring a *tracking* skill, not a prediction one,
+  // which is the opposite of what the knob is for. A second of grace forgives the
+  // wobble and leaves abandonment — the thing being priced — still fatal.
+  dwellGrace: 20,
+  // A lump sum, scaled by the arrival multiplier, paid once when an incident first
+  // pays out. The plan's other suggestion — "pay on arrival rather than per tick" —
+  // as a knob rather than a rewrite: raise this and drop `viewPay` to slide the
+  // economy from occupancy toward arrival timing. 0 = off.
+  //
+  // It is not optional at `dwellMin: 120`. A dwell only ever *removes* income — half
+  // the trips now pay nothing — and with the C1 pay rates that took the shipped
+  // expert to −26.7/min and put it below `still`, which is C1's own disqualifying
+  // condition: a game the incumbent loses is a game where doing nothing looks like a
+  // strategy. The bounty pays a completed commitment back, and it pays it for the
+  // behaviour the phase is trying to buy rather than for occupancy. At 120 the
+  // expert lands on 32.3/min, within noise of the 30.4 it scored under C1.
+  arrivalPay: 120,
+
   // --- anti-camping ---
   // Ticks of attention banked on one incident before its rate halves. 100 = 5 s.
   diminishHalf: 100,
   // …and a hard ceiling on what one incident can ever be worth, in points.
-  incidentCap: 120,
+  incidentCap: 280,
 
   // --- the costs ---
   // Per stride. A stage crossing is ~24 strides = 12 points, about a quarter of
@@ -176,6 +227,9 @@ function newLedger() {
     offered: new Map(),
     offeredActiveTicks: 0,
     attendedTicks: 0,
+    // Points accrued toward a dwell and then lost by walking away. Under
+    // `dwellMin: 0` this is always 0 and the whole mechanism is inert.
+    forfeited: 0,
   };
 }
 
@@ -239,36 +293,76 @@ function scoreTick(L, r, state, hat, prevMode) {
       // depends on when he committed, not on how long he then loiters.
       const age = state.tick - inc.born;
       const mult = Math.max(r.minArrivalMult, r.anticipationTau / (r.anticipationTau + age));
-      rec = { key, tier: inc.tier, arrivalAge: age, mult, banked: 0, paid: 0, capped: false };
+      rec = {
+        key, tier: inc.tier, arrivalAge: age, mult, banked: 0, paid: 0, capped: false,
+        // The dwell's state: ticks in the current unbroken visit, what that visit
+        // has accrued but not yet earned, and whether the commitment ever completed.
+        run: 0, escrow: 0, released: false, lastTick: -2, breaks: 0,
+      };
     }
 
     const weight = r.tierWeight[inc.tier] ?? 1;
     const rate = (r.viewPay * rec.mult * weight) / (1 + rec.banked / r.diminishHalf);
-    if (r.payAll) payOne(L, r, rec, rate);
+    if (r.payAll) payOne(L, r, rec, rate, state.tick);
     else if (rate > bestRate) { best = rec; bestRate = rate; }
   }
 
-  if (!r.payAll && best) payOne(L, r, best, bestRate);
+  if (!r.payAll && best) payOne(L, r, best, bestRate, state.tick);
 }
 
-function payOne(L, r, rec, rate) {
+// Bank one tick of attention on an incident, and pay for it if it has been earned.
+//
+// With `dwellMin` at 0 this is the C1 ledger exactly: the record releases on its
+// first tick and every tick pays its rate. Above 0 the first `dwellMin` contiguous
+// ticks accrue into escrow instead, and the escrow is released whole (plus
+// `arrivalPay`) on the tick the dwell completes.
+function payOne(L, r, rec, rate, tick) {
   if (!L.seen.has(rec.key)) {
     L.seen.set(rec.key, rec);
     L.offered.get(rec.key).attended = true;
   }
+
+  // A visit is broken by a lapse longer than `dwellGrace` — he wandered off, or
+  // (under `payAll: false`) gave the ticks to a better prospect. Forfeiting the
+  // escrow there is the whole mechanism: it is what turns "retarget costs a few
+  // strides" into "retarget costs everything you had banked".
+  if (tick - rec.lastTick > r.dwellGrace) {
+    if (!rec.released && rec.run > 0) { L.forfeited += rec.escrow; rec.breaks += 1; }
+    rec.run = 0;
+    rec.escrow = 0;
+  }
+  rec.lastTick = tick;
+  rec.run += 1;
   rec.banked += 1;
   L.attendedTicks += 1;
+
   const room = r.incidentCap - rec.paid;
   if (room <= 0) { rec.capped = true; return; }
-  const pay = Math.min(rate, room);
+
+  if (rec.released) { commit(L, rec, rate, room); return; }
+
+  rec.escrow += rate;
+  if (rec.run < r.dwellMin) return; // still earning the right to be paid at all
+  rec.released = true;
+  // `arrivalPay` lands here rather than on the first tick in range, because this is
+  // the tick the commitment actually completed — a bounty for a trip he abandoned
+  // halfway would price the walk, not the wager.
+  const due = rec.escrow + r.arrivalPay * rec.mult;
+  rec.escrow = 0;
+  commit(L, rec, due, room);
+}
+
+function commit(L, rec, amount, room) {
+  const pay = Math.min(amount, room);
   rec.paid += pay;
   L.view += pay;
-  if (pay < rate) rec.capped = true;
+  if (pay < amount) rec.capped = true;
 }
 
 // ---- the report ----
 
-const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+const sum = (xs) => xs.reduce((a, b) => a + b, 0);
+const mean = (xs) => (xs.length ? sum(xs) / xs.length : 0);
 
 // The score, its components, and the diagnostics that are the actual product of
 // this phase. The total is one number and one number cannot tell you *why* — a
@@ -308,6 +402,12 @@ export function report(L, rules, meta = {}) {
       meanArrivalMult: mean(recs.map((x) => x.mult)),
       cappedIncidents: recs.filter((x) => x.capped).length,
       meanPaidPerIncident: mean(recs.map((x) => x.paid)),
+      // The dwell's own diagnostics, and the pair C4 is actually read on: how many
+      // trips he took that never earned a thing, and what the failed bets cost him.
+      // A policy that cannot judge time-remaining shows up here long before it shows
+      // up in the score, and `dwellFailed / attended` is that policy's error rate.
+      dwellFailed: recs.filter((x) => !x.released).length,
+      forfeited: L.forfeited + sum(recs.filter((x) => !x.released).map((x) => x.escrow)),
     },
     hat: {
       steps: L.steps,

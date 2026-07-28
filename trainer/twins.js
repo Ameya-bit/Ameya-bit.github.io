@@ -360,6 +360,7 @@ export function measureArm(p, which, policy, rules = DEFAULT_RULES) {
     engine,
     state,
     policy,
+    rules,
     script,
     ticks: p.ticks,
     freezeUntil: p.decideAt - 1,

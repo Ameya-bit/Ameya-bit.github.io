@@ -28,9 +28,17 @@ function world({ tick = 2, hat = {}, pandas = [], incidents = [], cascadeActive 
 const sleeper = (over = {}) => ({ id: 1, mode: MODE.SLEEPER, x: 100, y: 0, ...over });
 const incident = (over = {}) => ({ subject: 1, tier: 1, born: 0, expires: 100000, px: 0, py: 0, ...over });
 
+// The C1 base game — C4's commitment economy switched off. The tests below pin the
+// ledger's *arithmetic*: per-tick pay, the arrival multiplier, diminishing returns.
+// Under the shipped `dwellMin` of 120 every one of those fixtures would have to run
+// for 120 ticks before a single point was released, which would be pinning the dwell
+// over and over instead of the thing each test is about. The dwell has its own
+// fixtures further down, and they turn it back on explicitly.
+const BASE = Object.freeze({ dwellMin: 0, arrivalPay: 0 });
+
 // Feed the scorer a run of ticks, one state per tick, and hand back its report.
 function play(states, rules = {}) {
-  const sink = scoreSink(rules);
+  const sink = scoreSink({ ...BASE, ...rules });
   sink.begin({ seed: 1, stride: 1 });
   for (const s of states) sink.sample(s);
   return sink.report();
@@ -112,7 +120,7 @@ test('the arrival multiplier is fixed at arrival, and punishes showing up late',
 });
 
 test('diminishing returns halve the rate after `diminishHalf` ticks of camping', () => {
-  const rules = makeRules({ anticipationTau: 1e9, incidentCap: 1e9 }); // isolate the decay
+  const rules = makeRules({ ...BASE, anticipationTau: 1e9, incidentCap: 1e9 }); // isolate the decay
   const run = (n) => play(hold(n, (t) => world({
     tick: t, pandas: [sleeper()], incidents: [incident()],
   })), rules).components.view;
@@ -202,4 +210,93 @@ test('rules are validated, and unknown keys are just carried', () => {
   assert.throws(() => makeRules({ viewRadius: 0 }), /viewRadius/);
   assert.throws(() => makeRules({ diminishHalf: -1 }), /diminishHalf/);
   assert.equal(makeRules().viewRadius, DEFAULT_RULES.viewRadius);
+});
+
+// ---- the commitment economy (C4) ----
+//
+// `dwellMin` is the knob C2 and C3 jointly demanded: a trip pays nothing unless the
+// incident is still running `dwellMin` ticks after he gets there, so what a trip is
+// worth turns on a belief about hidden state rather than on what is visible now.
+
+// Decay and the arrival multiplier are flattened out so a tick is worth exactly
+// one point and the assertions below are about the dwell and nothing else.
+const DWELL = Object.freeze({
+  dwellMin: 100, arrivalPay: 0, anticipationTau: 1e9, diminishHalf: 1e9,
+});
+
+test('a dwell pays nothing until it completes, then releases the whole escrow', () => {
+  const short = play(hold(99, (t) => world({
+    tick: t, pandas: [sleeper()], incidents: [incident()],
+  })), DWELL);
+  assert.equal(short.components.view, 0, 'one tick short of the dwell earns nothing');
+  assert.equal(short.attention.attended, 1, 'he was there — it just never paid');
+  assert.equal(short.attention.dwellFailed, 1);
+  assert.ok(short.attention.forfeited > 90, `forfeited ${short.attention.forfeited}`);
+
+  const done = play(hold(100, (t) => world({
+    tick: t, pandas: [sleeper()], incidents: [incident()],
+  })), DWELL);
+  // The escrow is released whole, so the 100th tick is worth all 100 of them.
+  assert.ok(done.components.view > 90, `got ${done.components.view}`);
+  assert.equal(done.attention.dwellFailed, 0);
+  assert.equal(done.attention.forfeited, 0);
+});
+
+test('walking away mid-dwell forfeits the escrow, and coming back starts over', () => {
+  // 60 ticks in range, one tick well outside it, then 60 more. That is 120 ticks of
+  // attention against a 100-tick dwell, and it earns nothing: the run is what counts.
+  const away = { x: DEFAULT_RULES.viewRadius + 500 };
+  const states = [
+    ...hold(60, (t) => world({ tick: t, pandas: [sleeper()], incidents: [incident()] }), 1),
+    ...hold(30, (t) => world({ tick: t, pandas: [sleeper(away)], incidents: [incident()] }), 61),
+    ...hold(60, (t) => world({ tick: t, pandas: [sleeper()], incidents: [incident()] }), 91),
+  ];
+  const r = play(states, DWELL);
+  assert.equal(r.components.view, 0, 'a broken commitment is worth nothing');
+  assert.ok(r.attention.forfeited > 50, `forfeited ${r.attention.forfeited}`);
+});
+
+test('a lapse shorter than `dwellGrace` does not break the visit', () => {
+  // The correction that matters: subjects move, and one tick of drift outside the
+  // radius while he steps to follow must not reset a 5-second commitment. Strict
+  // contiguity scored a tracking skill rather than a prediction one — with it, the
+  // *oracle* failed 24.7 of 33 dwells, worse than the arm with no clock at all.
+  const away = { x: DEFAULT_RULES.viewRadius + 500 };
+  const states = [
+    ...hold(60, (t) => world({ tick: t, pandas: [sleeper()], incidents: [incident()] }), 1),
+    ...hold(5, (t) => world({ tick: t, pandas: [sleeper(away)], incidents: [incident()] }), 61),
+    ...hold(60, (t) => world({ tick: t, pandas: [sleeper()], incidents: [incident()] }), 66),
+  ];
+  const r = play(states, { ...DWELL, dwellGrace: 20 });
+  assert.ok(r.components.view > 90, `a 5-tick wobble cost the commitment (${r.components.view})`);
+  assert.equal(r.attention.dwellFailed, 0);
+
+  // …and with no grace at all it does break, which is what the default guards against.
+  const strict = play(states, { ...DWELL, dwellGrace: 1 });
+  assert.equal(strict.components.view, 0);
+});
+
+test('`arrivalPay` lands on completion, scaled by how late he was', () => {
+  const rules = { dwellMin: 10, arrivalPay: 100, viewPay: 0, anticipationTau: 200 };
+  const prompt = play(hold(10, (t) => world({
+    tick: t, pandas: [sleeper()], incidents: [incident({ born: 0 })],
+  })), rules);
+  const late = play(hold(10, (t) => world({
+    tick: t + 600, pandas: [sleeper()], incidents: [incident({ born: 0 })],
+  }), 1), rules);
+  // viewPay is 0, so every point here is the bounty and nothing else.
+  assert.ok(prompt.components.view > 90, `prompt got ${prompt.components.view}`);
+  assert.ok(late.components.view < prompt.components.view * 0.5, `late got ${late.components.view}`);
+  assert.ok(late.components.view > 0, 'showing up late still beats not showing up');
+});
+
+test('the C4 defaults leave the incumbent above the do-nothing floor', () => {
+  // C1's disqualifying condition, kept as a test rather than a paragraph: a game the
+  // shipped watcher loses is a game where doing nothing looks like a strategy. Every
+  // dwell setting that pushes the conservative memory gap past 30% fails this, which
+  // is the finding C4 closes on.
+  assert.ok(DEFAULT_RULES.dwellMin > 0, 'the commitment economy is on by default');
+  assert.ok(DEFAULT_RULES.arrivalPay > 0, 'and a completed commitment pays it back');
+  assert.ok(DEFAULT_RULES.incidentCap > DEFAULT_RULES.arrivalPay,
+    'the cap must leave room for the bounty plus some view income');
 });

@@ -30,7 +30,7 @@ import { TICKS_PER_ACTION } from '../assets/pandas/engine/tick.js';
 // A sink receives the episode. Every method is optional, so a bare `{}` is a
 // legal (if useless) sink and a bench can pass nothing at all.
 //
-//   begin(ctx)          — ctx = { seed, cfg, ticks, stride }
+//   begin(ctx)          — ctx = { seed, cfg, ticks, stride, rules }
 //   sample(state, tick) — once per recorded tick (see `stride`)
 //   end(summary)        — summary = { seed, ticks, samples }
 //
@@ -67,12 +67,15 @@ export function bindPolicy(policy, ctx) {
 }
 
 // Run one episode. Returns the summary; the data goes to the sink.
-export function runEpisode({ seed, config = {}, sink = null, policy = null, ...opts }) {
+export function runEpisode({ seed, config = {}, sink = null, policy = null, rules = null, ...opts }) {
   const { ticks, stride, warmup } = { ...DEFAULT_ROLLOUT, ...opts };
   const engine = makeEngine(config);
   let state = engine.init(seed);
 
-  const ctx = { seed, cfg: engine.cfg, ticks, stride, warmup };
+  // `rules` is the scoring rules this episode is being run under, handed to the
+  // policy through `ctx` so that a yardstick prices the game it is actually paid
+  // out of. Null for a plain recording rollout, which has no referee at all.
+  const ctx = { seed, cfg: engine.cfg, ticks, stride, warmup, rules };
   sink?.begin?.(ctx);
   const act = bindPolicy(policy, ctx);
 

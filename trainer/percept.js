@@ -11,12 +11,16 @@
 //   belief = {
 //     self:       the hat, as the navigation primitives want him
 //     field:      entity-shaped objects he may reason about (nav + threat)
-//     candidates: [{ key, lx, ly, tier, p, age, remaining, hazard }]
+//     candidates: [{ key, lx, ly, tier, p, age, remaining, certain, hazard }]
 //   }
 //
 // `p` is the probability this candidate is currently paying, `age`/`remaining` are
 // ticks (null = "no idea, use the prior"), `hazard` is the chance per visit of
-// being floored by it. The three percepts fill those in with, respectively: the
+// being floored by it. **`certain` says whether `remaining` is knowledge or a
+// guess**, and it is not decoration: under a dwell the planner must treat an
+// uncertain estimate as a distribution to bet against rather than a countdown to
+// read off, or an arm with no clock refuses every trip it cannot prove will pay.
+// Only the oracle sets it. The three percepts fill those in with, respectively: the
 // truth; the truth minus everything temporal; and a base rate off the drawn pose.
 //
 // ## Coordinates
@@ -215,6 +219,7 @@ export const oracle = {
         p: 1,
         age: state.tick - inc.born,
         remaining: subject ? remainingOf(subject, cfg, state) : cfg.cascadeIncidentTtl,
+        certain: true, // the oracle's real privilege — see the header on `certain`
         hazard: subject ? (HAZARD[subject.mode] ?? DEFAULT_HAZARD) : DEFAULT_HAZARD,
       })),
     };
@@ -239,7 +244,7 @@ export const reactiveTruth = {
     const b = oracle.read(state);
     return {
       ...b,
-      candidates: b.candidates.map((c) => ({ ...c, age: null, remaining: null })),
+      candidates: b.candidates.map((c) => ({ ...c, age: null, remaining: null, certain: false })),
     };
   },
 };
@@ -362,7 +367,10 @@ export function makeReactiveObs(obsParams = {}) {
           tier: prior.tier,
           p: prior.p,
           age: null,
+          // A measured base rate off the drawn pose, which is a guess and is flagged
+          // as one — the pose says what this probably is, never how long it has left.
           remaining: prior.remaining,
+          certain: false,
           hazard: DEFAULT_HAZARD,
         });
       }
