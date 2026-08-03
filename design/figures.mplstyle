@@ -1,0 +1,104 @@
+# Figure style for ameyapanchal.github.io
+#
+# Not applied to anything yet — the existing figures live in other repos (IOI,
+# Niche) and are not regenerated here. This is the spec to plot against next
+# time, and the reason it exists:
+#
+# THE PROBLEM. The eleven figures currently on the site were exported between
+# 1128px and 2210px wide and are all displayed at the same column width. The
+# downscale therefore ranges 0.29x to 0.57x, which means the same nominal 10pt
+# matplotlib label renders anywhere from 8.1px to 15.9px depending on which
+# figure the reader is looking at — a 2x swing in apparent type size between
+# figures in the same post. That is why the figures read as inconsistent even
+# though each one is individually well made, and it is why the quote-grammar
+# table is illegible without clicking.
+#
+# THE RULE (transformer-circuits.pub's, verified in their shipped CSS): every
+# figure carries `max-width: calc(var(--img-width) / 1.5)` — exported at exactly
+# 1.5x its display width, every time. On this site figures display at up to
+# 846px (the reading column plus the margin band, see styles.scss), so:
+#
+#     846 * 1.5 = 1269  ->  export at 1280px wide, always.
+#     8.0in at 160dpi = 1280px.
+#
+# Fix the WIDTH and let height vary with the content; a shared width is what
+# makes a set of figures read as a set. At 1280px exported, a 10pt label lands
+# at ~14.7px on a wide viewport and ~11.2px on a narrow one — both readable,
+# and identical across every figure in the post.
+
+# ---- Geometry: fix the width, vary the height per plot ----------------------
+figure.figsize:  8.0, 5.0
+figure.dpi:      160
+savefig.dpi:     160
+savefig.bbox:    tight
+savefig.pad_inches: 0.05
+figure.facecolor: white
+savefig.facecolor: white
+
+# ---- Type: match the page ---------------------------------------------------
+# Inter is the site's typeface; DejaVu Sans is matplotlib's fallback and is what
+# most of the current figures are actually set in. Naming Inter first makes the
+# figures speak the page's voice wherever the font is installed.
+font.family:      sans-serif
+font.sans-serif:  Inter, DejaVu Sans, Helvetica, Arial
+font.size:        10
+axes.titlesize:   11.5
+axes.labelsize:   10
+xtick.labelsize:  9
+ytick.labelsize:  9
+legend.fontsize:  9
+figure.titlesize: 11.5
+axes.titleweight: semibold
+axes.titlelocation: left
+axes.titlepad:    12
+
+# ---- Ink: the site's palette, not matplotlib's ------------------------------
+text.color:       "#21201c"
+axes.labelcolor:  "#21201c"
+axes.edgecolor:   "#bcbbb5"
+xtick.color:      "#6f6f69"
+ytick.color:      "#6f6f69"
+grid.color:       "#e9e9e7"
+grid.linewidth:   0.8
+axes.grid:        True
+axes.grid.axis:   y
+axes.axisbelow:   True
+axes.spines.top:    False
+axes.spines.right:  False
+axes.linewidth:   0.8
+lines.linewidth:  1.8
+patch.linewidth:  0.8
+legend.frameon:   False
+
+# ---- Colour cycle: Okabe-Ito, colourblind-safe ------------------------------
+# The induction-head post already uses this set; the IOI post uses matplotlib's
+# tab10 defaults. Standardising on Okabe-Ito makes the two posts one body of
+# work, and #d55e00 — the vermillion that marks the finding in the copying-score
+# and DLA charts — is now the site's accent colour too, so a highlighted bar and
+# a hovered link are literally the same colour.
+axes.prop_cycle: cycler('color', ['0072b2', 'd55e00', '009e73', 'cc79a7', 'e69f00', '56b4e9', 'f0e442', '000000'])
+
+# ---- Colormaps: the part that signals fluency --------------------------------
+# NOT settable here, because it depends on what the data means. State it plainly
+# so it is not forgotten:
+#
+#   SIGNED quantities  — logit differences, attribution scores, patching deltas,
+#   direct logit attribution — use a DIVERGING map pinned to zero:
+#       vmax = np.abs(data).max(); vmin = -vmax; cmap = "RdBu_r"
+#   Without the symmetric limits matplotlib autoscales and the white midpoint
+#   lands somewhere arbitrary, which silently misstates which cells are positive.
+#
+#   UNSIGNED quantities — attention probabilities, which live in [0, 1] and have
+#   no meaningful midpoint — use a SEQUENTIAL map from zero:
+#       vmin = 0; cmap = "Blues"
+#   Using a diverging map here invents a false midpoint at 0.5 and implies
+#   negative attention exists. It is the fastest way for an interpretability
+#   figure to look amateur.
+#
+# The current figures already get this right (RdBu on head-patching recovery,
+# Blues on the L8H6/L9H9 attention patterns). This note is so it stays right.
+#
+# Never jet/rainbow: Crameri, Shephard & Heron, "The misuse of colour in science
+# communication", Nature Communications 11:5444 (2020).
+image.cmap:        Blues
+image.interpolation: nearest

@@ -15,7 +15,13 @@ $font-family-base: $font-family-sans-serif;
 $headings-font-family: $font-family-sans-serif;
 $headings-font-weight: 600;
 
-$font-size-root: 16px;
+// 17px, not 16. The measure is fixed at ~646px by the grid below, and at 16px
+// that renders ~80 characters per line — the longest line in the genre paired
+// with the smallest letter. Tufte runs 21px/~64ch, LessWrong ~19px/~70ch;
+// Distill gets away with ~83ch only on 1.7em leading and larger type. 17px
+// brings us to ~75ch without narrowing the column (narrowing would shrink the
+// figures, which are already the weakest link).
+$font-size-root: 17px;
 $line-height-base: 1.5;
 
 $body-bg: #fdfdfc;
@@ -40,13 +46,58 @@ $grid-margin-width: 300px;
   --gray-500: #e2e1de; // selection
   --gray-800: #bcbbb5; // link underlines at rest
   --gray-900: #8d8d86; // link underlines on hover
-  --gray-1000: #82827c; // tertiary text (dates, captions)
+  --gray-1000: #6f6f69; // tertiary text (dates, captions, TOC) — see note below
   --gray-1100: #63635e; // secondary text (descriptions)
   --gray-1200: #21201c; // ink
+
+  // --gray-1000 was #82827c, which is 3.80:1 on --gray-100 — a WCAG AA failure
+  // (needs 4.5:1), and it carried every caption, date, category, TOC item,
+  // listing timestamp and the colophon, all at the small apparatus size. #6f6f69
+  // is the same hue and chroma one Radix step darker: 4.97:1. It is the only
+  // approved palette value changed here; the rest of the ramp already passes.
+
+  // ---- The accent -----------------------------------------------------------
+  // Not a new decision so much as a discovered one. Every figure on this site
+  // already reaches for the same colour when it needs to say "this is the
+  // finding": the copying-score bar, the annotation arrows, the S-inhibition
+  // boxes. That is Okabe-Ito vermillion, and it is the natural accent for a page
+  // whose grays are warm. Two steps because one cannot do both jobs: #d55e00 is
+  // 3.80:1 (fine for marks, rules and 1px ticks — the 3:1 non-text bar — and for
+  // display type, but not for small text), #b04d00 is 5.28:1 and safe for text.
+  //
+  // Spending rule: the accent appears ONLY on interaction — link hover, figure
+  // hover, focus, the active TOC tick. At rest the page stays monochrome, so the
+  // severity is intact and colour reads as a response rather than decoration.
+  --accent: #d55e00;
+  --accent-ink: #b04d00;
 
   --hover-fill: #f5f4f4;
   --measure-pad: 24px;
   --shell: 1160px; // homepage-only wide layout
+
+  // The page grid's outer slack columns are `5fr`, so on a wide display they
+  // grow without bound: at a 2700px viewport each is ~784px, which strands the
+  // 220px TOC rail in ~670px of empty space and leaves the article, the rail and
+  // the masthead reading as three unrelated objects. Capping and centring the
+  // whole grid keeps the assembly composed at any width. Quarto's internal
+  // geometry is untouched — no flatten, no fixed sidebar.
+  --page-max: 1440px;
+
+  // ---- The apparatus tier ---------------------------------------------------
+  // Prose keeps the flat Inter scale. What is new is a second *role*: a
+  // monospace for labels, numerals and filing information — the things a paper
+  // has and a personal blog does not. This is the one place the site stops
+  // speaking Emil's language and starts speaking a publication's, and it is
+  // deliberately the un-copyable part: it comes from what this site publishes,
+  // not from whose CSS it was reverse-engineered out of.
+  //
+  // The split is strict. Mono = labels and numbers (dates, categories, section
+  // numerals, TOC, reading time). Inter = anything made of sentences (captions,
+  // descriptions, the epistemic block). Mono runs optically large, so the label
+  // size sits below the prose apparatus size rather than matching it.
+  --font-apparatus: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-apparatus-mono: 0.8125rem; // 13.8px
+  --text-label: 0.6875rem; // 11.7px, uppercase, tracked — kickers only
 
   // The apparatus tier. Prose stays flat at 16px — that part of the Emil
   // reverse-engineering was right (his post h1 carries no font-size class at
@@ -75,9 +126,12 @@ body {
   background: var(--gray-500);
 }
 
+// Focus is an interaction, so it takes the accent along with every other
+// interaction state. The inner ring is the page colour so the halo reads as a
+// gap rather than a border, which keeps it legible over the hover fill too.
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--gray-100), 0 0 0 4px var(--gray-1100);
+  box-shadow: 0 0 0 2px var(--gray-100), 0 0 0 4px var(--accent);
   border-radius: 4px;
 }
 
@@ -124,13 +178,21 @@ h3, .h3, h4, .h4 { font-weight: 500; }
   // `#quarto-header > nav { padding-left: 1em }`, and an id selector outranks any
   // amount of class weight — without borrowing the id back the name lands 16px
   // right of the rail instead of flush with it.
+  // The name still lives in the left gutter on posts (#quarto-header really is
+  // `position: fixed` — it ships `class="headroom fixed-top"` — so a name over
+  // the reading column does get scrolled underneath). What changed is that it no
+  // longer chases the far edge of the window: it tracks the same capped, centred
+  // box as the page grid, with the grid's own 1.5em screen inset as padding, so
+  // it lands flush with the TOC rail at every viewport instead of only at the
+  // width this was originally tuned on.
   @media (min-width: 992px) {
     body:not(:has(.hero-screen)) #quarto-header > & {
       padding-inline: 0;
 
       > .container-fluid {
-        max-width: none;
-        margin-inline: 0;
+        max-width: var(--page-max);
+        margin-inline: auto;
+        padding-inline: 1.5em;
       }
     }
   }
@@ -155,6 +217,24 @@ h3, .h3, h4, .h4 { font-weight: 500; }
 // ---- Layout ------------------------------------------------------------------
 // The page grid stays intact (symmetric widths set in the defaults above), so
 // Quarto's own sidebar/scroll logic keeps working; we only pad the measure.
+// Cap and centre the whole page grid. Without this the `5fr` slack columns on
+// either side grow without bound: at a 2700px viewport each reaches ~784px, the
+// 220px TOC rail is stranded in ~670px of nothing, and the masthead, the rail
+// and the article read as three unrelated objects adrift in the left half of the
+// screen. One rule fixes it at every width, and Quarto's sticky-sidebar
+// recompute never notices — the grid keeps all its columns and its geometry.
+#quarto-content.page-columns {
+  max-width: var(--page-max);
+  margin-inline: auto;
+}
+
+// Quarto offsets the fixed header by 16px for the scrollbar; with the header now
+// centring itself against the same box as the grid, that offset would shift the
+// name 8px out of line with the rail.
+body:not(:has(.hero-screen)) #quarto-header {
+  margin-right: 0;
+}
+
 main.content {
   padding-inline: var(--measure-pad);
 }
@@ -165,10 +245,16 @@ body:has(.hero-screen) main.content {
 
 // ---- Prose ------------------------------------------------------------------
 #quarto-content main.content {
+  // Sections number themselves. The numeral is the page's one piece of ornament
+  // and it earns its place: in a document with six h2s and six figures, "03" in
+  // the margin is genuinely useful navigation, not decoration. Counter lives on
+  // the article container so each post restarts at 01.
+  counter-reset: section;
+
   p,
   li {
     font-size: 1rem;
-    line-height: 1.65;
+    line-height: 1.7; // was 1.65 — long measures need the extra leading
     color: rgba(33, 32, 28, 0.9);
   }
 
@@ -228,17 +314,45 @@ body:has(.hero-screen) main.content {
     text-underline-position: from-font;
     text-underline-offset: 2px;
 
+    // The accent's first job. At rest the underline is gray and the page is
+    // monochrome; approach a link and the colour arrives. Instant, per the
+    // motion spec — hovers here have never been transitioned.
     &:hover,
     &:focus-visible {
-      text-decoration-color: var(--gray-900);
+      text-decoration-color: var(--accent);
     }
   }
 
   h2 {
+    counter-increment: section;
+    position: relative;
     margin-top: 56px;
     margin-bottom: 20px;
     padding-bottom: 0;
     border-bottom: none;
+
+    // Below the hanging breakpoint the numeral sits inline, ahead of the title.
+    &::before {
+      content: counter(section, decimal-leading-zero);
+      font-family: var(--font-apparatus);
+      font-size: var(--text-apparatus-mono);
+      font-weight: 400;
+      color: var(--gray-1000);
+      margin-right: 0.85ch;
+    }
+  }
+
+  // Wide enough to have a left margin worth hanging into: the numeral leaves the
+  // text flow entirely and sits in the gutter, so the prose edge stays a clean
+  // vertical line and the numbers read as a column of their own down the page.
+  // `top` is set in em so it tracks the heading's own baseline, not a magic px.
+  @media (min-width: 1200px) {
+    h2::before {
+      position: absolute;
+      left: -3.4rem;
+      top: 0.15em;
+      margin-right: 0;
+    }
   }
 
   h3 {
@@ -324,12 +438,18 @@ body:has(.hero-screen) main.content {
 // main.content, so an unqualified `.quarto-title-meta-contents p.date` loses the
 // id-weight fight and the date silently snaps back to 16px.
 #title-block-header {
+  // The filing line is pure apparatus — a date and two subject tags, no
+  // sentences — so it takes the mono role. This is the first thing a reader sees
+  // below the standfirst, and it is what tells them they are looking at a
+  // publication rather than a blog entry.
   .quarto-title-meta,
   .quarto-title-meta-heading,
   .quarto-title-meta-contents,
   .quarto-title-meta-contents p.date,
   .quarto-categories {
-    font-size: var(--text-apparatus);
+    font-family: var(--font-apparatus);
+    font-size: var(--text-apparatus-mono);
+    letter-spacing: -0.01em; // mono runs wide; pull it back toward the prose colour
     line-height: 1.6;
     color: var(--gray-1000);
     margin-bottom: 0;
@@ -390,7 +510,49 @@ div.sourceCode {
 // ---- Figures & math ---------------------------------------------------------
 figure,
 .quarto-figure {
-  margin-block: 32px;
+  // 64px against a 26px paragraph gap — a 2.5:1 ratio, so a figure reads as an
+  // event in the page rather than another block. Ciechanowski runs 3:1 (3em vs
+  // 1em) and it is most of why his figures feel like the point of the page.
+  // These were 32px, i.e. 1.2:1, which is very nearly uniform.
+  margin-block: 64px;
+}
+
+// ---- Figures break the measure ----------------------------------------------
+// The single worst measurable problem on this site: the figures are exported
+// between 1128px and 2210px wide and all displayed at ~646px, so the downscale
+// ranges 0.29x to 0.57x — the same 10pt matplotlib label renders anywhere from
+// 8.1px to 15.9px depending on which figure you are looking at. The real fix is
+// upstream (export every figure at 1.5x the display width — see
+// design/figures.mplstyle), but that means regenerating artwork.
+//
+// What CSS can do meanwhile is give them more room. The grid already reserves a
+// right-hand band that is empty on every page of this site; letting figures
+// extend into it lifts the display width to ~846px and the worst case from
+// 8.1px to ~10.6px. It also does the thing a one-width page cannot: it gives
+// the document a second width, which is what separates an article grid from a
+// column of blocks.
+//
+// Gated at 1200px, where the band is definitely present. The caption does not
+// follow the figure out — it stays at reading measure, because a 14px caption
+// set to 846px is a worse line than the one it replaced.
+// Descendant, not child: Quarto wraps each h2 and everything under it in a
+// `<section class="level2">`, so figures are grandchildren of main.content, not
+// children. A `>` here silently matches nothing.
+@media (min-width: 1200px) {
+  #quarto-content main.content .quarto-figure {
+    margin-right: -200px;
+  }
+
+  #quarto-content main.content .quarto-figure figcaption {
+    max-width: 40rem;
+  }
+}
+
+// A guard, not a layout tool: `clip` (not `hidden`) creates no scroll container,
+// so the sticky TOC keeps working, but nothing extending rightward can ever
+// produce a horizontal scrollbar on a narrow-but-not-narrow-enough viewport.
+body:not(:has(.hero-screen)) {
+  overflow-x: clip;
 }
 
 // Unframed. The charts are PNGs on a white ground and the page is #fdfdfc, so
@@ -406,9 +568,12 @@ figure img,
   border-radius: 0;
   cursor: zoom-in;
 
+  // The hover frame takes the accent. This is where the colour comes from in the
+  // first place — it is the highlight inside these charts — so the ring reading
+  // vermillion on approach closes the loop between the page and the artwork.
   &:hover,
   &:focus-visible {
-    outline: 1px solid var(--gray-400);
+    outline: 1px solid var(--accent);
     outline-offset: 6px;
   }
 }
@@ -609,7 +774,8 @@ main.content > :last-child {
   margin-top: clamp(2.5rem, 1.5rem + 5vw, 5.5rem);   // extra air above → it sits well down the page
   padding-inline: clamp(1.25rem, 5vw, 2rem);
   text-align: center;
-  font-size: 0.75rem;            // a hair under the caption scale — a quiet whisper
+  font-family: var(--font-apparatus); // a credit line is filing information
+  font-size: var(--text-label);
   letter-spacing: 0.01em;
   color: var(--gray-1000);       // the same tertiary gray as each post's date
   a {
@@ -752,10 +918,15 @@ body:has(.hero-screen) { overflow-x: hidden; }
       grid-column: 1;
     }
 
+    // Date + reading time: apparatus, not argument. direction.md already says
+    // listing metadata belongs to the small tier, but the CSS had it pinned at
+    // 1rem, so a timestamp carried the same weight as the post title next to it.
     .metadata {
       grid-column: 2;
-      font-size: 1rem;
-      line-height: 1.65;
+      font-family: var(--font-apparatus);
+      font-size: var(--text-apparatus-mono);
+      letter-spacing: -0.01em;
+      line-height: 1.7;
       color: var(--gray-1000);
       text-align: right;
 
@@ -812,22 +983,49 @@ body:has(.hero-screen) { overflow-x: hidden; }
 // falls between the rail and the still-centered article column.
 #quarto-content.page-columns #quarto-sidebar.sidebar-navigation {
   grid-column: screen-start-inset / body-start;
-  justify-self: start;
+  // `justify-self: start` sized the rail by its content, so at mid widths
+  // (roughly 1000–1300px, where the left band narrows to ~140px but the rail
+  // still wanted 220px) it overflowed its own track and ran under the article.
+  // Stretching it to the track and capping the TOC instead means the rail always
+  // fits the space it has.
+  justify-self: stretch;
+  min-width: 0;
 }
 
 #quarto-content.page-columns #quarto-sidebar #TOC {
   max-width: 220px; // keep the rail narrow and left-aligned in the wide band
 }
 
+// The rail joins the apparatus tier: mono, and numbered to match the headings it
+// points at. The counter here is a second, independent one — Quarto's TOC is a
+// flat `ul` of top-level items with nested `ul`s beneath, so numbering the
+// direct `li` children of the outer list lines up one-for-one with the h2s,
+// while sub-items stay unnumbered exactly as they are in the page.
 #TOC,
 .sidebar nav[role="doc-toc"] {
-  font-size: 14px;
+  font-family: var(--font-apparatus);
+  font-size: var(--text-apparatus-mono);
+  letter-spacing: -0.01em;
+  counter-reset: toc-section;
 
   h2,
   .toc-title {
-    font-size: 14px;
-    font-weight: 500;
+    font-family: var(--font-apparatus);
+    font-size: var(--text-label);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--gray-1000);
+  }
+
+  > ul > li {
+    counter-increment: toc-section;
+
+    > a::before {
+      content: counter(toc-section, decimal-leading-zero) "  ";
+      color: var(--gray-1000);
+      white-space: pre;
+    }
   }
 
   .nav-link {
@@ -838,9 +1036,17 @@ body:has(.hero-screen) { overflow-x: hidden; }
       color: var(--gray-1200);
     }
 
+    // The accent's last job, and the one the minimap layer was always going to
+    // need: the active tick is the only coloured mark on a resting page. The
+    // label goes to full ink, the rule goes vermillion — position is carried by
+    // colour rather than by weight, so nothing shifts as you scroll.
     &.active {
       color: var(--gray-1200);
-      border-left-color: var(--gray-1200);
+      border-left-color: var(--accent);
+
+      &::before {
+        color: var(--accent-ink);
+      }
     }
   }
 }
@@ -850,9 +1056,35 @@ body:has(.hero-screen) { overflow-x: hidden; }
   display: none;
 }
 
+// ---- Cross-document view transitions ----------------------------------------
+// Two lines, and every navigation on a static site stops being a white flash.
+// This is Layer 4 from direction.md, brought forward: it is opt-in, it is
+// entirely progressive (browsers without it simply navigate as before), and it
+// needs no JS on a Quarto site because every page already ships this stylesheet.
+// Chrome 126+, Safari 18.2+, Firefox 144+.
+@view-transition {
+  navigation: auto;
+}
+
+// The name is the one element genuinely common to every page, so it is the one
+// thing that should not cross-fade — it stays put while the page changes under
+// it. Everything else takes the default fade, which is inside the 300ms budget
+// and is opacity-only, so it satisfies the motion spec without a custom curve.
+.navbar-brand {
+  view-transition-name: masthead-name;
+}
+
 // ---- Motion guard (there is almost no motion to guard) ----------------------
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  // View transitions are not covered by the media query on their own — the
+  // animation is generated by the UA, so it has to be cancelled explicitly.
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
