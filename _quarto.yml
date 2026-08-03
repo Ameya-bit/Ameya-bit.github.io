@@ -7,6 +7,7 @@ project:
   resources:
     - "assets/niche/"
     - "assets/pandas/"
+    - "!assets/pandas/engine/node_modules/"
 
 website:
   title: "Ameya Panchal"
@@ -33,3 +34,5 @@ format:
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap">
+    include-after-body:
+      - assets/site/figure-zoom.html

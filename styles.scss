@@ -47,6 +47,16 @@ $grid-margin-width: 300px;
   --hover-fill: #f5f4f4;
   --measure-pad: 24px;
   --shell: 1160px; // homepage-only wide layout
+
+  // The apparatus tier. Prose stays flat at 16px — that part of the Emil
+  // reverse-engineering was right (his post h1 carries no font-size class at
+  // all; it inherits the 16px root, and weight alone ranks it). What his site
+  // *also* has, and ours had collapsed into 16px, is a second tier reserved for
+  // things that are not the argument: captions, post metadata, the TOC rail,
+  // prev/next links. On emilkowal.ski those run 12–14px in gray-1000. Keeping
+  // prose flat while letting apparatus drop is the whole system — the flat
+  // scale only reads as deliberate when something else is allowed not to be.
+  --text-apparatus: 0.875rem; // 14px
 }
 
 html {
@@ -103,6 +113,28 @@ h3, .h3, h4, .h4 { font-weight: 500; }
     padding-inline: clamp(1.25rem, 5vw, 2rem);
   }
 
+  // On posts the name moves out of the reading column and into the left gutter,
+  // sharing an edge with the TOC rail (both land at the 24px screen inset).
+  // Quarto renders #quarto-header as `position: fixed`, so anything sitting over
+  // the column gets scrolled underneath — with the name parked in the empty
+  // gutter there is nothing left for the text to pass beneath. Only above the lg
+  // breakpoint: below it the TOC collapses, the gutter closes, and the name
+  // belongs back on the column edge.
+  // `#quarto-header > &` rather than plain `&`: Quarto ships
+  // `#quarto-header > nav { padding-left: 1em }`, and an id selector outranks any
+  // amount of class weight — without borrowing the id back the name lands 16px
+  // right of the rail instead of flush with it.
+  @media (min-width: 992px) {
+    body:not(:has(.hero-screen)) #quarto-header > & {
+      padding-inline: 0;
+
+      > .container-fluid {
+        max-width: none;
+        margin-inline: 0;
+      }
+    }
+  }
+
   .navbar-brand-container {
     margin: 0 !important; // Quarto's mx-auto centers the brand; pin it to the column edge
   }
@@ -154,6 +186,40 @@ body:has(.hero-screen) main.content {
     margin-top: 0.5rem;
   }
 
+  // Body ink is rgba(…, 0.9), and bold inherited that veil — so the verdict
+  // sentences barely lifted off the paragraph. Emil solves the same problem the
+  // same way on his one flourish: his <em> is `text-gray-1200`, full ink,
+  // against 0.9-opacity body text. Emphasis is a contrast event, not just a
+  // weight event. Ours rides on <strong> because that is what the writing
+  // already uses to mark a finding.
+  strong,
+  b {
+    font-weight: 600;
+    color: var(--gray-1200);
+  }
+
+  // ---- Epistemic status / closing aside ------------------------------------
+  // A paragraph whose entire content is italic is, by convention in this kind of
+  // writing, not part of the argument — it is the confidence note up top and the
+  // nudge at the end. Both bookends of the induction-head post are exactly that
+  // shape, and Pandoc emits them as `<p><em>…</em></p>`, so the selector needs no
+  // markdown changes and no shortcode. Treating them as apparatus (small tier,
+  // secondary ink, hairline rule) says "this is a frame around the post" far more
+  // clearly than italics can — so the italics come off; the block carries the
+  // meaning now. Flip `font-style` back to italic below if you disagree.
+  p:has(> em:only-child) {
+    font-size: var(--text-apparatus);
+    line-height: 1.6;
+    color: var(--gray-1100);
+    border-left: 1px solid var(--gray-400);
+    padding-left: 20px;
+    margin-bottom: 40px;
+
+    > em {
+      font-style: normal;
+    }
+  }
+
   a {
     color: var(--gray-1200);
     text-decoration: underline;
@@ -181,17 +247,45 @@ body:has(.hero-screen) main.content {
   }
 }
 
-// ---- Post title block: flat title, gray metadata, generous air -------------
+// ---- Post masthead ----------------------------------------------------------
+// Publication grammar rather than Emil's grammar: he opens a post with a bare
+// h1 and nothing else — no date, no description, no categories anywhere on the
+// page. We have all three and they are worth showing, so the block is built the
+// way a journal builds one: title, standfirst, hairline, then the filing line
+// (date · categories) in the apparatus tier underneath.
+//
+// Quarto's DOM order is h1 + categories, description, date. Flexing the header
+// and giving `.quarto-title` `display: contents` promotes h1 and the categories
+// to direct flex items, so `order` can put the filing line last and sit the date
+// and categories on one shared row. The 1px rule is the header's own ::after —
+// a pseudo-element on a flex container is a flex item, so it orders like the
+// rest and needs no extra markup.
 #title-block-header.quarto-title-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   padding-top: 64px;
-  margin-bottom: 56px;
+  margin-bottom: 80px; // the filing line and the epistemic block are both small
+                       // gray text; they need real air or they read as one unit
 
-  .quarto-title h1.title {
-    font-size: 1rem;
+  .quarto-title {
+    display: contents;
+  }
+
+  h1.title {
+    flex: 0 0 100%;
+    order: 1;
+    font-size: 1rem; // the flat scale holds: weight alone ranks the title
     font-weight: 600;
     line-height: 1.65;
     letter-spacing: 0;
-    margin-bottom: 12px;
+    margin-bottom: 0;
+  }
+
+  > div:has(> .description) {
+    flex: 0 0 100%;
+    order: 2;
+    margin-top: 12px;
   }
 
   .description,
@@ -201,22 +295,69 @@ body:has(.hero-screen) main.content {
     color: var(--gray-1100);
     margin-bottom: 0;
   }
+
+  // The homepage also gets a #title-block-header — an empty one, since the hero
+  // is raw HTML — so the rule has to be conditional on there actually being a
+  // title above it, or a stray hairline floats over the hero.
+  &:has(h1.title)::after {
+    content: "";
+    flex: 0 0 100%;
+    order: 3;
+    height: 1px;
+    background: var(--gray-400);
+    margin-block: 28px 14px;
+  }
+
+  .quarto-title-meta {
+    order: 4;
+  }
+
+  .quarto-categories {
+    order: 5;
+    display: flex;
+    flex-wrap: wrap;
+  }
 }
 
-.quarto-title-meta,
-.quarto-title-meta-heading,
-.quarto-title-meta-contents {
-  font-size: 1rem;
-  color: var(--gray-1000);
+// Every selector here carries #title-block-header on purpose: the prose block is
+// scoped `#quarto-content main.content p`, and the title block sits inside
+// main.content, so an unqualified `.quarto-title-meta-contents p.date` loses the
+// id-weight fight and the date silently snaps back to 16px.
+#title-block-header {
+  .quarto-title-meta,
+  .quarto-title-meta-heading,
+  .quarto-title-meta-contents,
+  .quarto-title-meta-contents p.date,
+  .quarto-categories {
+    font-size: var(--text-apparatus);
+    line-height: 1.6;
+    color: var(--gray-1000);
+    margin-bottom: 0;
+  }
+
+  .quarto-title-meta-heading {
+    display: none; // "Published" label is noise; the date speaks for itself
+  }
 }
 
-.quarto-title-meta-heading {
-  display: none; // "Published" label is noise; the date speaks for itself
-}
+// Categories return as plain filing text, not pills — a middot chain hanging off
+// the date. Pills would be the only rounded, filled object on a post page.
+#title-block-header .quarto-categories {
+  .quarto-category {
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    font-size: inherit;
+    text-transform: none; // Quarto ships these uppercase at .65em; small caps are
+                          // a second voice the page doesn't otherwise speak
+    opacity: 1;
 
-#title-block-header .quarto-categories,
-.quarto-title .quarto-categories {
-  display: none; // no pills in the base layer
+    &::before {
+      content: "·";
+      margin-inline: 0.6ch;
+    }
+  }
 }
 
 // ---- Code -------------------------------------------------------------------
@@ -252,18 +393,38 @@ figure,
   margin-block: 32px;
 }
 
+// Unframed. The charts are PNGs on a white ground and the page is #fdfdfc, so
+// with the border and radius gone they stop being cards and become ink printed
+// on the page — the plate merges, only the drawing is left. The frame comes back
+// on hover as an offset outline, which is the whole click affordance: at rest the
+// figure is part of the page, on approach it declares itself an object. Outline
+// rather than border so nothing reflows, and offset so the ring never crops the
+// artwork. No transition — hovers are instant here, same as links.
 figure img,
 .quarto-figure img {
-  border: 1px solid var(--gray-400);
-  border-radius: 8px;
+  border: none;
+  border-radius: 0;
+  cursor: zoom-in;
+
+  &:hover,
+  &:focus-visible {
+    outline: 1px solid var(--gray-400);
+    outline-offset: 6px;
+  }
 }
 
+// Captions drop to the apparatus tier. They were pinned to 16px with
+// `!important`, which made a five-line caption weigh exactly as much as the
+// argument it was describing — the single biggest reason the figures read as
+// undifferentiated slabs. This is the one place the flat scale is deliberately
+// broken, and it is broken the way Emil breaks it: his figure attribution line
+// is `text-xs text-gray-1000`.
 figcaption,
 .figure-caption {
-  font-size: 1rem !important;
-  line-height: 1.65;
+  font-size: var(--text-apparatus);
+  line-height: 1.6;
   color: var(--gray-1000);
-  margin-top: 12px;
+  margin-top: 14px;
   text-align: left;
 }
 
@@ -272,8 +433,87 @@ img {
   height: auto;
 }
 
+// Pre-existing, unrelated to the masthead work: the display equations are wider
+// than the measure on a phone, and with nothing containing them the whole
+// document scrolled sideways (476px of scrollWidth at a 375px viewport, on the
+// old stylesheet too). Wide content scrolls inside its own box; the page body
+// never does.
 .katex-display {
   margin: 32px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 2px; // the scroll box would otherwise clip integral/subscript tails
+}
+
+// ---- Figure zoom (assets/site/figure-zoom.html) -----------------------------
+// Click a figure and it opens at full size over the page, so the 644px column
+// never has to widen to carry a dense chart. The overlay is the page colour, not
+// the usual black scrim: the reading room does not go dark, the article just
+// steps back. Motion is a 150ms opacity fade on the site's own ease-out curve —
+// inside the 300ms budget, opacity only, and skipped entirely under
+// prefers-reduced-motion (the script sets the duration to 0 to match).
+html.figure-zoom-open {
+  overflow: hidden;
+}
+
+.figure-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  background: rgba(253, 253, 252, 0.96);
+  cursor: zoom-out;
+  opacity: 0;
+  transition: opacity 150ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.is-open {
+    opacity: 1;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: none; // the global focus ring would trace the whole viewport
+  }
+}
+
+.figure-zoom-inner {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-height: 100%;
+
+  img {
+    max-width: 100%;
+    max-height: 78vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: none;
+    border-radius: 0;
+    cursor: zoom-out;
+  }
+
+  figcaption {
+    max-width: 62ch;
+    margin-top: 0;
+    text-align: center;
+    overflow-y: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figure-zoom {
+    transition: none;
+  }
 }
 
 // ---- Homepage: previous hero layout, Emil materials -------------------------

@@ -31,17 +31,14 @@ listing:
   <p class="writing-cue">Writing</p>
 </section>
 <script>
-  // Which hero engine runs. The default is now the fixed-tick engine under
+  // Which hero engine runs. The default is the fixed-tick engine under
   // assets/pandas/engine/ — the Phase-A rewrite — which passed the character gate
   // on 2026-07-27. The original pandas.js is kept, unmodified, behind ?engine=old:
-  // it is the reference the port is judged against, so it stays until the learned
-  // policy ships.
+  // it is the reference the port is judged against.
   //
-  // A second switch rides on the new engine: ?policy=nn hands the hat panda to the
-  // Phase-D trained clone instead of the rules watcher. Opt-in, and deliberately so
-  // — it has not passed the character gate. The weights are fetched after first
-  // paint and any failure falls back to the watcher without a visible event, so the
-  // hero is never waiting on 240 KB and never worse off for asking.
+  // The engine here is a runtime copy, rules expert only: development (and the
+  // NN policy work) lives at github.com/Ameya-bit/panda-engine, which syncs this
+  // directory via its tools/sync-site.sh.
   (function () {
     var wanted = new URLSearchParams(location.search).get('engine');
     if (wanted !== 'old') {

@@ -1,0 +1,102 @@
+<!--
+  Figure zoom — inlined into every page via `include-after-body` in _quarto.yml.
+
+  Why this and not a wider measure: the 644px column is the point of the post
+  page, and widening figures into the margins to make the two table screenshots
+  legible would have cost the column feel on every other figure. Clicking to
+  expand keeps the reading width honest and gives the dense figures somewhere to
+  go. Why not Quarto's built-in `lightbox:` — it pulls in GLightbox (~30kb) and a
+  dark scrim with its own chrome, and restyling that to the sand palette is more
+  work than the forty lines below.
+
+  Styles live in styles.scss under "Figure zoom". Bails out on pages with no
+  figures, so the homepage pays nothing but the parse.
+-->
+<script>
+  (() => {
+    const figures = document.querySelectorAll(
+      "#quarto-document-content figure img, #quarto-document-content .quarto-figure img"
+    );
+    if (!figures.length) return;
+
+    // Matches the CSS transition. Reduced motion collapses it to an instant swap
+    // so the overlay never lingers waiting on a fade that isn't running.
+    const DURATION = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 150;
+
+    let overlay, overlayImg, overlayCaption, lastFocused, closeTimer;
+
+    const build = () => {
+      overlay = document.createElement("div");
+      overlay.className = "figure-zoom";
+      overlay.setAttribute("role", "dialog");
+      overlay.setAttribute("aria-modal", "true");
+      overlay.tabIndex = -1;
+      overlay.hidden = true;
+
+      const inner = document.createElement("figure");
+      inner.className = "figure-zoom-inner";
+      overlayImg = document.createElement("img");
+      overlayImg.alt = "";
+      overlayCaption = document.createElement("figcaption");
+      inner.append(overlayImg, overlayCaption);
+      overlay.append(inner);
+
+      // Anywhere on the overlay closes it, image included — a lightbox with a
+      // dead zone in the middle is a lightbox people get stuck in.
+      overlay.addEventListener("click", close);
+      document.body.append(overlay);
+    };
+
+    const open = (img) => {
+      if (!overlay) build();
+      clearTimeout(closeTimer);
+      lastFocused = document.activeElement;
+
+      overlayImg.src = img.currentSrc || img.src;
+      const source = img.closest("figure, .quarto-figure");
+      const caption = source && source.querySelector("figcaption, .figure-caption");
+      const text = caption ? caption.textContent.trim() : "";
+
+      overlayCaption.textContent = text;
+      overlayCaption.hidden = !text;
+      overlay.setAttribute("aria-label", text || "Expanded figure");
+
+      overlay.hidden = false;
+      document.documentElement.classList.add("figure-zoom-open");
+      // Two frames: one to let `hidden` come off and the element lay out, one for
+      // the browser to register opacity 0 as the start of the transition.
+      requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add("is-open")));
+      overlay.focus();
+    };
+
+    const close = () => {
+      if (!overlay || overlay.hidden) return;
+      overlay.classList.remove("is-open");
+      document.documentElement.classList.remove("figure-zoom-open");
+      if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
+      closeTimer = setTimeout(() => {
+        if (!overlay.classList.contains("is-open")) overlay.hidden = true;
+      }, DURATION);
+    };
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") close();
+    });
+
+    figures.forEach((img) => {
+      // The image becomes the control. A real <button> would be tidier, but
+      // rewrapping Pandoc's `<p><img></p>` risks breaking the figure styling for
+      // one element that already has an accessible name from its caption.
+      img.setAttribute("role", "button");
+      img.setAttribute("tabindex", "0");
+      img.setAttribute("aria-label", "Expand figure");
+      img.addEventListener("click", () => open(img));
+      img.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open(img);
+        }
+      });
+    });
+  })();
+</script>
