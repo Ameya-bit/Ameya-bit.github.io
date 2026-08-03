@@ -84,19 +84,25 @@ $grid-margin-width: 300px;
   --page-max: 1440px;
 
   // ---- The apparatus tier ---------------------------------------------------
-  // Prose keeps the flat Inter scale. What is new is a second *role*: a
-  // monospace for labels, numerals and filing information — the things a paper
-  // has and a personal blog does not. This is the one place the site stops
-  // speaking Emil's language and starts speaking a publication's, and it is
-  // deliberately the un-copyable part: it comes from what this site publishes,
-  // not from whose CSS it was reverse-engineered out of.
+  // Prose keeps the flat Inter scale. The apparatus — captions, dates,
+  // categories, the rail, listing metadata — drops to `--text-apparatus` and
+  // gray, and otherwise stays in the family.
   //
-  // The split is strict. Mono = labels and numbers (dates, categories, section
-  // numerals, TOC, reading time). Inter = anything made of sentences (captions,
-  // descriptions, the epistemic block). Mono runs optically large, so the label
-  // size sits below the prose apparatus size rather than matching it.
+  // Mono was first applied to that whole tier and pulled back on 2026-08-02.
+  // The intent was to give a publication's apparatus its own role, which a
+  // personal blog has no use for. What it actually did was change typeface AND
+  // size AND tracking AND case at once, which is not a quieter tier — it is a
+  // second voice, and on a page whose content is only paragraphs and charts it
+  // read as a clash. It also broke the filing row: mono is wider, so the date
+  // and categories no longer fit on one line.
+  //
+  // The surviving rule: MONO IS FOR THE NUMBERING SYSTEM, NOTHING ELSE. Section
+  // numerals in the article gutter and their counterparts in the rail — one
+  // material, two places, the same job. Numbers are what an instrument shows;
+  // the moment mono touches words it stops reading as instrumentation and starts
+  // reading as a different font.
   --font-apparatus: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --text-apparatus-mono: 0.8125rem; // 13.8px
+  --text-apparatus-mono: 0.8125rem; // 13.8px — the numerals only
   --text-label: 0.6875rem; // 11.7px, uppercase, tracked — kickers only
 
   // The apparatus tier. Prose stays flat at 16px — that part of the Emil
@@ -258,13 +264,22 @@ body:has(.hero-screen) main.content {
     color: rgba(33, 32, 28, 0.9);
   }
 
+  // 43px against a 28.9px line — about 1.5 lines. It was 26px, which is *less
+  // than one line*, so a paragraph break read as a slightly loose line rather
+  // than a break, and the column turned into one gray field.
+  //
+  // Worth being honest about the limit: Emil's gap is also ~1 line and his page
+  // still breathes, because his paragraphs are 2–3 lines — his gap is ~45% of a
+  // block. At 8 lines a 26px gap is 11% of a block, and matching his ratio would
+  // need ~104px, which would look absurd. 1.5 lines buys back about half of it;
+  // the other half is paragraph length (Layer 5), not CSS.
   p {
-    margin-bottom: 26px;
+    margin-bottom: 43px;
   }
 
   ul,
   ol {
-    margin-bottom: 26px;
+    margin-bottom: 43px;
     padding-left: 1.25rem;
   }
 
@@ -299,7 +314,7 @@ body:has(.hero-screen) main.content {
     color: var(--gray-1100);
     border-left: 1px solid var(--gray-400);
     padding-left: 20px;
-    margin-bottom: 40px;
+    margin-bottom: 56px;
 
     > em {
       font-style: normal;
@@ -323,11 +338,15 @@ body:has(.hero-screen) main.content {
     }
   }
 
+  // 72px above (2.5 lines) / 29px below (1.0 line). Below was 20px — 0.69 of a
+  // line — so a heading sat closer to the paragraph above it than a paragraph
+  // break, and read as bolder text in the flow rather than as an introduction.
+  // Space-above stays ~2.5x space-below so the heading binds to what follows.
   h2 {
     counter-increment: section;
     position: relative;
-    margin-top: 56px;
-    margin-bottom: 20px;
+    margin-top: 72px;
+    margin-bottom: 29px;
     padding-bottom: 0;
     border-bottom: none;
 
@@ -356,8 +375,8 @@ body:has(.hero-screen) main.content {
   }
 
   h3 {
-    margin-top: 40px;
-    margin-bottom: 16px;
+    margin-top: 52px;
+    margin-bottom: 22px;
   }
 }
 
@@ -386,20 +405,35 @@ body:has(.hero-screen) main.content {
     display: contents;
   }
 
+  // The scale's one reckless jump, and the reason it now exists here.
+  //
+  // The flat-scale rule came from a site that solves contrast a different way:
+  // Emil's column alternates prose with bordered demo cards every few lines, and
+  // those cards carry all of his page's punctuation — which is exactly what lets
+  // his type stay flat. This site took the flat scale but not the cards (figures
+  // here are deliberately unframed), and paired both with long paragraphs. Three
+  // uniformity decisions stacked, and the column went gray.
+  //
+  // Every reference concentrates contrast in one place rather than spreading it:
+  // Ciechanowski jumps 2.8em -> 1.8em (1.56x) then runs flat; Distill 40px ->
+  // 24px (1.67x) then flat. The only exception here was the homepage hero — the
+  // page a reader spends the least time on. 1.6rem (27.2px) against 17px prose
+  // is a 1.6x jump in the same shape, and h2/h3 stay flat underneath it, so the
+  // system is "one event, then severity" rather than "no events".
   h1.title {
     flex: 0 0 100%;
     order: 1;
-    font-size: 1rem; // the flat scale holds: weight alone ranks the title
+    font-size: 1.6rem;
     font-weight: 600;
-    line-height: 1.65;
-    letter-spacing: 0;
+    line-height: 1.22; // display sizes need tighter leading than prose
+    letter-spacing: -0.015em;
     margin-bottom: 0;
   }
 
   > div:has(> .description) {
     flex: 0 0 100%;
     order: 2;
-    margin-top: 12px;
+    margin-top: 16px; // the title is bigger now; the standfirst needs more air
   }
 
   .description,
@@ -438,21 +472,32 @@ body:has(.hero-screen) main.content {
 // main.content, so an unqualified `.quarto-title-meta-contents p.date` loses the
 // id-weight fight and the date silently snaps back to 16px.
 #title-block-header {
-  // The filing line is pure apparatus — a date and two subject tags, no
-  // sentences — so it takes the mono role. This is the first thing a reader sees
-  // below the standfirst, and it is what tells them they are looking at a
-  // publication rather than a blog entry.
+  // The filing line stays Inter. Mono was tried here and pulled back: the tier
+  // is meant to give the apparatus a quieter *role*, but changing typeface AND
+  // size AND tracking AND case at once is not a quieter tier, it is a second
+  // voice — and on a page with this little content variety it read as a clash
+  // rather than a system. Mono is now confined to one thing: the numbering
+  // system (section numerals and their TOC counterparts). Numbers are what an
+  // instrument shows; the moment mono touches words it stops being instrumentation.
   .quarto-title-meta,
   .quarto-title-meta-heading,
   .quarto-title-meta-contents,
   .quarto-title-meta-contents p.date,
   .quarto-categories {
-    font-family: var(--font-apparatus);
-    font-size: var(--text-apparatus-mono);
-    letter-spacing: -0.01em; // mono runs wide; pull it back toward the prose colour
+    font-size: var(--text-apparatus);
     line-height: 1.6;
     color: var(--gray-1000);
     margin-bottom: 0;
+  }
+
+  // Quarto ships `.quarto-title-meta` as `grid-template-columns: repeat(2, 1fr)`
+  // for multi-field bylines. With a single field it still reserves both columns,
+  // so the block sits at twice the width of the date — which is why the date and
+  // the categories, which are meant to share one filing row, wrapped onto two
+  // lines the moment the categories got any wider. One content-sized column, and
+  // the row fits with room to spare.
+  .quarto-title-meta {
+    grid-template-columns: max-content;
   }
 
   .quarto-title-meta-heading {
@@ -463,6 +508,8 @@ body:has(.hero-screen) main.content {
 // Categories return as plain filing text, not pills — a middot chain hanging off
 // the date. Pills would be the only rounded, filled object on a post page.
 #title-block-header .quarto-categories {
+  margin-left: 1.75rem; // the gap that makes date + categories read as one row
+
   .quarto-category {
     background: none;
     border: none;
@@ -496,7 +543,7 @@ div.sourceCode {
   background: var(--gray-200);
   border: 1px solid var(--gray-400);
   border-radius: 8px;
-  margin-block: 32px;
+  margin-block: 48px; // tracks the new paragraph rhythm
 
   pre.sourceCode {
     font-size: 13px;
@@ -510,11 +557,11 @@ div.sourceCode {
 // ---- Figures & math ---------------------------------------------------------
 figure,
 .quarto-figure {
-  // 64px against a 26px paragraph gap — a 2.5:1 ratio, so a figure reads as an
-  // event in the page rather than another block. Ciechanowski runs 3:1 (3em vs
-  // 1em) and it is most of why his figures feel like the point of the page.
-  // These were 32px, i.e. 1.2:1, which is very nearly uniform.
-  margin-block: 64px;
+  // 96px against a 43px paragraph gap — 2.2:1, so a figure reads as an event in
+  // the page rather than another block. Ciechanowski runs 3:1 (3em vs 1em) and
+  // it is most of why his figures feel like the point of the page. These were
+  // 32px against 26px, i.e. 1.2:1, which is very nearly uniform.
+  margin-block: 96px;
 }
 
 // ---- Figures break the measure ----------------------------------------------
@@ -604,7 +651,7 @@ img {
 // old stylesheet too). Wide content scrolls inside its own box; the page body
 // never does.
 .katex-display {
-  margin: 32px 0;
+  margin: 48px 0; // tracks the new paragraph rhythm
   overflow-x: auto;
   overflow-y: hidden;
   padding-block: 2px; // the scroll box would otherwise clip integral/subscript tails
@@ -774,8 +821,7 @@ main.content > :last-child {
   margin-top: clamp(2.5rem, 1.5rem + 5vw, 5.5rem);   // extra air above → it sits well down the page
   padding-inline: clamp(1.25rem, 5vw, 2rem);
   text-align: center;
-  font-family: var(--font-apparatus); // a credit line is filing information
-  font-size: var(--text-label);
+  font-size: 0.75rem;            // a hair under the caption scale — a quiet whisper
   letter-spacing: 0.01em;
   color: var(--gray-1000);       // the same tertiary gray as each post's date
   a {
@@ -921,11 +967,13 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // Date + reading time: apparatus, not argument. direction.md already says
     // listing metadata belongs to the small tier, but the CSS had it pinned at
     // 1rem, so a timestamp carried the same weight as the post title next to it.
+    // Date + reading time: apparatus, not argument. direction.md already says
+    // listing metadata belongs to the small tier, but the CSS had it pinned at
+    // 1rem, so a timestamp carried the same weight as the post title next to it.
+    // Small and gray, not mono — see the note on the TOC.
     .metadata {
       grid-column: 2;
-      font-family: var(--font-apparatus);
-      font-size: var(--text-apparatus-mono);
-      letter-spacing: -0.01em;
+      font-size: var(--text-apparatus);
       line-height: 1.7;
       color: var(--gray-1000);
       text-align: right;
@@ -1001,18 +1049,21 @@ body:has(.hero-screen) { overflow-x: hidden; }
 // flat `ul` of top-level items with nested `ul`s beneath, so numbering the
 // direct `li` children of the outer list lines up one-for-one with the h2s,
 // while sub-items stay unnumbered exactly as they are in the page.
+// The rail is Inter again. Labels are words, and words in mono read as a
+// different font rather than a quieter tier — which is exactly how it landed.
+// What stays mono is the numeral, because that is the numbering system and it
+// matches the one hanging in the article's gutter. One mono material on the
+// page, used in two places for the same purpose.
 #TOC,
 .sidebar nav[role="doc-toc"] {
-  font-family: var(--font-apparatus);
-  font-size: var(--text-apparatus-mono);
-  letter-spacing: -0.01em;
+  font-size: var(--text-apparatus);
   counter-reset: toc-section;
 
+  // Uppercase and tracked keeps the kicker role; Inter keeps it in the family.
   h2,
   .toc-title {
-    font-family: var(--font-apparatus);
     font-size: var(--text-label);
-    font-weight: 400;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--gray-1000);
@@ -1021,10 +1072,31 @@ body:has(.hero-screen) { overflow-x: hidden; }
   > ul > li {
     counter-increment: toc-section;
 
-    > a::before {
-      content: counter(toc-section, decimal-leading-zero) "  ";
-      color: var(--gray-1000);
-      white-space: pre;
+    // Hanging indent. The numeral was an inline ::before, so a wrapped item
+    // ("Finding a copying head") put its second line under the *number* instead
+    // of under the label — three of six items were ragged, which is most of why
+    // the rail read as unformatted rather than deliberate. Absolute numeral,
+    // padded label, and continuation lines align with the first.
+    > a {
+      position: relative;
+      padding-left: 2.4rem;
+
+      &::before {
+        content: counter(toc-section, decimal-leading-zero);
+        position: absolute;
+        left: 0.7rem;
+        font-family: var(--font-apparatus);
+        font-size: var(--text-apparatus-mono);
+        color: var(--gray-1000);
+      }
+    }
+
+    // Sub-items (h3) are unnumbered, so without this they would sit at Quarto's
+    // default indent — shallower than the numbered labels above them, which
+    // would reintroduce exactly the ragged left edge the hanging indent fixes.
+    // Neither post has an h3 yet; this is here so the first one doesn't break it.
+    ul a {
+      padding-left: 2.4rem;
     }
   }
 
