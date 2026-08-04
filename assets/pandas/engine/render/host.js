@@ -16,6 +16,7 @@ import { pandaCountForViewport } from '../layout.js';
 import { makeRenderer } from './renderer.js';
 import { makeFlourish } from './flourish.js';
 import { buildTableau } from './tableau.js';
+import { drawScales } from './sizes.js';
 
 // Below this stage width the hero copy owns the space — a troupe this size would
 // pile onto the headline, so the stage stays empty (pandas.js's MOBILE_MIN).
@@ -32,18 +33,25 @@ const MAX_FRAME_MS = 250;
 // Recompute layout at most this often while a resize is in flight.
 const RESIZE_DEBOUNCE_MS = 150;
 
-// The fenced hero card in stage-local pixels, or null when there is no card.
+// The fence in stage-local pixels: one rect per matched element, or null when
+// nothing matches. `cardSelector` may match several elements — the site hero's
+// editorial layout (2026-08-03) fences headline / lede / filing corner as
+// separate rects so the pockets between them stay walkable. A single match
+// still returns a bare rect, byte-identical to the pre-array behavior.
 function computeFence(stage, cardSelector) {
-  const card = cardSelector ? document.querySelector(cardSelector) : null;
-  if (!card) return null;
-  const c = card.getBoundingClientRect();
+  const cards = cardSelector ? document.querySelectorAll(cardSelector) : [];
+  if (!cards.length) return null;
   const s = stage.getBoundingClientRect();
-  return {
-    l: c.left - s.left - FENCE_GAP,
-    t: c.top - s.top - FENCE_GAP,
-    r: c.right - s.left + FENCE_GAP,
-    b: c.bottom - s.top + FENCE_GAP,
-  };
+  const rects = Array.from(cards, (card) => {
+    const c = card.getBoundingClientRect();
+    return {
+      l: c.left - s.left - FENCE_GAP,
+      t: c.top - s.top - FENCE_GAP,
+      r: c.right - s.left + FENCE_GAP,
+      b: c.bottom - s.top + FENCE_GAP,
+    };
+  });
+  return rects.length === 1 ? rects[0] : rects;
 }
 
 /**
@@ -51,7 +59,9 @@ function computeFence(stage, cardSelector) {
  *
  * @param {HTMLElement} stage   the stage element (`#panda-stage`)
  * @param {object} [opts]
- * @param {string} [opts.cardSelector] the element to fence off ('.hero-inner')
+ * @param {string} [opts.cardSelector] the element(s) to fence off ('.hero-inner';
+ *                                     a selector matching several elements fences
+ *                                     each as its own rect)
  * @param {number} [opts.seed]         pin the seed (dev/preview); default per-visit
  * @param {boolean} [opts.reduced]     force the static tableau
  * @param {number} [opts.areaPerPanda] density override (dev slider)
@@ -149,6 +159,10 @@ export function mountPandas(stage, opts = {}) {
     bindPolicy(worldSeed);
     prevState = state;
     renderer = renderer ?? makeRenderer(stage);
+    // This visit's troupe sizes — drawn from the same seed the world was, so a
+    // pinned ?seed reproduces the sizes along with everything else. Must land
+    // before the first sync: views are created lazily after it.
+    renderer.setScales(drawScales(worldSeed, state.entities, engine.cfg));
     flourish = flourish ?? makeFlourish(stage);
     acc = 0;
     return true;

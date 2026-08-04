@@ -16,48 +16,27 @@ listing:
 ```{=html}
 <section class="hero-screen">
   <div class="hero" aria-labelledby="hero-headline">
-    <div id="panda-stage" class="panda-stage" aria-hidden="true"></div>
     <div class="hero-inner">
-      <p id="hero-headline" class="hero-headline" role="heading" aria-level="1">Right now, I'm trying to replicate Anthropic's global workspace paper</p>
-      <p class="hero-lede">Computer Science, Physics, and AI at Penn State (Schreyer Honors). I'm focused on AI interpretability, with a research background in physics-grade computation. This is where I write up what I find.</p>
-      <nav class="hero-links" aria-label="Profile links">
-        <a href="https://github.com/Ameya-bit">GitHub</a>
-        <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
-        <a href="mailto:ameyapanchal011@gmail.com">Email</a>
-        <a href="assets/Ameya_Panchal_Resume.pdf">Résumé</a>
-      </nav>
+      <p id="hero-headline" class="hero-headline" role="heading" aria-level="1">Studying computer science, physics, and AI&nbsp;—<br> researching mechanistic interpretability.</p>
+      <p class="hero-lede">I'm an undergrad at Penn State; this is where I write up what I find, one experiment at a time.</p>
+      <div class="hero-filing">
+        <p class="hero-status">Current experiment&ensp;·&ensp;Does Anthropic's global workspace result replicate?</p>
+        <nav class="hero-links" aria-label="Profile links">
+          <a href="https://github.com/Ameya-bit">GitHub</a>
+          <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
+          <a href="mailto:ameyapanchal011@gmail.com">Email</a>
+          <a href="assets/Ameya_Panchal_Resume.pdf">Résumé</a>
+        </nav>
+      </div>
     </div>
   </div>
   <p class="writing-cue">Writing</p>
 </section>
-<script>
-  // Which hero engine runs. The default is the fixed-tick engine under
-  // assets/pandas/engine/ — the Phase-A rewrite — which passed the character gate
-  // on 2026-07-27. The original pandas.js is kept, unmodified, behind ?engine=old:
-  // it is the reference the port is judged against.
-  //
-  // The engine here is a runtime copy, rules expert only: development (and the
-  // NN policy work) lives at github.com/Ameya-bit/panda-engine, which syncs this
-  // directory via its tools/sync-site.sh.
-  (function () {
-    var wanted = new URLSearchParams(location.search).get('engine');
-    if (wanted !== 'old') {
-      var css = document.createElement('link');
-      css.rel = 'stylesheet';
-      css.href = 'assets/pandas/engine/render/pandas.css';
-      document.head.appendChild(css);
-      var mod = document.createElement('script');
-      mod.type = 'module';
-      mod.src = 'assets/pandas/engine/render/site.js';
-      document.head.appendChild(mod);
-    } else {
-      var legacy = document.createElement('script');
-      legacy.src = 'assets/pandas/pandas.js';
-      legacy.defer = true;
-      document.head.appendChild(legacy);
-    }
-  })();
-</script>
+<!-- Panda engine disabled 2026-08-03: the minimalist base gets finished first,
+     whimsy returns only once the base stands on its own (design/direction.md,
+     session log). Assets and engine stay in assets/pandas/; development
+     continues in github.com/Ameya-bit/panda-engine. To re-enable, restore the
+     `#panda-stage` div above and the loader script from git history. -->
 ```
 
 ::: {.writing-section}
@@ -66,7 +45,3 @@ listing:
 :::
 
 :::
-
-```{=html}
-<p class="site-colophon">Hero pandas after <a href="https://codepen.io/Ma5a/pen/WNEBqPO">ma5a&rsquo;s <em>panda collision</em></a> (MIT).</p>
-```

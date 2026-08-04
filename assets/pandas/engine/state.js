@@ -12,6 +12,7 @@
 
 import { Rng } from './rng.js';
 import { hypot } from './mathx.js';
+import { DX, DY } from './dirs.js';
 import { inBounds, inForbid, applyPos } from './geometry.js';
 
 // Entity modes. The mutual-exclusion "what drives this panda" tag. Stack/cascade
@@ -348,6 +349,34 @@ export function clearSpot(rng, cfg, placed, minSep, tries = 60) {
   return best ?? { x: cfg.width / 2, y: cfg.height / 2 };
 }
 
+// A landing spot for the drop entrance: a clear spot that is also outside the
+// hero-card fence. `clearSpot` only avoids other pandas — fine for mid-scene
+// corpus spawns, which carry no fence — but a drop lands on the live page, where
+// the card rect is real and a panda must not thud down onto the headline.
+function pickDropSpot(rng, cfg, placed) {
+  const lo = cfg.boundLower + 10;
+  const hiX = cfg.width - cfg.boundUpper - 10;
+  const hiY = cfg.height - cfg.boundUpper - 10;
+  let best = null;
+  let bestD = -1;
+  for (let i = 0; i < 60; i++) {
+    const x = rng.float(lo, hiX);
+    const y = rng.float(lo, hiY);
+    if (!inBounds(cfg, x, y)) continue;
+    if (inForbid(cfg.forbid, cfg.foot, cfg.cell, x, y)) continue;
+    let d = Infinity;
+    for (const p of placed) d = Math.min(d, hypot(p.x - x, p.y - y));
+    if (d >= 90) return { x, y };
+    if (d > bestD) {
+      bestD = d;
+      best = { x, y };
+    }
+  }
+  // Only reachable when the card nearly fills the stage — same degenerate case,
+  // same answer, as pickEntry's fallback.
+  return best ?? clearSpot(rng, cfg, placed, 90);
+}
+
 // An off-stage start and the inward target it walks to, on a random edge whose
 // lane is clear of the hero card. Entry runs perpendicular to the edge, so the
 // straight transit never crosses the centred card. Falls back to an ordinary clear
@@ -405,8 +434,11 @@ export function spawnEntities(rng, cfg) {
     const hasHat = i === 0;
     const oblivious = i === obliviousAt;
     const moveSpeed = hasHat ? cfg.hatMove : rng.pick(cfg.moveSpeeds);
-    const entry = cfg.entrance ? pickEntry(rng, cfg, entities) : null;
-    const spot = entry ?? clearSpot(rng, cfg, entities, 90);
+    // In the drop style only the roamers fall; the watcher keeps his walk-in (his
+    // solo beat, and his dignity — the one panda who never pratfalls).
+    const drops = cfg.entrance && cfg.entranceStyle === 'drop' && !hasHat;
+    const entry = cfg.entrance && !drops ? pickEntry(rng, cfg, entities) : null;
+    const spot = entry ?? (drops ? pickDropSpot(rng, cfg, entities) : clearSpot(rng, cfg, entities, 90));
     const e = makeEntity(i, Math.round(entry ? entry.sx : spot.x), Math.round(entry ? entry.sy : spot.y), {
       hasHat,
       oblivious,
@@ -424,6 +456,24 @@ export function spawnEntities(rng, cfg) {
       e.home = [Math.round(entry.x), Math.round(entry.y)];
       e.aTimer = hasHat ? 0 : cfg.entranceLead + Math.floor((i - 1) / cfg.entranceWaveSize) * cfg.entranceWaveGap;
       e.moveTimer = 1;
+    } else if (drops) {
+      // Dropping in: the entity sits AT its landing spot for its whole entrance —
+      // parked, then falling — and the sim never moves it. The fall is drawn by
+      // the renderer (dropLift), the way the hiccup pop is; `flying` is what
+      // marks a dropper apart from a walker, keeps it out of collisions, and
+      // draws it above the field on the way down. Same wave clock as the walk.
+      e.mode = MODE.ENTERING;
+      e.entering = true;
+      e.flying = true;
+      e.anim = ANIM.WALK;
+      if (oblivious) e.home = [e.x, e.y]; // it lands on its patch
+      // Each dropper draws its own moment (no wave ladder — see config), plus a
+      // bounce heading and whether it bounces at all, all decided now so the
+      // entrance FSM stays a pure function of (entity, cfg).
+      e.aTimer = rng.intBetween(cfg.dropDelayMin, cfg.dropDelayMax);
+      e.aHeading = rng.int(8);
+      e.aStep = rng.chance(cfg.dropBounceP) ? 1 : 0;
+      e.moveTimer = 1;
     } else {
       if (oblivious) e.home = [e.x, e.y];
       e.moveTimer = rng.intBetween(1, moveSpeed); // stagger first strides
@@ -436,6 +486,44 @@ export function spawnEntities(rng, cfg) {
     entities.push(e);
   }
   return entities;
+}
+
+// One tick of the drop-in: park until this panda's moment (aTimer, drawn at
+// spawn), fall for `dropTicks`, then — if it drew a bounce — one rebound hop
+// along `aHeading` before settling. The heights are presentation (renderer
+// dropLift); the sim pins the fall to its landing spot and moves the ground
+// position only through the rebound, clamped by bounds and fence, so nothing
+// here can sweep the collision grid or hop onto the hero card. Phases in
+// `aPhase`: 0 parked, 1 falling, 2 rebounding. Returns true on the settling
+// tick; the caller starts the knock (the arrival IS the collision animation).
+export function advanceEntranceDrop(e, cfg) {
+  if (e.aTimer > 0) {
+    e.aTimer -= 1;
+    snapVisual(e);
+    return false;
+  }
+  if (e.aPhase === 0) {
+    e.aPhase = 1; // released — the renderer starts the fall this tick
+    e.aCount = cfg.dropTicks;
+  }
+  if (e.aPhase === 2) {
+    const per = cfg.dropBounceDist / cfg.dropBounceTicks;
+    const moved = applyPos(cfg, e.lx, e.ly, e.lx + DX[e.aHeading] * per, e.ly + DY[e.aHeading] * per);
+    e.lx = moved.x;
+    e.ly = moved.y;
+  }
+  snapVisual(e);
+  if (--e.aCount > 0) return false;
+  if (e.aPhase === 1 && e.aStep > 0) {
+    e.aStep -= 1; // first impact — up it goes again
+    e.aPhase = 2;
+    e.aCount = cfg.dropBounceTicks;
+    return false;
+  }
+  e.aPhase = 0;
+  e.entering = false;
+  e.flying = false;
+  return true;
 }
 
 // One tick of the walk-in: hold off-stage until this panda's wave is due, then

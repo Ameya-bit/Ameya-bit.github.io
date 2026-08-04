@@ -1,0 +1,92 @@
+<!--
+  TOC rail state — inlined into every page via `include-after-body` in _quarto.yml.
+
+  Sets one attribute, `data-toc="full" | "sunk"`, on <html>. All of the styling
+  lives in styles.scss under "The rail follows scroll DIRECTION"; this file only
+  decides when.
+
+  THE RULE: scrolling down collapses the rail to a single mark, scrolling up
+  brings the words back, and the top of the page always shows them. Scrolling
+  down is reading and reading wants an empty margin; scrolling up is looking for
+  something, which is the only moment a table of contents is worth any peripheral
+  vision at all.
+
+  What stays behind in the collapsed state is a column of 1px hairlines, one per
+  section, with the active one in full ink and the rest gray — enough to answer
+  "where am I, out of how many" without asking, and enough to be a visible target
+  for the hover that brings the words back. A rail that vanishes completely has no
+  handle, so only a reader who already knew it was there could ever retrieve it.
+
+  This one genuinely needs scroll position — direction cannot be observed with an
+  IntersectionObserver — so it is a passive listener that does nothing but store a
+  number, with the work deferred to rAF. The rest of the site's scroll-spy stays
+  on IntersectionObserver.
+
+  HYSTERESIS is the whole difficulty. A naive `y > lastY` flips state on every
+  sub-pixel trackpad wobble and makes the rail strobe, so movement is accumulated
+  and the state only flips once travel in one direction passes THRESHOLD.
+
+  Bails out on pages with no TOC, so the homepage pays nothing but the parse.
+-->
+<script>
+  (() => {
+    const toc = document.querySelector("#TOC");
+    if (!toc) return;
+
+    const root = document.documentElement;
+    const header = document.querySelector("#title-block-header");
+
+    // Travel required before the rail changes its mind. Below ~8px this reads as
+    // flicker on a trackpad; much above ~40px and a deliberate flick upward feels
+    // like it was ignored.
+    const THRESHOLD = 24;
+
+    let lastY = window.scrollY;
+    let travel = 0;
+    let state = "full";
+    let ticking = false;
+
+    const setState = (next) => {
+      if (next === state) return;
+      state = next;
+      root.dataset.toc = next;
+    };
+
+    const update = () => {
+      ticking = false;
+      const y = window.scrollY;
+      const delta = y - lastY;
+      lastY = y;
+      if (delta === 0) return;
+
+      // While any of the title block is still on screen the reader is orienting,
+      // not reading — the rail stays regardless of which way they are going.
+      const top = header ? header.getBoundingClientRect().bottom > 0 : y < 200;
+      if (top) {
+        travel = 0;
+        setState("full");
+        return;
+      }
+
+      // Reset the accumulator whenever direction reverses, so travel always
+      // measures one continuous run rather than a net figure that a long scroll
+      // down could hide a short scroll up inside.
+      if ((delta > 0) !== (travel > 0)) travel = 0;
+      travel += delta;
+
+      if (travel > THRESHOLD) setState("sunk");
+      else if (travel < -THRESHOLD) setState("full");
+    };
+
+    root.dataset.toc = "full";
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(update);
+      },
+      { passive: true }
+    );
+  })();
+</script>

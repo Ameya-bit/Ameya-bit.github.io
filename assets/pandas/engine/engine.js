@@ -20,6 +20,7 @@ import { sq } from './mathx.js';
 import { detectCollisions } from './collision.js';
 import {
   MODE, ANIM, spawnEntities, isDown, easeVisual, advanceKnock, beginKnock, advanceEntrance,
+  advanceEntranceDrop,
 } from './state.js';
 import { updateAnomaly } from './anomalies.js';
 import { initDirector, runDirector, pruneIncidents } from './director.js';
@@ -38,7 +39,7 @@ import {
 function updateEntity(e, cfg, rng, state) {
   if (e.mode === MODE.WANDER) return updateWander(e, cfg, rng);
   if (e.mode === MODE.KNOCKED) return updateKnocked(e, cfg, state);
-  if (e.mode === MODE.ENTERING) return updateEntering(e, cfg);
+  if (e.mode === MODE.ENTERING) return updateEntering(e, cfg, rng);
   // Stack roles are driven wholesale by runStack (one machine owns the tower), and
   // the hat panda by updateHat — both only need a clone here.
   if (e.mode === MODE.STACK_BASE || e.mode === MODE.MOUNTING || e.mode === MODE.RIDING) {
@@ -52,8 +53,19 @@ function updateEntity(e, cfg, rng, state) {
 
 // Walking on from off-stage. On arrival it simply joins the wander — no fanfare,
 // which is the point: by the time you notice it, it is one of the troupe.
-function updateEntering(e, cfg) {
+//
+// A dropper (ENTERING + flying — only the drop entrance sets that pair) instead
+// falls onto its spot and lands straight into the ordinary knock: no shove, just
+// the fall -> lie -> stand-up it would have taken from any collision, after which
+// updateKnocked hands it to the wander like any other recovery.
+function updateEntering(e, cfg, rng) {
   const next = { ...e };
+  if (next.flying) {
+    if (advanceEntranceDrop(next, cfg)) {
+      beginKnock(next, cfg, rng, { faceDir: next.defaultFallDir, slideVx: 0, slideVy: 0 });
+    }
+    return next;
+  }
   if (advanceEntrance(next, cfg)) {
     next.mode = MODE.WANDER;
     next.anim = ANIM.WALK;

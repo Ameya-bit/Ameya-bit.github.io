@@ -29,3 +29,8 @@
 /trainer/py/runs/
 /trainer/py/__pycache__/
 /trainer/py/uv.lock
+
+# Figure pipeline scratch. `_data.npz` (6kb) IS committed on purpose — it is what
+# lets plot.py restyle every figure without a CPU rerun of the model.
+posts/**/figures/__pycache__/
+posts/**/figures/compute.log

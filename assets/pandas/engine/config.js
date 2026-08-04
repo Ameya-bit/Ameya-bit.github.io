@@ -17,7 +17,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   width: 1200,
   height: 520,
 
-  // The hero-card fence: pandas route around this rectangle (stage-local px).
+  // The hero-card fence: pandas route around it (stage-local px). One {l,t,r,b}
+  // rect, an array of rects (the hero's offset text blocks, 2026-08-03), or
   // null = no fence (headless tests). The host recomputes it from layout.
   forbid: null,
 
@@ -72,6 +73,40 @@ export const DEFAULT_CONFIG = Object.freeze({
   entranceWaveGap: msToTicks(1050), // 21 — then a wave every so often
   entranceWaveSize: 2, // "a couple at a time"
   entranceTries: 40, // attempts to find an entry lane clear of the hero card
+
+  // Which entrance. 'walk' is the original: the troupe strides on from the edges.
+  // 'drop' rains the roamers onto their spots from above the stage instead — each
+  // parks on the same wave clock, falls for `dropTicks`, and lands straight into
+  // the ordinary knock (fall -> lie -> stand up), so the arrival reuses the
+  // collision animation rather than inventing a new one. The hat panda walks on
+  // regardless of style — the watcher does not pratfall — and the corpora keep
+  // 'walk' (the default), so the Phase-B freeze never sees this branch.
+  entranceStyle: 'walk',
+  dropTicks: msToTicks(650), // 13 — airborne time; the fall's shape is presentation
+  // Drop timing is NOT the walk's wave ladder — a ladder reads as scripted when
+  // the arrivals are this fast. Each roamer draws its own moment uniformly in
+  // this window, which produces clusters and gaps the way real rain does.
+  dropDelayMin: msToTicks(400), // 8 — a beat after load before the first can fall
+  dropDelayMax: msToTicks(7000), // 140 — the sky closes after ~7s
+  // Some landers rebound once — a short hop along a random heading drawn at
+  // spawn, clamped by bounds and fence — before the knock settles them.
+  dropBounceP: 0.4,
+  dropBounceTicks: msToTicks(450), // 9 — the rebound arc
+  dropBounceRise: 46, // px — the rebound's apex (presentation)
+  dropBounceDist: 60, // px — how far the rebound carries
+
+  // ---- troupe size variance (presentation ONLY — the sim never reads these) ----
+  // Scales are drawn once per visit in the render layer (render/sizes.js) and
+  // never enter the sim: collision keeps the uniform 44x54 body, encode() is
+  // untouched, and the Phase-B freeze cannot see them. Normal about sizeMean,
+  // clamped; the hat panda is always 1 (the observer is the reference body); if
+  // no roamer clears sizeBig the largest is promoted to it, so every troupe has
+  // its big one ("most medium, a couple big"). sizeSd: 0 restores uniform.
+  sizeMean: 1,
+  sizeSd: 0.16,
+  sizeMin: 0.7,
+  sizeMax: 1.45,
+  sizeBig: 1.3,
 
   // The glide. The original moved logically in 50px hops but rendered them through
   // `transition: transform 2s`, and — critically — collision read that lagging

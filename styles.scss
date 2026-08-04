@@ -8,7 +8,7 @@
 // transitions) layers on top of this later, one at a time.
 // ---------------------------------------------------------------------------
 
-$font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+$font-family-sans-serif: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI",
   system-ui, sans-serif;
 $font-family-monospace: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 $font-family-base: $font-family-sans-serif;
@@ -84,7 +84,7 @@ $grid-margin-width: 300px;
   --page-max: 1440px;
 
   // ---- The apparatus tier ---------------------------------------------------
-  // Prose keeps the flat Inter scale. The apparatus — captions, dates,
+  // Prose keeps the flat Nunito scale. The apparatus — captions, dates,
   // categories, the rail, listing metadata — drops to `--text-apparatus` and
   // gray, and otherwise stays in the family.
   //
@@ -114,6 +114,10 @@ $grid-margin-width: 300px;
   // prose flat while letting apparatus drop is the whole system — the flat
   // scale only reads as deliberate when something else is allowed not to be.
   --text-apparatus: 0.875rem; // 14px
+  --text-filing: 0.75rem; // 12.75px — the filing line only, one step under the
+                          // apparatus tier. Referred to, not read. #6f6f69 on
+                          // #fdfdfc is 4.97:1, so the step down costs nothing in
+                          // contrast. This is the floor; nothing else goes here.
 }
 
 html {
@@ -124,7 +128,9 @@ body {
   background: var(--gray-100);
   color: var(--gray-1200);
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "cv01", "ss03";
+  // cv01/ss03 were Inter's stylistic sets (single-storey a, disambiguated l).
+  // Nunito has no such axes, so the only feature rule left is the one that
+  // still applies: ligatures off, so code-ish strings in prose stay literal.
   font-variant-ligatures: none;
 }
 
@@ -191,13 +197,20 @@ h3, .h3, h4, .h4 { font-weight: 500; }
   // box as the page grid, with the grid's own 1.5em screen inset as padding, so
   // it lands flush with the TOC rail at every viewport instead of only at the
   // width this was originally tuned on.
+  // The name is pinned to the SCREEN's left inset, not to the capped grid's.
+  // Tracking `--page-max` kept it flush with the rail, but on anything wider
+  // than 1440px it pushed both of them inward together — at 1920px the name and
+  // the rail sat 266px from the edge, floating in the middle-left of the screen
+  // rather than holding a margin. The article column still lives in the capped,
+  // centred grid; the margin furniture now holds the actual edge of the window,
+  // which is what a margin is. The rail gets the matching treatment below.
   @media (min-width: 992px) {
     body:not(:has(.hero-screen)) #quarto-header > & {
       padding-inline: 0;
 
       > .container-fluid {
-        max-width: var(--page-max);
-        margin-inline: auto;
+        max-width: none;
+        margin-inline: 0;
         padding-inline: 1.5em;
       }
     }
@@ -300,15 +313,25 @@ body:has(.hero-screen) main.content {
   }
 
   // ---- Epistemic status / closing aside ------------------------------------
-  // A paragraph whose entire content is italic is, by convention in this kind of
-  // writing, not part of the argument — it is the confidence note up top and the
-  // nudge at the end. Both bookends of the induction-head post are exactly that
-  // shape, and Pandoc emits them as `<p><em>…</em></p>`, so the selector needs no
-  // markdown changes and no shortcode. Treating them as apparatus (small tier,
-  // secondary ink, hairline rule) says "this is a frame around the post" far more
-  // clearly than italics can — so the italics come off; the block carries the
-  // meaning now. Flip `font-style` back to italic below if you disagree.
-  p:has(> em:only-child) {
+  // A block that frames the post rather than arguing it — the confidence note up
+  // top, the revision notice, the nudge at the end. Rendered as apparatus (small
+  // tier, secondary ink, hairline rule), which says "this is a frame around the
+  // post" far more clearly than italics can, so the italics come off and the
+  // block carries the meaning. Flip `font-style` back to italic if you disagree.
+  //
+  // Written `::: {.epistemic}` in the markdown (`.aside` is reserved — Quarto
+  // uses it to move content into the margin column), and it has to be explicit. This was
+  // `p:has(> em:only-child)` — chosen to catch fully-italic paragraphs with no
+  // markdown changes — and that selector is wrong in a way that stayed hidden
+  // while the posts had long paragraphs. `:only-child` counts ELEMENT children;
+  // text nodes are not elements. So `<p>Some prose with <em>one</em> italic
+  // word.</p>` matches it exactly as well as `<p><em>whole paragraph</em></p>`
+  // does. Rewriting the IOI post into 1–3 sentence paragraphs made a single
+  // emphasised word the only element in a paragraph over and over, and four
+  // paragraphs of ordinary argument silently dropped into the apparatus tier at
+  // 14px behind a rule. No CSS selector can express "this element is the only
+  // node here", so the class is not a workaround — it is the only correct form.
+  .epistemic {
     font-size: var(--text-apparatus);
     line-height: 1.6;
     color: var(--gray-1100);
@@ -316,7 +339,14 @@ body:has(.hero-screen) main.content {
     padding-left: 20px;
     margin-bottom: 56px;
 
-    > em {
+    p {
+      font-size: inherit;
+      line-height: inherit;
+      color: inherit;
+      margin-bottom: 0;
+    }
+
+    em {
       font-style: normal;
     }
   }
@@ -381,25 +411,50 @@ body:has(.hero-screen) main.content {
 }
 
 // ---- Post masthead ----------------------------------------------------------
-// Publication grammar rather than Emil's grammar: he opens a post with a bare
-// h1 and nothing else — no date, no description, no categories anywhere on the
-// page. We have all three and they are worth showing, so the block is built the
-// way a journal builds one: title, standfirst, hairline, then the filing line
-// (date · categories) in the apparatus tier underneath.
+// TITLE, then the filing line directly under it. That is the whole header.
+//
+// It used to be title → standfirst → hairline rule → filing line, which was the
+// journal grammar done thoroughly and was also four objects deep before a reader
+// reached a sentence of the actual post. Two things came out (2026-08-03):
+//
+//   * THE STANDFIRST, because the epistemic block twelve lines below it was
+//     already saying the same thing in the same register. Two summaries of one
+//     post, stacked, is not a header — it is the post starting twice. The
+//     `description:` front matter stays and is still doing three jobs: the
+//     homepage listing, the OG card, and the meta description. It is only hidden
+//     HERE, where it was redundant.
+//   * THE HAIRLINE RULE, which existed to separate the standfirst from the
+//     filing line. With the standfirst gone it had nothing left to separate, and
+//     a rule between a title and the date under it argues they are different
+//     things when they are the same thing: what this is and when it was filed.
+//
+// The space that used to be spent on those two now goes below the header instead
+// — reference sites disperse date, keywords and summary down the page rather
+// than compressing them into one block, and the cheapest version of that idea is
+// to stop stacking and start spacing.
 //
 // Quarto's DOM order is h1 + categories, description, date. Flexing the header
 // and giving `.quarto-title` `display: contents` promotes h1 and the categories
 // to direct flex items, so `order` can put the filing line last and sit the date
-// and categories on one shared row. The 1px rule is the header's own ::after —
-// a pseudo-element on a flex container is a flex item, so it orders like the
-// rest and needs no extra markup.
+// and categories on one shared row.
 #title-block-header.quarto-title-block {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
+  // The gap between the dates and the categories belongs to the LAYOUT, not to
+  // the categories. Carried as a `margin-left` on `.quarto-categories` it
+  // travelled with the element, so a filing line long enough to wrap — date ·
+  // revised date · two categories — put the categories on a second line still
+  // holding a 28px indent, which reads as a mistake rather than as a wrap. A
+  // column-gap only applies between items that share a line.
+  column-gap: 1.75rem;
   padding-top: 64px;
-  margin-bottom: 80px; // the filing line and the epistemic block are both small
-                       // gray text; they need real air or they read as one unit
+  // Four lines of the 28.9px prose rhythm. The filing line and the epistemic
+  // block are both small gray text, so with anything less they read as one
+  // stacked unit — and this gap is now the header's ONLY separator, doing the
+  // job the hairline rule and the standfirst used to share. Space is the
+  // cheapest material on the page and the only one that cannot look busy.
+  margin-bottom: 116px;
 
   .quarto-title {
     display: contents;
@@ -430,12 +485,17 @@ body:has(.hero-screen) main.content {
     margin-bottom: 0;
   }
 
+  // The standfirst is hidden, not deleted. `description:` still populates the
+  // homepage listing, the Open Graph card and the meta description — it is only
+  // redundant HERE, sitting a few lines above an epistemic block that frames the
+  // post in the same voice. Kept as a rule rather than removed from the front
+  // matter so those three other consumers keep working.
   > div:has(> .description) {
-    flex: 0 0 100%;
-    order: 2;
-    margin-top: 16px; // the title is bigger now; the standfirst needs more air
+    display: none;
   }
 
+  // Still styled, because the homepage listing and any future post that wants a
+  // visible standfirst read from here.
   .description,
   .subtitle {
     font-size: 1rem;
@@ -444,26 +504,28 @@ body:has(.hero-screen) main.content {
     margin-bottom: 0;
   }
 
-  // The homepage also gets a #title-block-header — an empty one, since the hero
-  // is raw HTML — so the rule has to be conditional on there actually being a
-  // title above it, or a stray hairline floats over the hero.
-  &:has(h1.title)::after {
-    content: "";
-    flex: 0 0 100%;
-    order: 3;
-    height: 1px;
-    background: var(--gray-400);
-    margin-block: 28px 14px;
-  }
-
+  // The filing line sits DIRECTLY under the title — no rule, no standfirst
+  // between them. 20px is close enough to read as one block (title and its
+  // filing details are the same statement) without the date crowding the
+  // descender line of a 27px title.
   .quarto-title-meta {
     order: 4;
+    margin-top: 20px;
   }
 
+  // Pushed to the far edge of the filing row, so the line reads as one ruled
+  // band with the date anchoring the left and the subject anchoring the right —
+  // the two things a reader scans for — and the measure of the column doing the
+  // separating instead of a fixed gap. `margin-left: auto` on a flex item eats
+  // all the free space on its line, which is also what guarantees the two groups
+  // never look like one run-on chain.
   .quarto-categories {
     order: 5;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    margin-left: auto;
+    margin-top: 20px; // matches the date's, so the two halves of the filing line
+                      // sit on one baseline now that nothing precedes them
   }
 }
 
@@ -472,19 +534,27 @@ body:has(.hero-screen) main.content {
 // main.content, so an unqualified `.quarto-title-meta-contents p.date` loses the
 // id-weight fight and the date silently snaps back to 16px.
 #title-block-header {
-  // The filing line stays Inter. Mono was tried here and pulled back: the tier
+  // The filing line stays Nunito. Mono was tried here and pulled back: the tier
   // is meant to give the apparatus a quieter *role*, but changing typeface AND
   // size AND tracking AND case at once is not a quieter tier, it is a second
   // voice — and on a page with this little content variety it read as a clash
   // rather than a system. Mono is now confined to one thing: the numbering
   // system (section numerals and their TOC counterparts). Numbers are what an
   // instrument shows; the moment mono touches words it stops being instrumentation.
+  // The filing line runs one step BELOW the rest of the apparatus, at
+  // `--text-filing` rather than `--text-apparatus`. Captions and the TOC are
+  // apparatus you actually read; the filing line is apparatus you *refer to* —
+  // nobody reads a date, they check it. At 14px it had the same presence as a
+  // figure caption while carrying a fraction of the meaning, which is what made
+  // the header feel bottom-heavy under a title that had just been given its
+  // one scale jump. This is the tier's floor: nothing else goes here.
   .quarto-title-meta,
   .quarto-title-meta-heading,
   .quarto-title-meta-contents,
   .quarto-title-meta-contents p.date,
+  .quarto-title-meta-contents p.date-modified,
   .quarto-categories {
-    font-size: var(--text-apparatus);
+    font-size: var(--text-filing);
     line-height: 1.6;
     color: var(--gray-1000);
     margin-bottom: 0;
@@ -496,19 +566,47 @@ body:has(.hero-screen) main.content {
   // the categories, which are meant to share one filing row, wrapped onto two
   // lines the moment the categories got any wider. One content-sized column, and
   // the row fits with room to spare.
-  .quarto-title-meta {
-    grid-template-columns: max-content;
+  // Flex, not grid — and note the selector. Quarto ships this as
+  // `#title-block-header.quarto-title-block.default .quarto-title-meta`
+  // { display: grid; grid-template-columns: repeat(2, 1fr) }, which is (1,3,0).
+  // A rule written `#title-block-header .quarto-title-meta` is (1,1,0) and
+  // silently loses — the previous `grid-template-columns: max-content` fix here
+  // never applied at all, and the filing row had been sitting in two 1fr columns
+  // the whole time. It only looked correct because with a single date the empty
+  // second column was invisible; adding `date-modified:` is what exposed it, as
+  // a ~160px gap between the two dates and categories pushed onto their own line.
+  //
+  // The filing line is one chain of short text, so lay it out as one: a flex row
+  // exactly as wide as its content, whether that content is one date or two.
+  &.quarto-title-block.default .quarto-title-meta {
+    display: flex;
+    flex-wrap: wrap; // wrap, so that on a phone the two dates stack whole rather
+                     // than sitting side by side each broken across two lines
+    align-items: baseline;
+    column-gap: 1.75rem; // same step as the header's, so all three middots in
+                         // `date · revised · category · category` sit alike
   }
 
   .quarto-title-meta-heading {
     display: none; // "Published" label is noise; the date speaks for itself
   }
+
+  // The revision joins the filing row in the same middot grammar the categories
+  // use, so the line reads as one chain — date · revised date · categories —
+  // rather than as three separately-designed metadata objects. Corrections are
+  // apparatus a publication owes its readers; a research site that quietly
+  // edits a wrong number in place is worse than one that shows the date it
+  // stopped being wrong.
+  .quarto-title-meta-contents p.date-modified {
+    &::before {
+      content: "· revised ";
+    }
+  }
 }
 
-// Categories return as plain filing text, not pills — a middot chain hanging off
-// the date. Pills would be the only rounded, filled object on a post page.
+// Categories return as plain filing text, not pills — pills would be the only
+// rounded, filled object on a post page.
 #title-block-header .quarto-categories {
-  margin-left: 1.75rem; // the gap that makes date + categories read as one row
 
   .quarto-category {
     background: none;
@@ -519,11 +617,49 @@ body:has(.hero-screen) main.content {
     text-transform: none; // Quarto ships these uppercase at .65em; small caps are
                           // a second voice the page doesn't otherwise speak
     opacity: 1;
+    white-space: nowrap; // a category is a label, not a sentence; letting
+                         // "mechanistic interpretability" break mid-phrase is
+                         // what would put the filing line back onto two rows
 
-    &::before {
+    // The middot separates categories from EACH OTHER. It used to sit before
+    // every one of them, which was right when the categories hung directly off
+    // the date as one chain — now that they are their own right-aligned group,
+    // a leading middot dangles off nothing.
+    + .quarto-category::before {
       content: "·";
       margin-inline: 0.6ch;
     }
+  }
+
+  // Two, and only two. The filing line's one-line guarantee is a function of how
+  // much text is in it, so it is enforced here rather than left to whatever a
+  // future post's front matter happens to declare. Every category still ships in
+  // the HTML for search and for Quarto's category index — this hides the tail
+  // from the header, it does not drop the data.
+  .quarto-category:nth-of-type(n + 3) {
+    display: none;
+  }
+}
+
+// The justified single line needs the FULL measure, and the full measure needs
+// the full grid: sidebar 300 + body 692 + margin 300 is ~1300px before the body
+// column stops being compressed. Above that the filing line reliably fits on one
+// row; below it the row wraps, and a second line still carrying
+// `margin-left: auto` is right-aligned under a left-aligned date, which reads as
+// a mistake rather than as a wrap.
+//
+// Worth recording that this took four tries — 620px, 800px, then 992px — because
+// each was a guess at "when does the text stop fitting" instead of a statement
+// about when the LAYOUT changes. 992px was the most tempting and still wrong:
+// it is where Quarto collapses to one column, but the measure is already
+// squeezed well above it, so the row was wrapping at 992-1300 with the
+// right-alignment still on.
+// The selector has to carry `.quarto-title-block` to match the (1,2,0) of the
+// rule it is overriding — see the specificity note above; this is the third time
+// a filing-row rule has silently lost that fight.
+@media (max-width: 1300px) {
+  #title-block-header.quarto-title-block .quarto-categories {
+    margin-left: 0;
   }
 }
 
@@ -730,7 +866,7 @@ html.figure-zoom-open {
 
 // ---- Homepage: previous hero layout, Emil materials -------------------------
 // The homepage alone breaks the narrow column: full-viewport hero + wide
-// writing list. Everything is still built from the Emil system (Inter, sand
+// writing list. Everything is still built from the Emil system (Nunito, sand
 // grays, underline links, instant hovers, no accent).
 .hero-screen {
   display: flex;
@@ -747,22 +883,31 @@ html.figure-zoom-open {
   align-items: center;
 }
 
+// The editorial hero (2026-08-03): claim → answer → filing, all flush left.
+// Three registers, one per beat: display / prose / apparatus — the same grammar
+// as a post's title → standfirst → filing line. The engine fences each block
+// separately (site.js passes all three selectors), so the ragged right the three
+// widths leave is real panda territory, not dead space inside one big rect.
 .hero-inner {
-  max-width: 46rem;
-  // an invisible fence: pandas walk around this box, never behind it (pandas.js
-  // reads its rect). The padding sets how much clear space rings the text.
-  padding: clamp(1.75rem, 3.5vw, 3rem);
+  width: 100%;
 }
 
-// Scoped under the content id so these outrank the prose p rules
+// Scoped under the content id so these outrank the prose p rules.
+// The clamp max dropped 3.25rem → 2.75rem with the 2026-08-03 copy: the new
+// headline is ~25% longer, and 2.75rem is the size at which it sets as two even
+// lines broken at the em dash (the <br> in the markup) instead of three stacked
+// ones. Still the page's one scale event.
 #quarto-content main.content .hero-headline {
   font-weight: 600;
-  font-size: clamp(2rem, 1.2rem + 3vw, 3.25rem);
+  font-size: clamp(1.75rem, 1rem + 2.6vw, 2.75rem);
   line-height: 1.12;
   letter-spacing: -0.02em;
   color: var(--gray-1200);
-  margin: 0 0 28px;
+  margin: 0 0 48px;
   text-wrap: balance;
+  // Shrink the block to its longest line: the fence reads this element's rect,
+  // and a full-shell <p> would fence off the empty right sliver too.
+  width: fit-content;
 }
 
 #quarto-content main.content .hero-lede {
@@ -770,7 +915,41 @@ html.figure-zoom-open {
   line-height: 1.65;
   color: var(--gray-1100);
   max-width: 40rem;
-  margin: 0 0 36px;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.hero-filing {
+  margin-top: 56px;
+  // Same fence logic as the headline: without this the block spans the shell and
+  // its fence rect steals the whole bottom band, not just the filing corner.
+  width: fit-content;
+}
+
+// The status line is apparatus, deliberately: it is the one sentence in the hero
+// that goes stale (the current experiment), and setting it as a filing line makes
+// it look like the status it is rather than a fourth paragraph. Mono here is the
+// same role mono plays on posts — numerals and filing — not a new material.
+#quarto-content main.content .hero-status {
+  font-family: var(--font-apparatus);
+  font-size: var(--text-apparatus-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-1000);
+  margin: 0 0 16px;
+}
+
+// Below the engine's own stage floor (it leaves the hero empty under 800px) the
+// hand-set break goes, so the headline wraps naturally in a narrow column, and
+// the filing corner pulls in a notch.
+@media (max-width: 799.98px) {
+  #quarto-content main.content .hero-headline br {
+    display: none;
+  }
+
+  .hero-filing {
+    margin-top: 44px;
+  }
 }
 
 .hero-links {
@@ -838,7 +1017,7 @@ main.content > :last-child {
 // stage empty. Sprite + collision reproduced from ma5a's "panda collision" (MIT);
 // the hat is ours.
 .hero { position: relative; }               // stage anchors to the hero box
-.hero-inner { position: relative; z-index: 1; }   // the fenced card sits above pandas
+.hero-inner { position: relative; z-index: 1; }   // the text blocks sit above pandas (fence = the three blocks, not this wrapper)
 // keep the full-bleed stage from ever adding a horizontal scrollbar
 body:has(.hero-screen) { overflow-x: hidden; }
 
@@ -1038,28 +1217,106 @@ body:has(.hero-screen) { overflow-x: hidden; }
   // fits the space it has.
   justify-self: stretch;
   min-width: 0;
+
+  padding-left: 0; // Quarto insets the sidebar's contents 20px; measured, the
+                   // sidebar box itself already lands on the 26px screen inset
+                   // that the masthead uses, so the inset was pure drift.
+
+  // Escape the capped grid, the same way the masthead now does. `#quarto-content`
+  // is capped at `--page-max` and centred, so above 1440px the whole assembly —
+  // rail included — drifts inward by half the overflow. Pulling the rail back by
+  // exactly that amount lands it on the window's own inset at every width, while
+  // the article column stays centred in the capped box where it belongs.
+  // `min(0px, …)` so nothing happens below the cap, where the offset would be
+  // positive and would shove the rail to the right.
+  margin-left: min(0px, calc((var(--page-max) - 100vw) / 2));
+
+  // Vertically centred in the viewport, Rauno's placement. A rail pinned near
+  // the top sits in peripheral vision at exactly the height the eye rests at
+  // while reading, which is most of why it read as a permanent block; centred,
+  // it becomes something you look DOWN or UP to rather than something already in
+  // the way. Sticky, never fixed — `position: fixed` on this element is what
+  // broke Quarto's sidebar geometry recompute before (see the gotchas in
+  // design/direction.md); a full-height sticky box that centres its own child is
+  // the same visual result with none of that risk.
+  @media (min-width: 992px) {
+    // ---- BLEED: room to the left of the rail for the active mark -----------
+    // Quarto ships this element `class="… overflow-auto"`, so its padding box is
+    // a clipping box — and the rail's left edge IS that box's left edge. Anything
+    // hanging into the margin gets cut off, which is not a hypothetical: the
+    // active link's `border-left` was specified vermillion and had never once
+    // rendered, because the anchor carries `margin-left: -0.75rem` to put it
+    // exactly there. The bug hid the only thing that would have revealed it.
+    //
+    // Fixed by moving the CLIP EDGE left rather than moving the mark right: pull
+    // the box out by `--rail-bleed` and pad the contents back by the same amount,
+    // so every child lands precisely where it did before and only the clip
+    // changes. `overflow: auto` is left alone — a TOC taller than the viewport
+    // still scrolls rather than spilling off screen, which switching to
+    // `overflow: visible` would have cost. 1.5rem is the grid's own screen inset,
+    // so the clip edge lands on the window edge and a margin mark can never be
+    // trimmed again.
+    //
+    // Scoped to ≥992px on purpose. Below that Quarto collapses this element into
+    // an off-canvas menu with its own transform and its own idea of where its
+    // left edge is, and there is no margin rail down there to need the room.
+    --rail-bleed: 1.5rem;
+    padding-left: var(--rail-bleed);
+    margin-left: calc(
+      min(0px, calc((var(--page-max) - 100vw) / 2)) - var(--rail-bleed)
+    );
+
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100svh;
+    display: flex;
+    // Quarto already ships `#quarto-sidebar { flex-direction: column }`, so both
+    // axes have to be named explicitly. Setting `align-items: center` alone
+    // centred the rail HORIZONTALLY — a column's cross axis is the horizontal
+    // one — and pushed it 54px off the left edge it is supposed to share with
+    // the masthead.
+    flex-direction: column;
+    justify-content: center; // vertical, in a column
+    align-items: flex-start; // horizontal: stay hard left
+    pointer-events: none; // the empty 100vh box must not eat clicks in the
+                          // gutter; the rail itself takes them back below
+
+    // Quarto paints the sidebar `background-color: #fdfdfc`. That was harmless
+    // while the box was only as tall as its own six links; at 100vh and
+    // `position: sticky` it became a full-height opaque, POSITIONED panel
+    // covering the whole left band — and the article's section numerals hang in
+    // that band at `left: -3.4rem`, so they were being painted over. The rail
+    // sits on the page colour anyway, so it has no need of a background of its
+    // own.
+    background: transparent;
+  }
 }
 
 #quarto-content.page-columns #quarto-sidebar #TOC {
   max-width: 220px; // keep the rail narrow and left-aligned in the wide band
+  pointer-events: auto;
+  // Quarto pads the sidebar's children, which left the rail sitting ~26px in
+  // from the screen inset the masthead uses. Zeroed, so the name and the rail
+  // share one vertical edge — the point of parking the name in the gutter in the
+  // first place was that the two read as one left margin, and 26px of drift is
+  // enough to read as two.
+  padding-left: 0;
+  margin-left: 0;
 }
 
-// The rail joins the apparatus tier: mono, and numbered to match the headings it
-// points at. The counter here is a second, independent one — Quarto's TOC is a
-// flat `ul` of top-level items with nested `ul`s beneath, so numbering the
-// direct `li` children of the outer list lines up one-for-one with the h2s,
-// while sub-items stay unnumbered exactly as they are in the page.
-// The rail is Inter again. Labels are words, and words in mono read as a
-// different font rather than a quieter tier — which is exactly how it landed.
-// What stays mono is the numeral, because that is the numbering system and it
-// matches the one hanging in the article's gutter. One mono material on the
-// page, used in two places for the same purpose.
+// The rail is Nunito, unnumbered, and marked. Labels are words, and words in mono
+// read as a different font rather than a quieter tier — which is exactly how it
+// landed the first time. The numerals that used to sit here are gone too: once
+// every section has its own mark, a number beside that mark is the same fact
+// stated twice, and the marks are the version that survives the collapse. Mono
+// still exists on the page — the article's h2 gutter numerals are untouched —
+// it just no longer has a counterpart in the rail.
 #TOC,
 .sidebar nav[role="doc-toc"] {
   font-size: var(--text-apparatus);
-  counter-reset: toc-section;
 
-  // Uppercase and tracked keeps the kicker role; Inter keeps it in the family.
+  // Uppercase and tracked keeps the kicker role; Nunito keeps it in the family.
   h2,
   .toc-title {
     font-size: var(--text-label);
@@ -1069,56 +1326,288 @@ body:has(.hero-screen) { overflow-x: hidden; }
     color: var(--gray-1000);
   }
 
-  > ul > li {
-    counter-increment: toc-section;
+  // The last 6px of drift: a `ul` keeps its list padding even with the markers
+  // gone. Zeroed, the anchors start on the same vertical line as the kicker
+  // above them and the masthead above that.
+  > ul {
+    padding-left: 0;
+    margin-left: 0;
+  }
 
-    // Hanging indent. The numeral was an inline ::before, so a wrapped item
-    // ("Finding a copying head") put its second line under the *number* instead
-    // of under the label — three of six items were ragged, which is most of why
-    // the rail read as unformatted rather than deliberate. Absolute numeral,
-    // padded label, and continuation lines align with the first.
+  > ul > li {
+    // Containing block for the mark below. Quarto ships the `li` static.
+    position: relative;
+
+    // The labels clear the mark column. This used to be a hanging indent for an
+    // absolutely-positioned numeral (`margin-left: -0.75rem` + a 2.4rem pad);
+    // with the numeral gone the anchor sits flush in the rail and needs only
+    // enough padding that the mark reads as a margin mark rather than a bullet
+    // touching the text.
+    //
+    // ONE LINE PER LABEL, enforced. This is what makes the marks evenly spaced:
+    // each one sits beside its own label, so a label that wraps to two or three
+    // lines pushes every mark below it down and the rail's spacing ends up
+    // encoding word-wrap. The real fix is editorial — **section headings are
+    // written short enough to fit** (see design/direction.md; ~30 characters at
+    // this measure) — and this is the tripwire that keeps it true rather than
+    // leaving the rail's geometry at the mercy of whatever a future post
+    // declares. Same reasoning as the two-category cap on the filing row.
+    // **An ellipsis appearing in the rail is a bug report about the heading, not
+    // a styling choice**: shorten the heading, do not widen the rail.
     > a {
       position: relative;
-      padding-left: 2.4rem;
-
-      &::before {
-        content: counter(toc-section, decimal-leading-zero);
-        position: absolute;
-        left: 0.7rem;
-        font-family: var(--font-apparatus);
-        font-size: var(--text-apparatus-mono);
-        color: var(--gray-1000);
-      }
+      padding-left: 1.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    // Sub-items (h3) are unnumbered, so without this they would sit at Quarto's
-    // default indent — shallower than the numbered labels above them, which
-    // would reintroduce exactly the ragged left edge the hanging indent fixes.
-    // Neither post has an h3 yet; this is here so the first one doesn't break it.
+    // Sub-items (h3) match the top-level treatment so they cannot reintroduce
+    // uneven spacing either. They get no mark of their own: a second tick length
+    // or shade to encode depth is a real decision, and neither post has an h3 to
+    // make it against yet.
     ul a {
-      padding-left: 2.4rem;
+      padding-left: 1.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    // ---- THE MARKS ------------------------------------------------------
+    // One 1px × 12px hairline per section, and this is what the rail collapses
+    // to. A single mark was tried first and was the wrong object: alone in an
+    // empty margin it is a dot with nothing to be measured against, so it can
+    // say "here" but not "here, out of six" or "near the end". Marks are only
+    // legible as a set. Ranked by ink, not colour — `--gray-800` for the rest,
+    // full ink for the active one — which is the same gray-to-ink ladder the
+    // labels themselves use, so the rail ranks one way rather than two.
+    //
+    // Still NOT Rauno's ruler of horizontal dashes. A vertical hairline in the
+    // left margin is the oldest mark in the trade — the printer's change bar —
+    // and it already existed in this stylesheet as the active link's
+    // `border-left`, so a column of them costs no new material.
+    //
+    // Parked on the `li` rather than the anchor for one reason: the collapse
+    // scales the anchor to nothing, and a pseudo-element inherits its parent's
+    // transform. On the `li` the marks are outside that transform and simply
+    // stay.
+    //
+    // Geometry, measured rather than guessed. `left: 0` puts the marks on the
+    // rail's own left edge, which is the line the masthead and the kicker
+    // already hold — with the numerals gone the marks inherit that job, and
+    // they are the right holder for it because they are what remains on screen
+    // while the reader reads. Vertically each one centres on its label's first
+    // line box: Quarto's `.nav-link` pads 0.2rem and sets a 1.1rem line-height,
+    // and 0.2 + 1.1/2 = exactly 0.75rem.
+    //
+    // The height is FIXED at 12px. The `border-left` this replaces took the
+    // anchor's height, so it ran 25px beside a one-line label and 63px beside a
+    // three-line one — a mark whose length looks like it encodes something and
+    // in fact encodes word-wrap. Fixed, length says nothing and only position
+    // and shade carry meaning. Note the SPACING is still uneven, because each
+    // mark sits beside its own label and labels wrap to one, two or three
+    // lines. That is deliberate: even spacing would need the marks to detach
+    // from the labels, and then hovering would reveal words that do not line up
+    // with the marks that summoned them. Consistency between the two states is
+    // worth more than a metronomic rail.
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: calc(0.75rem - 6px);
+      width: 1px;
+      height: 12px;
+      background: var(--gray-800);
+    }
+
+    &:has(> a.active)::after {
+      background: var(--gray-1200);
     }
   }
 
   .nav-link {
     color: var(--gray-1000);
+
+    // Bootstrap ships `.nav-link { transition: color .15s, background-color
+    // .15s, border-color .15s }`, so the rail's gray→ink hover was fading over
+    // 150ms while every other link on the site changes instantly — Layer 1's
+    // link rule is explicit that hovers are untransitioned. It never touched
+    // opacity or transform, so the collapse was unaffected and the leak was
+    // invisible until the reveal timings were split apart and measured.
+    // Zeroing it here also makes the base state genuinely transition-free, which
+    // is what the hover and focus reveals fall back to in order to be instant.
+    // The two scroll rules below are (1,2,0) and (1,4,0) against this (1,1,0),
+    // so they still win where they should.
+    transition: none;
+
+    // A shim, not a style. Quarto's own theme puts a full-height `border-left`
+    // on the active TOC link, and deleting our declaration simply hands the rail
+    // back to it — a rule as tall as the item, drawn in the same column as the
+    // marks, which is the exact variable-length mark the fixed 12px ones were
+    // chosen to replace. Transparent rather than `none` so the 1px it occupies
+    // stays in the box and the labels do not shift by a pixel between themes.
     border-left: 1px solid transparent;
 
     &:hover {
       color: var(--gray-1200);
     }
 
-    // The accent's last job, and the one the minimap layer was always going to
-    // need: the active tick is the only coloured mark on a resting page. The
-    // label goes to full ink, the rule goes vermillion — position is carried by
-    // colour rather than by weight, so nothing shifts as you scroll.
+    // The global `:focus-visible` ring is (0,1,0) and Bootstrap ships
+    // `.nav-link:focus-visible` at (0,2,0), so the rail — alone on the site —
+    // was drawing Bootstrap's default BLUE halo, the only colour on the page
+    // outside the palette. It matters more here than it would anywhere else:
+    // keyboard is the one route by which a reader who never scrolls up can
+    // retrieve a collapsed rail, so this ring is not a rare state, it is the
+    // entire keyboard affordance. Restated at (1,2,0) to win. The accent is
+    // correct here and is not a contradiction of the monochrome active mark —
+    // focus is an interaction, and interaction is exactly what the accent is
+    // budgeted for.
+    &:focus-visible {
+      box-shadow:
+        0 0 0 2px var(--gray-100),
+        0 0 0 4px var(--accent);
+      border-radius: 4px;
+    }
+
+    // Rank by weight and ink, not by colour — Emil's move, and the one that
+    // keeps Layer 1b's spending rule honest. The accent used to mark this,
+    // which meant vermillion sat in the margin for the entire duration of a
+    // read; that is not "colour as a response to interaction", it is the only
+    // colour on the page, permanently, in peripheral vision. Gray → ink plus
+    // 400 → 500 says the same thing in materials the page already ranks with,
+    // and the rail is now monochrome in both of its states. The mark beside it
+    // runs the same ladder from `--gray-800` to ink, so label and mark rank
+    // together rather than each in its own language.
     &.active {
       color: var(--gray-1200);
-      border-left-color: var(--accent);
+      font-weight: 500;
+    }
+  }
+}
 
-      &::before {
-        color: var(--accent-ink);
+// ---- The rail follows scroll DIRECTION ---------------------------------------
+//
+// The complaint this answers: at rest the rail is 220px of TEXT — six labels,
+// four of which wrap to two or three lines — sitting permanently in peripheral
+// vision beside a column that is also text. Severity says the page gets one
+// column of words.
+//
+// Direction, not depth, is the right signal. A depth threshold ("hide once you
+// are past the header") answers "has the reader started?" — but the question the
+// rail actually answers is "where am I / where can I go", and a reader only asks
+// that when they stop moving forward. **Scrolling down is reading, and reading
+// wants an empty margin. Scrolling up is looking for something, and that is
+// exactly when a table of contents should be there.** So the rail's words go and
+// come back the moment the scroll reverses. Hover and keyboard focus also bring
+// them back, for anyone who wants them without scrolling.
+//
+// AMENDED: the rail no longer goes to nothing. Fading the whole thing to zero
+// left two holes. (1) The affordance was invisible — `pointer-events` is left on
+// so the empty gutter still takes a hover, but that only helps a reader who
+// already knows to reach there; anyone who scrolls straight down never learns
+// the rail exists. (2) A TOC does two jobs, and only one of them is navigation.
+// The other is POSITION, which is passive and continuous: you do not summon it,
+// you glance at it. Hiding it entirely made the answer to "where am I" something
+// you had to ask for.
+//
+// So the words go and the MARKS stay — one per section, not one in total. A
+// single mark was tried first and could only say "here"; with nothing to be
+// measured against it could not say "here, out of six" or "near the end", which
+// is most of what position means. Marks are legible as a set.
+//
+// The collapse is a MORPH, not a fade: each label scales to nothing about
+// `transform-origin: left`, which is the exact column its own mark occupies, so
+// the words compress into the thing that replaces them rather than dissolving in
+// place. A dissolve in peripheral vision reads as a rendering fault; a
+// directional collapse reads as an object changing zoom level. Still transform
+// and opacity only, still incapable of reflowing the article (neither property
+// is laid out), and the marks are outside the transform because they hang off
+// the `li` rather than the anchor.
+//
+// ASYMMETRIC TIMING, and this is the load-bearing part. There are three ways in
+// and out of this state and they do NOT share a duration, because the rule is
+// not "reveal fast, hide slow" — it is **who asked, and with what**.
+//
+//   scroll down → collapse   280ms + 15ms stagger   (nobody asked; take the time)
+//   scroll up   → reveal     200ms, no stagger      (a change of reading mode)
+//   hover / Tab → reveal     INSTANT                (a direct request)
+//
+// A pointer landing in the gutter or a Tab key pressed is a request for the rail
+// *right now*, and a request answered on a curve is a request answered late —
+// Emil's rule 2 (high-frequency interactions get no animation) and rule 3 (never
+// animate keyboard-initiated actions). Reversing the scroll is not that: it is
+// the reader changing from reading to looking, which is a mode change and reads
+// better carried than cut. So scroll gets motion in both directions and the
+// pointer gets none.
+//
+// The three cases fall out of the selectors without a single extra class:
+//   · `[data-toc="full"]`  matches only after a scroll-up  → 200ms
+//   · `[data-toc="sunk"]:not(:hover):not(:focus-within)`   → 280ms + stagger
+//   · hovering while sunk matches NEITHER (data-toc is still "sunk", and the
+//     sunk rule excludes :hover) so it falls to the base rule, which declares no
+//     transition at all → instant, in and out of hover.
+// Using the `transition` shorthand in the full rule also resets the stagger's
+// `transition-delay` on the way back, so the reveal cannot inherit it.
+//
+// Still NOT Rauno's tick minimap (Layer 2) — see the note on the marks above for
+// why they are vertical change bars rather than a ruler of horizontal dashes.
+@media (min-width: 992px) {
+  // Both halves of the rail collapse: the kicker and every link. The marks are
+  // untouched by this and stay at full strength in both states.
+  #TOC .nav-link,
+  #TOC #toc-title {
+    transform-origin: left center;
+  }
+
+  // Scroll-up reveal. Slightly quicker than the collapse and deliberately
+  // unstaggered — coming back, the rail should arrive as one object rather than
+  // unrolling, because by then the reader is looking for something in it.
+  html[data-toc="full"] #TOC {
+    .nav-link,
+    #toc-title {
+      transition:
+        opacity 200ms cubic-bezier(0.16, 1, 0.3, 1),
+        transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  }
+
+  // Set by assets/site/toc-rail.html on <html>. A direction flip is a
+  // low-frequency, deliberate state change rather than a high-frequency
+  // interaction, so motion here is within the rules — and it has hysteresis in
+  // the JS so trackpad jitter cannot make it strobe.
+  html[data-toc="sunk"] #TOC:not(:hover):not(:focus-within) {
+    .nav-link,
+    #toc-title {
+      opacity: 0;
+      transform: scaleX(0);
+      transition:
+        opacity 280ms cubic-bezier(0.16, 1, 0.3, 1),
+        transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    // The stagger runs top-down from the kicker, so the rail folds away in the
+    // reading direction. Each element's own animation is 280ms — inside the
+    // <300ms motion budget, which is a per-element rule — while the gesture as a
+    // whole runs to 355ms on the last item. Capped at eight items because past
+    // that the tail grows without the rail saying anything more.
+    @for $i from 1 through 8 {
+      > ul > li:nth-child(#{$i}) > .nav-link {
+        transition-delay: #{($i - 1) * 15}ms;
       }
+    }
+  }
+}
+
+// Both scroll-driven transitions are cancelled, not just the collapse — the
+// reveal became animated when the timings were split, so it needs covering here
+// too. The states themselves still change; only the carrying does not.
+@media (prefers-reduced-motion: reduce) {
+  html[data-toc="full"] #TOC,
+  html[data-toc="sunk"] #TOC:not(:hover):not(:focus-within) {
+    .nav-link,
+    #toc-title {
+      transition: none;
+      transition-delay: 0s;
     }
   }
 }

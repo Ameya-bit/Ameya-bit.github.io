@@ -25,6 +25,30 @@ const JUMP_PX = 60;
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
+// The drop entrance's fall, presentation-side — the sim pins a dropper to its
+// landing spot (state.js advanceEntranceDrop) and this lifts the drawing above
+// the stage, exactly the hiccup-pop arrangement. Parked (aPhase 0) = held at the
+// full lift, clipped above the stage top; airborne = a quadratic ease-in, so it
+// lands at full speed. Lift is a function of state, so sync() can evaluate it at
+// the previous tick too and interpolate — a 20 Hz fall drawn stepwise would judder.
+function dropLift(e, cfg) {
+  if (e.mode !== MODE.ENTERING || !e.flying) return 0;
+  // 1.5 cells clears the stage top even for a scaled-up sprite (sizes.js can
+  // grow the drawing ~30px past its cell).
+  const liftMax = e.y + cfg.cell * 1.5;
+  if (e.aPhase === 1) {
+    const t = 1 - e.aCount / cfg.dropTicks;
+    return liftMax * (1 - t * t);
+  }
+  if (e.aPhase === 2) {
+    // The rebound: a small parabolic hop while the sim carries the ground
+    // position along the bounce heading.
+    const t = 1 - e.aCount / cfg.dropBounceTicks;
+    return cfg.dropBounceRise * 4 * t * (1 - t);
+  }
+  return liftMax; // parked above the stage, clipped
+}
+
 export function interp(prev, cur, alpha) {
   if (!prev) return { x: cur.x, y: cur.y };
   const dx = cur.x - prev.x;
@@ -36,13 +60,17 @@ export function interp(prev, cur, alpha) {
 // One panda's DOM: a positioned wrapper, an inner element carrying the facing
 // flip, and the sprite sheet it slides around behind a 100px window. The seated
 // drawing is created lazily, the first time this panda rides a tower.
-function makeView(entity) {
+function makeView(entity, scale = 1) {
   const el = document.createElement('div');
   el.className = 'panda_wrapper';
   el.innerHTML =
     '<div class="panda_inner_wrapper">' +
     `<div class="panda_sprite">${entity.hasHat ? SPRITE_HAT : SPRITE_BARE}</div>` +
     '</div>';
+  // A scaled panda scales about its feet (the art stands on row ~81 of the 100px
+  // cell), so every size shares one ground plane. Scale-1 pandas keep the
+  // default origin — their rider sway pivot stays exactly as shipped.
+  if (scale !== 1) el.style.transformOrigin = '50px 81px';
   return {
     el,
     inner: el.firstChild,
@@ -67,6 +95,9 @@ function makeView(entity) {
 // must never be left drawing against the stage it used to be.
 export function makeRenderer(stage) {
   const views = new Map();
+  // id -> visual scale (render/sizes.js). Presentation only — the host draws a
+  // fresh map whenever it builds a world; an id missing here renders at 1.
+  let scales = new Map();
 
   // ---- per-frame cel bookkeeping ----
 
@@ -101,6 +132,7 @@ export function makeRenderer(stage) {
     }
     if (e.mode === MODE.MOUNTING && state.stack.phase === PHASE.FLIGHT) return 0;
     if (e.mode === MODE.HICCUP && hiccupLift(e, cfg) > 0) return 0;
+    if (e.mode === MODE.ENTERING && e.flying) return 0; // dropping: carried, not walking
     return null;
   }
 
@@ -115,6 +147,17 @@ export function makeRenderer(stage) {
         const k = 1 - e.aTimer / cfg.hiccupHopTicks;
         return wrapDir(e.dir + Math.round(k * 16));
       }
+    }
+    if (e.mode === MODE.ENTERING && e.flying && e.aPhase === 1) {
+      // A dropper tumbles ~2 turns on the way down, same trick as the pop above.
+      const k = 1 - e.aCount / cfg.dropTicks;
+      return wrapDir(e.dir + Math.round(k * 16));
+    }
+    if (e.mode === MODE.ENTERING && e.flying && e.aPhase === 2) {
+      // …and one lazy turn through the rebound. The fall's two full turns end at
+      // the spawn facing, so this continues from it without a snap.
+      const k = 1 - e.aCount / cfg.dropBounceTicks;
+      return wrapDir(e.dir + Math.round(k * 8));
     }
     return wrapDir(e.dir);
   }
@@ -159,15 +202,17 @@ export function makeRenderer(stage) {
     for (const e of state.entities) {
       let view = views.get(e.id);
       if (!view) {
-        view = makeView(e);
+        view = makeView(e, scales.get(e.id) ?? 1);
         views.set(e.id, view);
         stage.appendChild(view.el);
       }
 
       const over = overrides?.get(e.id);
-      const pos = interp(prevById?.get(e.id), e, alpha);
+      const prevE = prevById?.get(e.id);
+      const pos = interp(prevE, e, alpha);
       let x = pos.x;
-      let y = pos.y - hiccupLift(e, cfg);
+      let y = pos.y - hiccupLift(e, cfg)
+        - (prevE ? lerp(dropLift(prevE, cfg), dropLift(e, cfg), alpha) : dropLift(e, cfg));
       let rotate = 0;
       let depth = pos.y;
 
@@ -180,7 +225,15 @@ export function makeRenderer(stage) {
       const flying = e.mode === MODE.MOUNTING && state.stack.phase === PHASE.FLIGHT;
       if ((riding || flying) && base) {
         const level = riding ? e.stackLevel : state.stack.mountIdx + 1;
-        const drop = level * (cfg.riderRise - seatRise(base.dir));
+        // Each storey of the tower is as tall as the panda standing (or sitting)
+        // in it, so the seat height sums the SCALES of everyone below — with a
+        // uniform troupe this is exactly the old `level * per`.
+        const per = cfg.riderRise - seatRise(base.dir);
+        let drop = per * (scales.get(base.id) ?? 1);
+        for (let l = 1; l < level; l++) {
+          const rid = state.stack.riders[l - 1];
+          drop += per * (rid == null ? 1 : (scales.get(rid) ?? 1));
+        }
         y += flying ? drop * Math.min(1, state.stack.flight / cfg.mountHopTicks) : drop;
         // Riders must draw over the base they sit on; their own (smaller) y would
         // sort them behind it.
@@ -190,9 +243,10 @@ export function makeRenderer(stage) {
       else hideRider(view);
 
       // transform + depth
-      const transform = rotate
-        ? `translate(${x}px, ${y}px) rotate(${rotate}deg)`
-        : `translate(${x}px, ${y}px)`;
+      const s = scales.get(e.id) ?? 1;
+      let transform = `translate(${x}px, ${y}px)`;
+      if (rotate) transform += ` rotate(${rotate}deg)`;
+      if (s !== 1) transform += ` scale(${s})`;
       if (transform !== view.transform) {
         view.el.style.transform = transform;
         view.transform = transform;
@@ -237,5 +291,12 @@ export function makeRenderer(stage) {
     views.clear();
   }
 
-  return { sync, clear, views };
+  // Install this world's size map (render/sizes.js). Called before the first
+  // sync of a build — views are created lazily after it, so each wrapper gets
+  // its transform-origin from the scale it will wear.
+  function setScales(next) {
+    scales = next ?? new Map();
+  }
+
+  return { sync, clear, views, setScales };
 }

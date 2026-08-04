@@ -22,6 +22,20 @@ if (stage) {
 
   // Exposed for the console: `__pandas.state` is the live sim, `__pandas.setPolicy()`
   // swaps the hat panda's brain, `__pandas.destroy()` takes the whole thing down.
-  const host = mountPandas(stage, { cardSelector: '.hero-inner', ...(overlay ? { overlay } : {}) });
+  //
+  // `entranceStyle: 'drop'` — the site's arrival (2026-08-03): the roamers rain
+  // onto their spots and land into the ordinary knock; the hat panda still walks
+  // on. Sim default stays 'walk' (the training corpora are frozen against it);
+  // `?entrance=walk` restores the old walk-in for A/B against it.
+  const wantsWalk = new URLSearchParams(location.search).get('entrance') === 'walk';
+  // Three rects, not one: the editorial hero (2026-08-03) offsets headline, lede
+  // and filing corner into a Z, and fencing each block separately is what keeps
+  // the mid-left pocket between them walkable — a single .hero-inner bounding box
+  // would swallow it, which is the whole point of the layout.
+  const host = mountPandas(stage, {
+    cardSelector: '.hero-headline, .hero-lede, .hero-filing',
+    ...(wantsWalk ? {} : { config: { entranceStyle: 'drop' } }),
+    ...(overlay ? { overlay } : {}),
+  });
   window.__pandas = host;
 }

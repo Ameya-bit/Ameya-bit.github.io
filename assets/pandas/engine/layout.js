@@ -18,13 +18,17 @@ export const DEFAULT_DENSITY = Object.freeze({
   max: 28,
 });
 
-// Free (walkable) area = stage minus the fenced hero-card rectangle.
+// Free (walkable) area = stage minus the fence (one rect or an array of rects;
+// array rects are assumed disjoint — the hero's text blocks never overlap).
 export function freeArea(width, height, forbid) {
   const stage = width * height;
   if (!forbid) return stage;
-  const fw = Math.max(0, forbid.r - forbid.l);
-  const fh = Math.max(0, forbid.b - forbid.t);
-  return Math.max(0, stage - fw * fh);
+  const rects = Array.isArray(forbid) ? forbid : [forbid];
+  const fenced = rects.reduce(
+    (sum, f) => sum + Math.max(0, f.r - f.l) * Math.max(0, f.b - f.t),
+    0,
+  );
+  return Math.max(0, stage - fenced);
 }
 
 // Panda count for a viewport, holding ~constant density within [min, max].

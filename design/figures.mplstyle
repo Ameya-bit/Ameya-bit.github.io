@@ -30,17 +30,33 @@
 figure.figsize:  8.0, 5.0
 figure.dpi:      160
 savefig.dpi:     160
-savefig.bbox:    tight
-savefig.pad_inches: 0.05
-figure.facecolor: white
-savefig.facecolor: white
+
+# savefig.bbox MUST stay `standard`. `tight` crops the canvas to whatever the
+# content happens to occupy, which silently makes every figure a different width
+# -- the exact failure this file was written to prevent. Measured on the first
+# restyled set, `tight` produced 1132, 1165, 1240, 1247, 1248 and 1249px from six
+# figures all declared at 8.0in. Use constrained layout to fit the content INSIDE
+# the fixed canvas instead of resizing the canvas around the content.
+savefig.bbox:    standard
+figure.constrained_layout.use: True
+# The canvas is the PAGE colour, not white. Figures on post pages are unframed
+# (no border, no radius), so a white PNG on a #fdfdfc page draws a faint
+# rectangle exactly where the frame was removed from. Matching the page is what
+# finishes the "ink printed on the page" idea rather than half-doing it. The
+# zoom overlay is the same colour, so an expanded figure has no seam either.
+figure.facecolor: "#fdfdfc"
+savefig.facecolor: "#fdfdfc"
 
 # ---- Type: match the page ---------------------------------------------------
-# Inter is the site's typeface; DejaVu Sans is matplotlib's fallback and is what
-# most of the current figures are actually set in. Naming Inter first makes the
-# figures speak the page's voice wherever the font is installed.
-font.family:      sans-serif
-font.sans-serif:  Inter, DejaVu Sans, Helvetica, Arial
+# Nunito is the site's typeface; DejaVu Sans is matplotlib's fallback. Naming
+# Nunito first makes the figures speak the page's voice wherever the font is
+# installed — plot.py registers the vendored copies in design/fonts/.
+# font.family is a LIST, not the "sans-serif" alias, and that is load-bearing:
+# per-glyph fallback only runs across an explicit family list. Nunito has no
+# U+2192, and several axis labels are "x → y" — with the alias the arrow drew as
+# a tofu box instead of falling through to DejaVu.
+font.family:      Nunito, DejaVu Sans, Helvetica, Arial
+font.sans-serif:  Nunito, DejaVu Sans, Helvetica, Arial
 font.size:        10
 axes.titlesize:   11.5
 axes.labelsize:   10
@@ -51,6 +67,13 @@ figure.titlesize: 11.5
 axes.titleweight: semibold
 axes.titlelocation: left
 axes.titlepad:    12
+
+# ...but PREFER NO TITLE AT ALL. The figcaption underneath already names the
+# figure, and the h2 above it already names the section, so a bold headline
+# baked into the PNG is a third heading in the same 200px — set in a different
+# typeface, at a size the page cannot control, and repeated in the alt text.
+# The title settings above are for the rare figure that is read out of context.
+# Panel labels inside a multi-panel figure are the normal exception.
 
 # ---- Ink: the site's palette, not matplotlib's ------------------------------
 text.color:       "#21201c"
