@@ -14,29 +14,32 @@ listing:
 ---
 
 ```{=html}
-<!-- The framed hero (2026-08-04): display mass low, small objects pinned to the
-     frame's edges — lede answers top-right, filing corner holds bottom-left, the
-     Writing cue holds bottom-right. DOM order stays headline → lede → filing
-     (the reading order); the lede's top-right position is visual only (flex
-     `order`). Each .rise-mask/.rise pair is one beat of the entrance
+<!-- The staircase hero (2026-08-04, iteration B of the six): the tricolon
+     headline steps rightward — three beats, three indents, the editorial Z
+     drawn inside the type block. Corners carry semantic jobs: identity corner
+     top-right (role line + links — contact belongs with identity), status
+     alone bottom-left, the Writing cue alone bottom-right (this is what fixed
+     the cue/links baseline collision). DOM order stays headline → role →
+     filing (the reading order); the identity corner's position is visual only
+     (flex `order`). Each .rise-mask/.rise pair is one beat of the entrance
      choreography (assets/site/hero-motion.html); --beat is that line's delay.
      With no JS or with prefers-reduced-motion the masks are inert wrappers. -->
 <section class="hero-screen">
   <div class="hero" aria-labelledby="hero-headline">
     <div class="hero-inner">
-      <p id="hero-headline" class="hero-headline" role="heading" aria-level="1"><span class="rise-mask"><span class="rise" style="--beat: 0ms">Studying computer science, physics, and&nbsp;AI&nbsp;—</span></span><span class="rise-mask"><span class="rise" style="--beat: 90ms">researching mechanistic interpretability.</span></span></p>
-      <p class="hero-lede"><span class="rise-mask"><span class="rise" style="--beat: 240ms">I'm an undergrad at Penn State; this is where I write up what I find, one experiment at a time.</span></span></p>
+      <p id="hero-headline" class="hero-headline" role="heading" aria-level="1"><span class="rise-mask"><span class="rise" style="--beat: 0ms">LLM circuitry&nbsp;—</span></span><span class="rise-mask hl-step-2"><span class="rise" style="--beat: 80ms">implemented, documented,</span></span><span class="rise-mask hl-step-3"><span class="rise" style="--beat: 160ms">shown&nbsp;off.</span></span></p>
+      <div class="hero-ident">
+        <p class="hero-role"><span class="rise-mask"><span class="rise" style="--beat: 260ms">CS, physics &amp; AI at Penn State.<br>Independent interpretability research.</span></span></p>
+        <div class="rise-mask"><nav class="hero-links rise" style="--beat: 320ms" aria-label="Profile links">
+          <a href="https://github.com/Ameya-bit">GitHub</a>
+          <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
+          <a href="mailto:ameyapanchal011@gmail.com">Email</a>
+          <a href="assets/Ameya_Panchal_Resume.pdf">Résumé</a>
+        </nav></div>
+      </div>
       <div class="hero-foot">
-        <div class="hero-filing">
-          <p class="hero-status"><span class="rise-mask"><span class="rise" style="--beat: 360ms">Current experiment&ensp;·&ensp;Does Anthropic's global workspace result replicate?<span class="hero-cursor" aria-hidden="true"></span></span></span></p>
-          <div class="rise-mask"><nav class="hero-links rise" style="--beat: 360ms" aria-label="Profile links">
-            <a href="https://github.com/Ameya-bit">GitHub</a>
-            <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
-            <a href="mailto:ameyapanchal011@gmail.com">Email</a>
-            <a href="assets/Ameya_Panchal_Resume.pdf">Résumé</a>
-          </nav></div>
-        </div>
-        <p class="writing-cue"><span class="rise-mask"><span class="rise" style="--beat: 420ms">Writing</span></span></p>
+        <p class="hero-status"><span class="rise-mask"><span class="rise" style="--beat: 400ms">Current experiment&ensp;·&ensp;Does Anthropic's global workspace result replicate?<span class="hero-cursor" aria-hidden="true"></span></span></span></p>
+        <p class="writing-cue"><span class="rise-mask"><span class="rise" style="--beat: 460ms">Writing</span></span></p>
       </div>
     </div>
   </div>

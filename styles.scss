@@ -1056,12 +1056,25 @@ html.figure-zoom-open {
   text-wrap: balance;
 }
 
-// Balance splits the headline's first phrase mid-compound ("Studying computer /
-// science, physics…") to even the lines; greedy wrapping breaks at the comma
-// ("Studying computer science, / physics, and AI —"), which reads right even
-// though the lines land uneven. Semantics outrank symmetry in display type.
+// Balance would re-wrap a step's line to even it against nothing; each step is
+// one hand-set line and must stay one. (Kept from the pre-staircase build,
+// where balance also split "computer science" mid-compound — semantics outrank
+// symmetry in display type.)
 #quarto-content main.content .hero-headline .rise {
   text-wrap: initial;
+}
+
+// The staircase (iteration B): the tricolon's three beats step rightward —
+// three lines, three indents, the editorial Z drawn inside the type block
+// itself. The indent is on the MASK, not the rising line, so the entrance's
+// vertical rise happens inside an already-placed step and the stagger reads
+// as the staircase assembling in place. 100/200px at calibration.
+.hl-step-2 {
+  margin-left: 5.882rem;
+}
+
+.hl-step-3 {
+  margin-left: 11.765rem;
 }
 
 html[data-hero-entrance] .hero-screen .rise {
@@ -1098,21 +1111,30 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   margin: auto 0 2.941rem; // top auto = the flexible space; 50px to the filing corner
 }
 
-// The lede answers from the top-right (visual only — `order` moves it; the DOM
-// keeps headline → lede → filing, which is the reading order).
-#quarto-content main.content .hero-lede {
+// The identity corner (top-right, visual only — `order` moves it; the DOM
+// keeps headline → role → filing, which is the reading order): the role line
+// with the links directly under it. Contact belongs with identity, and moving
+// the links up here is what gave the bottom edge back to one object per
+// corner — the cue no longer shares a baseline with anything.
+.hero-ident {
   order: -1;
   align-self: flex-end;
   text-align: right;
+  margin-top: 0.5rem;
+}
+
+#quarto-content main.content .hero-role {
   font-size: 1rem;
   line-height: 1.65;
   color: var(--gray-1100);
-  max-width: 24rem;
-  margin: 0.5rem 0 0;
-  text-wrap: pretty;
+  margin: 0 0 0.9rem;
 }
 
-// The bottom edge: filing corner left, Writing cue right, baselines aligned.
+.hero-ident .hero-links {
+  justify-content: flex-end;
+}
+
+// The bottom edge: status alone left, Writing cue alone right, baselines aligned.
 .hero-foot {
   display: flex;
   justify-content: space-between;
@@ -1136,7 +1158,7 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--gray-1000);
-  margin: 0 0 0.941rem; // 16px
+  margin: 0; // alone in the foot now — the links live in the identity corner
 }
 
 // The heartbeat (review finding 04): one resting cursor after the experiment
@@ -1167,19 +1189,29 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   }
 }
 
-// Below 800px the frame collapses to a stack: headline from the top, lede back
-// to the left (order and alignment reset), the foot pinned to the bottom edge
-// with the cue under the filing block.
+// Below 800px the frame collapses to a stack: headline from the top with the
+// staircase flattened (an indent would eat the narrow measure), the identity
+// corner back to the left after it, the foot pinned to the bottom edge with
+// the cue under the status line.
 @media (max-width: 799.98px) {
   #quarto-content main.content .hero-headline {
     margin: 1rem 0 0;
   }
 
-  #quarto-content main.content .hero-lede {
+  .hl-step-2,
+  .hl-step-3 {
+    margin-left: 0;
+  }
+
+  .hero-ident {
     order: 0;
     align-self: flex-start;
     text-align: left;
     margin-top: 1.4rem;
+  }
+
+  .hero-ident .hero-links {
+    justify-content: flex-start;
   }
 
   .hero-foot {
