@@ -325,6 +325,42 @@ body:not(:has(.hero-screen)) #quarto-header {
   margin-right: 0;
 }
 
+// ---- The masthead appears in place, it does not slide -----------------------
+// Quarto runs headroom.js on the fixed header: scroll down and it translates up
+// out of view, scroll up and it translates back down, over ~200ms. On a header
+// with a visible bar that reads as the bar returning; on THIS header — which is
+// transparent, just a name — a downward translate reads as the page being
+// shoved down under it (Ameya's read, 2026-08-03, and he is right: with no bar,
+// the only thing the eye can attribute the downward motion to is the page).
+//
+// So the translate goes. The name now dissolves in place on scroll-down and
+// returns in place on scroll-up — the exact grammar the TOC rail already
+// speaks: scroll down, the margin empties; scroll up, it comes back; nothing
+// ever moves. Headroom's classes keep firing (its JS is untouched, and its
+// hysteresis is what stops trackpad jitter from strobing this) — the classes
+// just drive opacity now instead of transform. 200ms matches the rail's
+// scroll-up reveal, on the same curve.
+#quarto-header.headroom {
+  transform: none !important; // kill the slide in both directions
+  transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.headroom--unpinned {
+    opacity: 0;
+    pointer-events: none; // an invisible name must not eat clicks on content
+  }
+
+  &.headroom--pinned,
+  &.headroom--top {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #quarto-header.headroom {
+    transition: none;
+  }
+}
+
 main.content {
   padding-inline: var(--measure-pad);
 }
@@ -800,15 +836,24 @@ figure,
 // Descendant, not child: Quarto wraps each h2 and everything under it in a
 // `<section class="level2">`, so figures are grandchildren of main.content, not
 // children. A `>` here silently matches nothing.
+// SYMMETRIC now (2026-08-03, Ameya's catch). The original outset pushed the
+// whole 200px into the right margin only, which meant every enlarged figure sat
+// visibly right of the column's own axis — off-center against the heading above
+// it and the caption below it. The same 200px split evenly re-centres the
+// figure on the text column: same display width, breaking the measure on both
+// sides the way Distill and Tufte outsets do. The left overhang (~100px at
+// calibration) clears the rail comfortably — the rail's labels end well before
+// the column starts — and may pass the h2 numeral line, which is fine: numerals
+// sit beside headings, figures sit 96px below them.
 @media (min-width: 1200px) {
   #quarto-content main.content .quarto-figure {
-    margin-right: -11.765rem; // −200px — rem, so the outset grows with the
-                              // margin column it reaches into (both scale from
-                              // the same root; the ratio is what was designed)
+    margin-inline: -5.882rem; // −100px per side (was −200px right-only)
   }
 
   #quarto-content main.content .quarto-figure figcaption {
     max-width: 40rem;
+    margin-left: 5.882rem; // the caption does NOT follow the figure out — it
+                           // stays on the column's left edge, at reading measure
   }
 }
 
@@ -831,6 +876,11 @@ figure img,
   border: none;
   border-radius: 0;
   cursor: zoom-in;
+  // A figure narrower than its box centres in it rather than hugging the left
+  // edge — matters for the induction post, whose figures predate the one-width
+  // export rule and come in at assorted natural sizes.
+  display: block;
+  margin-inline: auto;
 
   // The hover frame takes the accent. This is where the colour comes from in the
   // first place — it is the highlight inside these charts — so the ring reading
@@ -1009,15 +1059,21 @@ html.figure-zoom-open {
 
 // The status line is apparatus, deliberately: it is the one sentence in the hero
 // that goes stale (the current experiment), and setting it as a filing line makes
-// it look like the status it is rather than a fourth paragraph. Mono here is the
-// same role mono plays on posts — numerals and filing — not a new material.
+// it look like the status it is rather than a fourth paragraph.
+//
+// Nunito, not mono (2026-08-03, Ameya's catch). This line was the last words-in-
+// mono holdout, grandfathered as "the filing role" — but the standing rule is
+// sharper than the role: MONO IS FOR THE NUMBERING SYSTEM, NOTHING ELSE, because
+// the moment mono touches words it reads as a second font rather than as
+// instrumentation. Uppercase + tracking already carry the kicker voice on their
+// own (same treatment as the rail's "ON THIS PAGE"); the family stays Nunito.
 #quarto-content main.content .hero-status {
-  font-family: var(--font-apparatus);
   font-size: var(--text-apparatus-mono);
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--gray-1000);
-  margin: 0 0 16px;
+  margin: 0 0 0.941rem; // 16px
 }
 
 // Below the engine's own stage floor (it leaves the hero empty under 800px) the
