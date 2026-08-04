@@ -17,6 +17,14 @@
   for the hover that brings the words back. A rail that vanishes completely has no
   handle, so only a reader who already knew it was there could ever retrieve it.
 
+  THE MARKS ARE BARS (2026-08-03, draft 3 of the round-2 TOC exploration): each
+  mark's LENGTH is its section's length, scaled so the longest section in the
+  post gets the tallest mark. The second script below measures the rendered
+  `section.level2` heights and writes one custom property per rail item;
+  styles.scss turns that into the mark's height and keeps it centred on its
+  label's first line. CSS alone cannot know section lengths, which is why this
+  is the one piece of rail geometry that comes from script.
+
   This one genuinely needs scroll position — direction cannot be observed with an
   IntersectionObserver — so it is a passive listener that does nothing but store a
   number, with the work deferred to rAF. The rest of the site's scroll-spy stays
@@ -88,5 +96,46 @@
       },
       { passive: true }
     );
+  })();
+
+  // ---- The marks are bars: mark length = section length --------------------
+  // Measures each h2 section's rendered height and scales the rail's marks to
+  // match — a six-bar chart of the document, readable in one glance. Bounds are
+  // stated in rem so the chart scales with the fluid root: at the 17px
+  // calibration root the tallest mark is 20px and the floor is 6px. The floor
+  // exists because a two-paragraph section still needs a visible, hoverable
+  // mark; the ceiling keeps the tallest bar clear of its neighbours (label rows
+  // sit ~25px apart, held there by the one-line-heading rule).
+  //
+  // Re-measured on load (images settle section heights) and on resize (the
+  // fluid root changes every length). If the TOC and the sections ever disagree
+  // in count — nested h3 lists don't affect this; both counts are h2-level —
+  // the script leaves the uniform 12px fallback rather than guessing a mapping.
+  (() => {
+    const items = document.querySelectorAll("#TOC > ul > li");
+    if (!items.length) return;
+    const sections = document.querySelectorAll("main.content section.level2");
+    if (sections.length !== items.length) return;
+
+    const paint = () => {
+      const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const MAX = 1.176 * rootPx; // 20px at calibration
+      const MIN = 0.353 * rootPx; // 6px at calibration
+      const lengths = Array.from(sections, (s) => s.offsetHeight);
+      const longest = Math.max(...lengths);
+      items.forEach((li, i) => {
+        const h = Math.round(Math.max(MIN, (lengths[i] / longest) * MAX));
+        li.style.setProperty("--mark-h", h + "px");
+      });
+    };
+
+    let raf = 0;
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(paint);
+    };
+    window.addEventListener("load", schedule);
+    window.addEventListener("resize", schedule, { passive: true });
+    paint();
   })();
 </script>

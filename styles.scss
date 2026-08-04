@@ -1565,23 +1565,29 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // line box: Quarto's `.nav-link` pads 0.2rem and sets a 1.1rem line-height,
     // and 0.2 + 1.1/2 = exactly 0.75rem.
     //
-    // The height is FIXED at 12px. The `border-left` this replaces took the
-    // anchor's height, so it ran 25px beside a one-line label and 63px beside a
-    // three-line one — a mark whose length looks like it encodes something and
-    // in fact encodes word-wrap. Fixed, length says nothing and only position
-    // and shade carry meaning. Note the SPACING is still uneven, because each
-    // mark sits beside its own label and labels wrap to one, two or three
-    // lines. That is deliberate: even spacing would need the marks to detach
-    // from the labels, and then hovering would reveal words that do not line up
-    // with the marks that summoned them. Consistency between the two states is
-    // worth more than a metronomic rail.
+    // The height is the SECTION'S LENGTH (2026-08-03, draft 3 of the round-2
+    // TOC exploration — Ameya's pick). This deliberately overturns the earlier
+    // fixed-12px doctrine, and the history matters: length was originally
+    // banned because the `border-left` this mark replaced took its label's
+    // height, so length accidentally encoded word-wrap. The ban was on length
+    // encoding NOTHING TRUE — not on length. Now it encodes the one thing
+    // worth saying: the rail is a small bar chart of the document, longest
+    // section = tallest mark, readable in a glance and still just six
+    // hairlines. `--mark-h` is written per item by assets/site/toc-rail.html
+    // (CSS cannot know section lengths); the 12px fallback keeps the old
+    // uniform rail on any page where the script bails. Each mark centres on
+    // its label's first line box (0.2rem padding + half the 1.1rem
+    // line-height = 0.75rem), so variable heights stay aligned to their
+    // labels and the hover reveal cannot drift. The one-line-heading rule is
+    // what keeps the PITCH even — bars only read as a chart against a steady
+    // baseline grid, which is one more job that tripwire now carries.
     &::after {
       content: "";
       position: absolute;
       left: 0;
-      top: calc(0.75rem - 6px);
+      top: calc(0.75rem - var(--mark-h, 12px) / 2);
       width: 1px;
-      height: 12px;
+      height: var(--mark-h, 12px);
       background: var(--gray-800);
     }
 
