@@ -1,0 +1,19 @@
+<!-- The entrance gate. Runs in <head>, before first paint, and decides whether
+     this page load gets the hero entrance. It only ever SETS an attribute —
+     styles.scss does the hiding, and only inside .hero-screen, so on any page
+     without a hero this attribute is inert (and hero-motion.html removes it).
+     Three refusals, in order: reduced motion (the entrance simply never
+     exists), a repeat visit this session (arrival happens once — coming back
+     from a post replays nothing), and any storage error (fail toward a static
+     page, never toward re-animating). -->
+<script>
+  (function () {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    try {
+      if (sessionStorage.getItem("hero-entrance")) return;
+    } catch (e) {
+      return;
+    }
+    document.documentElement.setAttribute("data-hero-entrance", "pending");
+  })();
+</script>

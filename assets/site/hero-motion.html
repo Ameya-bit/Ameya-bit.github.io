@@ -1,0 +1,53 @@
+<!-- The hero's two motions (2026-08-04, review findings 03 and 05).
+
+     1. The entrance: if hero-head.html armed the page (data-hero-entrance
+        "pending"), flip it to "play" one frame after first paint — the masked
+        lines rise on their staggered --beat delays (styles.scss), 920ms total,
+        once per session. On any page without a hero the attribute is removed,
+        so a mis-armed post page can never hide content.
+
+     2. The seam: the hero dims and settles back as the reader leaves it —
+        opacity/transform mapped to scroll position over the first 55% of a
+        viewport, the same grammar as the rail's fill: state, not animation, so
+        scrubbing back restores it exactly. Under reduced motion the settle
+        (the only part that MOVES) is dropped and the dim kept — the dim is
+        position information, like the scrollbar. visibility flips off once
+        fully faded so invisible links can't take keyboard focus. -->
+<script>
+  (function () {
+    "use strict";
+    var html = document.documentElement;
+    var screen = document.querySelector(".hero-screen");
+    if (!screen) {
+      html.removeAttribute("data-hero-entrance");
+      return;
+    }
+
+    if (html.getAttribute("data-hero-entrance") === "pending") {
+      try { sessionStorage.setItem("hero-entrance", "1"); } catch (e) { /* static next time too — fine */ }
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          html.setAttribute("data-hero-entrance", "play");
+        });
+      });
+    }
+
+    var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var raf = 0;
+    function paint() {
+      raf = 0;
+      var span = window.innerHeight * 0.55;
+      var t = span > 0 ? Math.min(1, Math.max(0, window.scrollY / span)) : 0;
+      screen.style.opacity = t === 0 ? "" : String(+(1 - t).toFixed(3));
+      screen.style.transform = reduced || t === 0 ? "" : "translateY(" + (-24 * t).toFixed(1) + "px)";
+      screen.style.visibility = t >= 1 ? "hidden" : "";
+    }
+    window.addEventListener("scroll", function () {
+      if (!raf) raf = requestAnimationFrame(paint);
+    }, { passive: true });
+    window.addEventListener("resize", function () {
+      if (!raf) raf = requestAnimationFrame(paint);
+    }, { passive: true });
+    paint();
+  })();
+</script>
