@@ -1374,14 +1374,24 @@ body:has(.hero-screen) { overflow-x: hidden; }
   // positive and would shove the rail to the right.
   margin-left: min(0px, calc((var(--page-max) - 100vw) / 2));
 
-  // Vertically centred in the viewport, Rauno's placement. A rail pinned near
-  // the top sits in peripheral vision at exactly the height the eye rests at
-  // while reading, which is most of why it read as a permanent block; centred,
-  // it becomes something you look DOWN or UP to rather than something already in
-  // the way. Sticky, never fixed — `position: fixed` on this element is what
-  // broke Quarto's sidebar geometry recompute before (see the gotchas in
-  // design/direction.md); a full-height sticky box that centres its own child is
-  // the same visual result with none of that risk.
+  // DOCKED under the masthead (2026-08-03, concept A — replaces the vertical
+  // centring, which Ameya rejected). The centred rail was Rauno's placement
+  // borrowed without his page: his whole composition is centred, so a centred
+  // rail aligns with everything; here masthead, title and content all anchor
+  // top, so the rail was the page's ONLY vertically-centred object and read as
+  // unaligned rather than deliberate. It also glued the marks to resting eye
+  // height — the exact peripheral-attention problem the collapse exists to
+  // solve. Docked, the left margin reads as one column of furniture: the name,
+  // then the contents, then quiet.
+  //
+  // Sticky, never fixed — `position: fixed` on this element is what broke
+  // Quarto's sidebar geometry recompute before (see the gotchas in
+  // design/direction.md). The sticky `top` matches the rail's own natural grid
+  // position, so the rail never visibly slides to its stuck position — it is
+  // simply THERE, holding still from the first pixel of scroll, which is what
+  // "docked" means. `align-self: start` is what makes sticky work at all: the
+  // grid was stretching this item to the full row height, and an element as
+  // tall as its container has no room left to stick in.
   @media (min-width: 992px) {
     // ---- BLEED: room to the left of the rail for the active mark -----------
     // Quarto ships this element `class="… overflow-auto"`, so its padding box is
@@ -1410,28 +1420,39 @@ body:has(.hero-screen) { overflow-x: hidden; }
     );
 
     position: sticky;
-    top: 0;
-    height: 100vh;
-    height: 100svh;
-    display: flex;
-    // Quarto already ships `#quarto-sidebar { flex-direction: column }`, so both
-    // axes have to be named explicitly. Setting `align-items: center` alone
-    // centred the rail HORIZONTALLY — a column's cross axis is the horizontal
-    // one — and pushed it 54px off the left edge it is supposed to share with
-    // the masthead.
-    flex-direction: column;
-    justify-content: center; // vertical, in a column
-    align-items: flex-start; // horizontal: stay hard left
-    pointer-events: none; // the empty 100vh box must not eat clicks in the
-                          // gutter; the rail itself takes them back below
+    // `!important`, and the reason is a discovery worth keeping: quarto.js
+    // writes INLINE `top` and `max-height` onto this element, synced to
+    // headroom's state — `top: 59px` while the header is pinned, `top: 0` once
+    // it unpins — its compensation for a header that used to slide away. Ours
+    // no longer slides (it fades in place), so that compensation is pure
+    // motion: the rail was silently jumping the masthead's height on every
+    // scroll-direction flip. Only `!important` outranks an inline style; the
+    // JS keeps writing, the paint stays put, and its sticky recompute is
+    // otherwise untouched.
+    //
+    // The value docks the rail's top edge on the title block's own line —
+    // 3.5rem masthead + 1.75rem content margin — so the margin column reads
+    // name, then contents, aligned with the article's header rather than at an
+    // invented offset. The fixed masthead occupies 0–3.5rem and is cleared
+    // with the content margin to spare.
+    top: calc(3.5rem + 1.75rem) !important;
+    align-self: start; // the grid stretches this item to the full row height by
+                       // default, and an element as tall as its container has
+                       // no room to stick in — start-aligned it shrinks to its
+                       // content and sticky gets its travel back
+    padding-top: 0; // Quarto pads the sidebar 14px; zeroed so the rail's box
+                    // top IS the docked line rather than 14px below it
+    // A TOC taller than the remaining viewport still scrolls inside itself
+    // rather than running under the fold (`overflow: auto` ships on the
+    // element); in practice six labels never hit this.
+    max-height: calc(100svh - 3.5rem - 1.75rem - 2rem) !important;
+    pointer-events: none; // the box must not eat clicks in the gutter;
+                          // the rail itself takes them back below
 
-    // Quarto paints the sidebar `background-color: #fdfdfc`. That was harmless
-    // while the box was only as tall as its own six links; at 100vh and
-    // `position: sticky` it became a full-height opaque, POSITIONED panel
-    // covering the whole left band — and the article's section numerals hang in
-    // that band at `left: -3.4rem`, so they were being painted over. The rail
-    // sits on the page colour anyway, so it has no need of a background of its
-    // own.
+    // Quarto paints the sidebar `background-color: #fdfdfc`. Harmless at this
+    // content height, but kept transparent so a positioned panel can never
+    // paint over the article's gutter numerals again (it did once, at 100vh —
+    // see the session log).
     background: transparent;
   }
 }
