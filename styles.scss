@@ -1581,6 +1581,17 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // labels and the hover reveal cannot drift. The one-line-heading rule is
     // what keeps the PITCH even — bars only read as a chart against a steady
     // baseline grid, which is one more job that tripwire now carries.
+    // THE FILL (2026-08-03, same session): the bars are also the reading
+    // position. `--mark-fill` (written by toc-rail.html on scroll) is the
+    // fraction of that section behind the reader — completed sections are
+    // solid ink, the current one is part-filled, the rest wait in gray. The
+    // whole rail is one instrument: shape = the document, ink = your progress
+    // through it. A hard gradient stop, not a nested element, because a
+    // pseudo-element can't hold children — and the stop doubles as the "you
+    // are here" edge. No transition: the fill tracks the scroll position the
+    // way a scrollbar thumb does, which is state, not animation — so there is
+    // nothing for prefers-reduced-motion to disable. The per-section `active`
+    // ink override is gone; the partially-filled bar IS the active marker now.
     &::after {
       content: "";
       position: absolute;
@@ -1588,11 +1599,19 @@ body:has(.hero-screen) { overflow-x: hidden; }
       top: calc(0.75rem - var(--mark-h, 12px) / 2);
       width: 1px;
       height: var(--mark-h, 12px);
-      background: var(--gray-800);
+      background: linear-gradient(
+        to bottom,
+        var(--gray-1200) 0 var(--mark-fill, 0%),
+        var(--gray-800) var(--mark-fill, 0%) 100%
+      );
     }
 
-    &:has(> a.active)::after {
-      background: var(--gray-1200);
+    // Longer bars need a longer pitch: the anchor's own box is ~25.5px and the
+    // bars now run to 28px, so each item adds half a rem of air. Scoped to the
+    // rail — below 992px this list is Quarto's off-canvas menu and stays
+    // compact.
+    @media (min-width: 992px) {
+      margin-bottom: 0.5rem;
     }
   }
 
@@ -1656,129 +1675,31 @@ body:has(.hero-screen) { overflow-x: hidden; }
   }
 }
 
-// ---- The rail follows scroll DIRECTION ---------------------------------------
+// ---- The rail's words exist only on request -----------------------------------
 //
-// The complaint this answers: at rest the rail is 220px of TEXT — six labels,
-// four of which wrap to two or three lines — sitting permanently in peripheral
-// vision beside a column that is also text. Severity says the page gets one
-// column of words.
+// (2026-08-03, Ameya's call — supersedes the scroll-direction system.) The rail
+// at rest is BARS ONLY: no labels, no kicker, ever. Text appears the instant a
+// pointer enters the rail or focus lands in it, and leaves the instant they do.
+// With the bars now carrying shape (section lengths) AND position (the fill),
+// the words stopped earning any resting presence at all — and once the resting
+// state never contains text, scroll direction has nothing left to decide, so
+// the whole direction-plus-hysteresis machinery is retired from
+// assets/site/toc-rail.html. Its history — the morph, the asymmetric timings,
+// the "who asked, and with what" rule — is preserved in design/direction.md's
+// session log; what survives here is its best finding: **a request (hover,
+// Tab) is answered instantly, never on a curve.** Both directions of the
+// reveal are instant, which also means there is nothing here for
+// prefers-reduced-motion to cover.
 //
-// Direction, not depth, is the right signal. A depth threshold ("hide once you
-// are past the header") answers "has the reader started?" — but the question the
-// rail actually answers is "where am I / where can I go", and a reader only asks
-// that when they stop moving forward. **Scrolling down is reading, and reading
-// wants an empty margin. Scrolling up is looking for something, and that is
-// exactly when a table of contents should be there.** So the rail's words go and
-// come back the moment the scroll reverses. Hover and keyboard focus also bring
-// them back, for anyone who wants them without scrolling.
-//
-// AMENDED: the rail no longer goes to nothing. Fading the whole thing to zero
-// left two holes. (1) The affordance was invisible — `pointer-events` is left on
-// so the empty gutter still takes a hover, but that only helps a reader who
-// already knows to reach there; anyone who scrolls straight down never learns
-// the rail exists. (2) A TOC does two jobs, and only one of them is navigation.
-// The other is POSITION, which is passive and continuous: you do not summon it,
-// you glance at it. Hiding it entirely made the answer to "where am I" something
-// you had to ask for.
-//
-// So the words go and the MARKS stay — one per section, not one in total. A
-// single mark was tried first and could only say "here"; with nothing to be
-// measured against it could not say "here, out of six" or "near the end", which
-// is most of what position means. Marks are legible as a set.
-//
-// The collapse is a MORPH, not a fade: each label scales to nothing about
-// `transform-origin: left`, which is the exact column its own mark occupies, so
-// the words compress into the thing that replaces them rather than dissolving in
-// place. A dissolve in peripheral vision reads as a rendering fault; a
-// directional collapse reads as an object changing zoom level. Still transform
-// and opacity only, still incapable of reflowing the article (neither property
-// is laid out), and the marks are outside the transform because they hang off
-// the `li` rather than the anchor.
-//
-// ASYMMETRIC TIMING, and this is the load-bearing part. There are three ways in
-// and out of this state and they do NOT share a duration, because the rule is
-// not "reveal fast, hide slow" — it is **who asked, and with what**.
-//
-//   scroll down → collapse   280ms + 15ms stagger   (nobody asked; take the time)
-//   scroll up   → reveal     200ms, no stagger      (a change of reading mode)
-//   hover / Tab → reveal     INSTANT                (a direct request)
-//
-// A pointer landing in the gutter or a Tab key pressed is a request for the rail
-// *right now*, and a request answered on a curve is a request answered late —
-// Emil's rule 2 (high-frequency interactions get no animation) and rule 3 (never
-// animate keyboard-initiated actions). Reversing the scroll is not that: it is
-// the reader changing from reading to looking, which is a mode change and reads
-// better carried than cut. So scroll gets motion in both directions and the
-// pointer gets none.
-//
-// The three cases fall out of the selectors without a single extra class:
-//   · `[data-toc="full"]`  matches only after a scroll-up  → 200ms
-//   · `[data-toc="sunk"]:not(:hover):not(:focus-within)`   → 280ms + stagger
-//   · hovering while sunk matches NEITHER (data-toc is still "sunk", and the
-//     sunk rule excludes :hover) so it falls to the base rule, which declares no
-//     transition at all → instant, in and out of hover.
-// Using the `transition` shorthand in the full rule also resets the stagger's
-// `transition-delay` on the way back, so the reveal cannot inherit it.
-//
-// Still NOT Rauno's tick minimap (Layer 2) — see the note on the marks above for
-// why they are vertical change bars rather than a ruler of horizontal dashes.
+// Scoped to >=992px: below that this list is Quarto's off-canvas menu, where
+// the labels ARE the interface and must stay visible.
 @media (min-width: 992px) {
-  // Both halves of the rail collapse: the kicker and every link. The marks are
-  // untouched by this and stay at full strength in both states.
-  #TOC .nav-link,
-  #TOC #toc-title {
-    transform-origin: left center;
-  }
-
-  // Scroll-up reveal. Slightly quicker than the collapse and deliberately
-  // unstaggered — coming back, the rail should arrive as one object rather than
-  // unrolling, because by then the reader is looking for something in it.
-  html[data-toc="full"] #TOC {
-    .nav-link,
-    #toc-title {
-      transition:
-        opacity 200ms cubic-bezier(0.16, 1, 0.3, 1),
-        transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-  }
-
-  // Set by assets/site/toc-rail.html on <html>. A direction flip is a
-  // low-frequency, deliberate state change rather than a high-frequency
-  // interaction, so motion here is within the rules — and it has hysteresis in
-  // the JS so trackpad jitter cannot make it strobe.
-  html[data-toc="sunk"] #TOC:not(:hover):not(:focus-within) {
+  #TOC:not(:hover):not(:focus-within) {
     .nav-link,
     #toc-title {
       opacity: 0;
       transform: scaleX(0);
-      transition:
-        opacity 280ms cubic-bezier(0.16, 1, 0.3, 1),
-        transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    // The stagger runs top-down from the kicker, so the rail folds away in the
-    // reading direction. Each element's own animation is 280ms — inside the
-    // <300ms motion budget, which is a per-element rule — while the gesture as a
-    // whole runs to 355ms on the last item. Capped at eight items because past
-    // that the tail grows without the rail saying anything more.
-    @for $i from 1 through 8 {
-      > ul > li:nth-child(#{$i}) > .nav-link {
-        transition-delay: #{($i - 1) * 15}ms;
-      }
-    }
-  }
-}
-
-// Both scroll-driven transitions are cancelled, not just the collapse — the
-// reveal became animated when the timings were split, so it needs covering here
-// too. The states themselves still change; only the carrying does not.
-@media (prefers-reduced-motion: reduce) {
-  html[data-toc="full"] #TOC,
-  html[data-toc="sunk"] #TOC:not(:hover):not(:focus-within) {
-    .nav-link,
-    #toc-title {
-      transition: none;
-      transition-delay: 0s;
+      transform-origin: left center;
     }
   }
 }

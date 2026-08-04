@@ -1,141 +1,109 @@
 <!--
-  TOC rail state — inlined into every page via `include-after-body` in _quarto.yml.
+  TOC rail geometry — inlined into every page via `include-after-body` in
+  _quarto.yml. All styling lives in styles.scss ("The rail's words exist only on
+  request" + the marks rules); this file only measures and writes numbers.
 
-  Sets one attribute, `data-toc="full" | "sunk"`, on <html>. All of the styling
-  lives in styles.scss under "The rail follows scroll DIRECTION"; this file only
-  decides when.
+  THE RAIL IS AN INSTRUMENT, not a list (2026-08-03): at rest it is six
+  hairline bars and nothing else. Each bar's LENGTH is its section's rendered
+  length — a small bar chart of the document — and each bar FILLS with ink as
+  the reader moves through that section, so completed sections are solid,
+  the current one is part-filled, and what remains waits in gray. Shape says
+  what the document is; ink says where you are in it. Labels exist only on
+  hover or keyboard focus (pure CSS, styles.scss).
 
-  THE RULE: scrolling down collapses the rail to a single mark, scrolling up
-  brings the words back, and the top of the page always shows them. Scrolling
-  down is reading and reading wants an empty margin; scrolling up is looking for
-  something, which is the only moment a table of contents is worth any peripheral
-  vision at all.
+  This file writes two custom properties per top-level TOC item:
 
-  What stays behind in the collapsed state is a column of 1px hairlines, one per
-  section, with the active one in full ink and the rest gray — enough to answer
-  "where am I, out of how many" without asking, and enough to be a visible target
-  for the hover that brings the words back. A rail that vanishes completely has no
-  handle, so only a reader who already knew it was there could ever retrieve it.
+    --mark-h     the bar's height   (section length, scaled; 8–28px at the
+                 17px calibration root, rem-scaled via the live root)
+    --mark-fill  the bar's fill     (0–100%, fraction of the section behind
+                 the reader's position)
 
-  THE MARKS ARE BARS (2026-08-03, draft 3 of the round-2 TOC exploration): each
-  mark's LENGTH is its section's length, scaled so the longest section in the
-  post gets the tallest mark. The second script below measures the rendered
-  `section.level2` heights and writes one custom property per rail item;
-  styles.scss turns that into the mark's height and keeps it centred on its
-  label's first line. CSS alone cannot know section lengths, which is why this
-  is the one piece of rail geometry that comes from script.
+  The fill is written on scroll through one passive rAF-coalesced listener. It
+  is STATE, not animation — it tracks the scroll position exactly the way the
+  scrollbar thumb does, with no transition — so prefers-reduced-motion has
+  nothing to disable.
 
-  This one genuinely needs scroll position — direction cannot be observed with an
-  IntersectionObserver — so it is a passive listener that does nothing but store a
-  number, with the work deferred to rAF. The rest of the site's scroll-spy stays
-  on IntersectionObserver.
+  HISTORY: this file used to run a scroll-direction state machine
+  (data-toc full/sunk, 24px hysteresis, staggered collapse). Ameya retired it:
+  once the resting rail never contains text, direction has nothing to decide.
+  The full design and its timings are preserved in design/direction.md.
 
-  HYSTERESIS is the whole difficulty. A naive `y > lastY` flips state on every
-  sub-pixel trackpad wobble and makes the rail strobe, so movement is accumulated
-  and the state only flips once travel in one direction passes THRESHOLD.
+  The reader line: a section counts as "being read" from the moment its top
+  passes 30% of the viewport height. The last pixels of the document can never
+  pass that line, so the fill is additionally pinned to 100% at the scroll
+  floor — a document read to the end shows a fully inked rail.
 
   Bails out on pages with no TOC, so the homepage pays nothing but the parse.
 -->
 <script>
   (() => {
-    const toc = document.querySelector("#TOC");
-    if (!toc) return;
+    const items = document.querySelectorAll("#TOC > ul > li");
+    if (!items.length) return;
+    const sections = document.querySelectorAll("main.content section.level2");
+    // If the TOC and the sections ever disagree in count, leave the uniform
+    // 12px fallback marks rather than guess a mapping. (Nested h3 lists do not
+    // affect this — both counts are h2-level.)
+    if (sections.length !== items.length) return;
 
-    const root = document.documentElement;
-    const header = document.querySelector("#title-block-header");
+    let tops = [];
+    let bottoms = [];
 
-    // Travel required before the rail changes its mind. Below ~8px this reads as
-    // flicker on a trackpad; much above ~40px and a deliberate flick upward feels
-    // like it was ignored.
-    const THRESHOLD = 24;
-
-    let lastY = window.scrollY;
-    let travel = 0;
-    let state = "full";
-    let ticking = false;
-
-    const setState = (next) => {
-      if (next === state) return;
-      state = next;
-      root.dataset.toc = next;
-    };
-
-    const update = () => {
-      ticking = false;
+    // ---- Bar heights: mark length = section length -------------------------
+    // Bounds are stated in rem so the chart scales with the fluid root. The
+    // floor exists because a two-paragraph section still needs a visible,
+    // hoverable bar; the ceiling keeps the tallest bar clear of its
+    // neighbours on the rail's 0.5rem-spaced pitch.
+    const measure = () => {
+      const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const MAX = 1.647 * rootPx; // 28px at calibration
+      const MIN = 0.471 * rootPx; // 8px at calibration
       const y = window.scrollY;
-      const delta = y - lastY;
-      lastY = y;
-      if (delta === 0) return;
-
-      // While any of the title block is still on screen the reader is orienting,
-      // not reading — the rail stays regardless of which way they are going.
-      const top = header ? header.getBoundingClientRect().bottom > 0 : y < 200;
-      if (top) {
-        travel = 0;
-        setState("full");
-        return;
-      }
-
-      // Reset the accumulator whenever direction reverses, so travel always
-      // measures one continuous run rather than a net figure that a long scroll
-      // down could hide a short scroll up inside.
-      if ((delta > 0) !== (travel > 0)) travel = 0;
-      travel += delta;
-
-      if (travel > THRESHOLD) setState("sunk");
-      else if (travel < -THRESHOLD) setState("full");
+      tops = Array.from(sections, (s) => s.getBoundingClientRect().top + y);
+      bottoms = Array.from(sections, (s, i) => tops[i] + s.offsetHeight);
+      const longest = Math.max(...Array.from(sections, (s) => s.offsetHeight));
+      items.forEach((li, i) => {
+        const h = Math.round(Math.max(MIN, ((bottoms[i] - tops[i]) / longest) * MAX));
+        li.style.setProperty("--mark-h", h + "px");
+      });
+      fill();
     };
 
-    root.dataset.toc = "full";
+    // ---- Fill: ink up to the reader's position ------------------------------
+    const fill = () => {
+      const y = window.scrollY;
+      const atFloor = y >= document.documentElement.scrollHeight - window.innerHeight - 2;
+      const reader = y + window.innerHeight * 0.3;
+      items.forEach((li, i) => {
+        const f = atFloor
+          ? 1
+          : Math.min(1, Math.max(0, (reader - tops[i]) / (bottoms[i] - tops[i])));
+        li.style.setProperty("--mark-fill", (f * 100).toFixed(1) + "%");
+      });
+    };
+
+    let ticking = false;
     window.addEventListener(
       "scroll",
       () => {
         if (ticking) return;
         ticking = true;
-        requestAnimationFrame(update);
+        requestAnimationFrame(() => {
+          ticking = false;
+          fill();
+        });
       },
       { passive: true }
     );
-  })();
-
-  // ---- The marks are bars: mark length = section length --------------------
-  // Measures each h2 section's rendered height and scales the rail's marks to
-  // match — a six-bar chart of the document, readable in one glance. Bounds are
-  // stated in rem so the chart scales with the fluid root: at the 17px
-  // calibration root the tallest mark is 20px and the floor is 6px. The floor
-  // exists because a two-paragraph section still needs a visible, hoverable
-  // mark; the ceiling keeps the tallest bar clear of its neighbours (label rows
-  // sit ~25px apart, held there by the one-line-heading rule).
-  //
-  // Re-measured on load (images settle section heights) and on resize (the
-  // fluid root changes every length). If the TOC and the sections ever disagree
-  // in count — nested h3 lists don't affect this; both counts are h2-level —
-  // the script leaves the uniform 12px fallback rather than guessing a mapping.
-  (() => {
-    const items = document.querySelectorAll("#TOC > ul > li");
-    if (!items.length) return;
-    const sections = document.querySelectorAll("main.content section.level2");
-    if (sections.length !== items.length) return;
-
-    const paint = () => {
-      const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
-      const MAX = 1.176 * rootPx; // 20px at calibration
-      const MIN = 0.353 * rootPx; // 6px at calibration
-      const lengths = Array.from(sections, (s) => s.offsetHeight);
-      const longest = Math.max(...lengths);
-      items.forEach((li, i) => {
-        const h = Math.round(Math.max(MIN, (lengths[i] / longest) * MAX));
-        li.style.setProperty("--mark-h", h + "px");
-      });
-    };
 
     let raf = 0;
-    const schedule = () => {
+    const remeasure = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(paint);
+      raf = requestAnimationFrame(measure);
     };
-    window.addEventListener("load", schedule);
-    window.addEventListener("resize", schedule, { passive: true });
-    paint();
+    // Load settles the images (section heights move as they arrive); resize
+    // changes the fluid root and with it every length on the page.
+    window.addEventListener("load", remeasure);
+    window.addEventListener("resize", remeasure, { passive: true });
+    measure();
   })();
 </script>
