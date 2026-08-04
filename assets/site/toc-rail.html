@@ -3,20 +3,25 @@
   _quarto.yml. All styling lives in styles.scss ("The rail's words exist only on
   request" + the marks rules); this file only measures and writes numbers.
 
-  THE RAIL IS AN INSTRUMENT, not a list (2026-08-03): at rest it is six
-  hairline bars and nothing else. Each bar's LENGTH is its section's rendered
-  length — a small bar chart of the document — and each bar FILLS with ink as
-  the reader moves through that section, so completed sections are solid,
-  the current one is part-filled, and what remains waits in gray. Shape says
-  what the document is; ink says where you are in it. Labels exist only on
-  hover or keyboard focus (pure CSS, styles.scss).
+  THE RAIL IS AN INSTRUMENT, not a list (2026-08-03): at rest it is a stacked
+  column of 2px bars and nothing else, scaled so bars plus equal gaps span
+  HALF THE VIEWPORT HEIGHT, vertically centred by the sticky box. Each bar's
+  LENGTH is its section's share of the document; each bar FILLS with ink as
+  the reader moves through it — completed sections solid, the current one
+  part-filled, the rest gray. Shape says what the document is; ink says where
+  you are in it. Labels exist only on hover or keyboard focus (pure CSS,
+  styles.scss), centred on their bars.
 
-  This file writes two custom properties per top-level TOC item:
+  This file writes two custom properties per top-level TOC item, plus one on
+  the root:
 
-    --mark-h     the bar's height   (section length, scaled; 8–28px at the
-                 17px calibration root, rem-scaled via the live root)
+    --mark-h     the bar's height   (section share × the half-viewport
+                 column, floored at 0.824rem so short sections stay visible)
     --mark-fill  the bar's fill     (0–100%, fraction of the section behind
                  the reader's position)
+    --rail-h     (on <html>) the column's total height, which the sticky box
+                 uses to centre it — on the root because quarto.js rewrites
+                 the sidebar's own style attribute on scroll
 
   The fill is written on scroll through one passive rAF-coalesced listener. It
   is STATE, not animation — it tracks the scroll position exactly the way the
@@ -48,23 +53,35 @@
     let tops = [];
     let bottoms = [];
 
-    // ---- Bar heights: mark length = section length -------------------------
-    // Bounds are stated in rem so the chart scales with the fluid root. The
-    // floor exists because a two-paragraph section still needs a visible,
-    // hoverable bar; the ceiling keeps the tallest bar clear of its
-    // neighbours on the rail's 0.5rem-spaced pitch.
+    // ---- Bar heights: the column is half the viewport ----------------------
+    // Each bar's share of the column is its section's share of the document,
+    // the gaps between bars are equal (0.706rem, matching the CSS
+    // margin-bottom), and bars + gaps together span 50% of the viewport
+    // height. The floor keeps a two-paragraph section visible and hoverable —
+    // and, with the 0.706rem gap, keeps adjacent hover labels (~25px tall,
+    // centred on their bars) from colliding even when two short sections sit
+    // together. The total is written to <html> as `--rail-h` so the sticky
+    // box can centre the column vertically; it goes on the root because
+    // quarto.js rewrites the sidebar's own style attribute on scroll.
     const measure = () => {
       const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
-      const MAX = 1.647 * rootPx; // 28px at calibration
-      const MIN = 0.471 * rootPx; // 8px at calibration
+      const GAP = 0.706 * rootPx; // 12px at calibration — must match the CSS
+      const FLOOR = 0.824 * rootPx; // 14px at calibration
       const y = window.scrollY;
       tops = Array.from(sections, (s) => s.getBoundingClientRect().top + y);
       bottoms = Array.from(sections, (s, i) => tops[i] + s.offsetHeight);
-      const longest = Math.max(...Array.from(sections, (s) => s.offsetHeight));
+      const lengths = sections.length
+        ? Array.from(sections, (s) => s.offsetHeight)
+        : [];
+      const sum = lengths.reduce((a, b) => a + b, 0);
+      const target = window.innerHeight * 0.5 - GAP * (lengths.length - 1);
+      let railH = GAP * (lengths.length - 1);
       items.forEach((li, i) => {
-        const h = Math.round(Math.max(MIN, ((bottoms[i] - tops[i]) / longest) * MAX));
+        const h = Math.round(Math.max(FLOOR, (lengths[i] / sum) * target));
         li.style.setProperty("--mark-h", h + "px");
+        railH += h;
       });
+      document.documentElement.style.setProperty("--rail-h", railH + "px");
       fill();
     };
 

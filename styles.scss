@@ -1430,22 +1430,23 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // JS keeps writing, the paint stays put, and its sticky recompute is
     // otherwise untouched.
     //
-    // The value docks the rail's top edge on the title block's own line —
-    // 3.5rem masthead + 1.75rem content margin — so the margin column reads
-    // name, then contents, aligned with the article's header rather than at an
-    // invented offset. The fixed masthead occupies 0–3.5rem and is cleared
-    // with the content margin to spare.
-    top: calc(3.5rem + 1.75rem) !important;
+    // The instrument centres vertically (2026-08-03, Ameya's call — this
+    // reverses the title-line docking for the BAR column specifically; the
+    // history of that reversal is in design/direction.md). `--rail-h` is the
+    // bar column's total height, written on <html> by toc-rail.html — on the
+    // root, not on this element, because quarto.js rewrites this element's
+    // style attribute on scroll and would wipe a property parked here. The
+    // fallback (a centred ~21rem column) covers the no-JS uniform rail.
+    top: calc(50svh - var(--rail-h, 21rem) / 2) !important;
     align-self: start; // the grid stretches this item to the full row height by
                        // default, and an element as tall as its container has
                        // no room to stick in — start-aligned it shrinks to its
                        // content and sticky gets its travel back
     padding-top: 0; // Quarto pads the sidebar 14px; zeroed so the rail's box
-                    // top IS the docked line rather than 14px below it
-    // A TOC taller than the remaining viewport still scrolls inside itself
-    // rather than running under the fold (`overflow: auto` ships on the
-    // element); in practice six labels never hit this.
-    max-height: calc(100svh - 3.5rem - 1.75rem - 2rem) !important;
+                    // top IS the centred line rather than 14px below it
+    // The column is half the viewport by construction, so this can never bind;
+    // it exists so a runaway measurement can't push the rail under the fold.
+    max-height: 100svh !important;
     pointer-events: none; // the box must not eat clicks in the gutter;
                           // the rail itself takes them back below
 
@@ -1461,6 +1462,10 @@ body:has(.hero-screen) { overflow-x: hidden; }
   max-width: 12.941rem; // 220px — rem so the rail, its labels and its ~25-char
                         // budget all scale as one
   pointer-events: auto;
+  padding-block: 0; // Quarto pads the nav ~15px on top, which pushed the bar
+                    // column that far below the true viewport centre — the
+                    // sticky box centres on `--rail-h`, so the column must
+                    // start at the box's own top edge
   // Quarto pads the sidebar's children, which left the rail sitting ~26px in
   // from the screen inset the masthead uses. Zeroed, so the name and the rail
   // share one vertical edge — the point of parking the name in the gutter in the
@@ -1470,188 +1475,66 @@ body:has(.hero-screen) { overflow-x: hidden; }
   margin-left: 0;
 }
 
-// The rail is Nunito, unnumbered, and marked. Labels are words, and words in mono
-// read as a different font rather than a quieter tier — which is exactly how it
-// landed the first time. The numerals that used to sit here are gone too: once
-// every section has its own mark, a number beside that mark is the same fact
-// stated twice, and the marks are the version that survives the collapse. Mono
-// still exists on the page — the article's h2 gutter numerals are untouched —
-// it just no longer has a counterpart in the rail.
+// The rail is Nunito and unnumbered — mono stays with the article's gutter
+// numerals; words in mono read as a different font rather than a quieter tier.
 #TOC,
 .sidebar nav[role="doc-toc"] {
   font-size: var(--text-apparatus);
 
-  // Uppercase and tracked keeps the kicker role; Nunito keeps it in the family.
+  // The kicker is gone entirely (2026-08-03). The resting rail is a wordless
+  // instrument, and in the hover state the labels identify themselves — a
+  // heading over a list that only exists mid-interaction is furniture.
   h2,
   .toc-title {
-    font-size: var(--text-label);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--gray-1000);
+    display: none;
   }
 
-  // The last 6px of drift: a `ul` keeps its list padding even with the markers
-  // gone. Zeroed, the anchors start on the same vertical line as the kicker
-  // above them and the masthead above that.
   > ul {
     padding-left: 0;
     margin-left: 0;
+    margin-bottom: 0;
   }
 
   > ul > li {
-    // Containing block for the mark below. Quarto ships the `li` static.
-    position: relative;
+    position: relative; // containing block for the bar and its label
 
-    // The labels clear the mark column. This used to be a hanging indent for an
-    // absolutely-positioned numeral (`margin-left: -0.75rem` + a 2.4rem pad);
-    // with the numeral gone the anchor sits flush in the rail and needs only
-    // enough padding that the mark reads as a margin mark rather than a bullet
-    // touching the text.
-    //
-    // ONE LINE PER LABEL, enforced. This is what makes the marks evenly spaced:
-    // each one sits beside its own label, so a label that wraps to two or three
-    // lines pushes every mark below it down and the rail's spacing ends up
-    // encoding word-wrap. The real fix is editorial — **section headings are
-    // written short enough to fit** (see design/direction.md; ~30 characters at
-    // this measure) — and this is the tripwire that keeps it true rather than
-    // leaving the rail's geometry at the mercy of whatever a future post
-    // declares. Same reasoning as the two-category cap on the filing row.
-    // **An ellipsis appearing in the rail is a bug report about the heading, not
-    // a styling choice**: shorten the heading, do not widen the rail.
-    > a {
-      position: relative;
-      padding-left: 1.25rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    // Sub-items (h3) match the top-level treatment so they cannot reintroduce
-    // uneven spacing either. They get no mark of their own: a second tick length
-    // or shade to encode depth is a real decision, and neither post has an h3 to
-    // make it against yet.
+    // ONE LINE PER LABEL, enforced (nowrap + ellipsis). The labels now centre
+    // on their bars rather than the bars sitting beside label rows, so a wrap
+    // can no longer bend the rail's geometry — but a wrapped label would still
+    // collide with its neighbours in the hover state. The editorial rule
+    // stands: **an ellipsis in the rail is a bug report about the heading** —
+    // shorten the heading, do not widen the rail.
+    > a,
     ul a {
       padding-left: 1.25rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
-    // ---- THE MARKS ------------------------------------------------------
-    // One 1px × 12px hairline per section, and this is what the rail collapses
-    // to. A single mark was tried first and was the wrong object: alone in an
-    // empty margin it is a dot with nothing to be measured against, so it can
-    // say "here" but not "here, out of six" or "near the end". Marks are only
-    // legible as a set. Ranked by ink, not colour — `--gray-800` for the rest,
-    // full ink for the active one — which is the same gray-to-ink ladder the
-    // labels themselves use, so the rail ranks one way rather than two.
-    //
-    // Still NOT Rauno's ruler of horizontal dashes. A vertical hairline in the
-    // left margin is the oldest mark in the trade — the printer's change bar —
-    // and it already existed in this stylesheet as the active link's
-    // `border-left`, so a column of them costs no new material.
-    //
-    // Parked on the `li` rather than the anchor for one reason: the collapse
-    // scales the anchor to nothing, and a pseudo-element inherits its parent's
-    // transform. On the `li` the marks are outside that transform and simply
-    // stay.
-    //
-    // Geometry, measured rather than guessed. `left: 0` puts the marks on the
-    // rail's own left edge, which is the line the masthead and the kicker
-    // already hold — with the numerals gone the marks inherit that job, and
-    // they are the right holder for it because they are what remains on screen
-    // while the reader reads. Vertically each one centres on its label's first
-    // line box: Quarto's `.nav-link` pads 0.2rem and sets a 1.1rem line-height,
-    // and 0.2 + 1.1/2 = exactly 0.75rem.
-    //
-    // The height is the SECTION'S LENGTH (2026-08-03, draft 3 of the round-2
-    // TOC exploration — Ameya's pick). This deliberately overturns the earlier
-    // fixed-12px doctrine, and the history matters: length was originally
-    // banned because the `border-left` this mark replaced took its label's
-    // height, so length accidentally encoded word-wrap. The ban was on length
-    // encoding NOTHING TRUE — not on length. Now it encodes the one thing
-    // worth saying: the rail is a small bar chart of the document, longest
-    // section = tallest mark, readable in a glance and still just six
-    // hairlines. `--mark-h` is written per item by assets/site/toc-rail.html
-    // (CSS cannot know section lengths); the 12px fallback keeps the old
-    // uniform rail on any page where the script bails. Each mark centres on
-    // its label's first line box (0.2rem padding + half the 1.1rem
-    // line-height = 0.75rem), so variable heights stay aligned to their
-    // labels and the hover reveal cannot drift. The one-line-heading rule is
-    // what keeps the PITCH even — bars only read as a chart against a steady
-    // baseline grid, which is one more job that tripwire now carries.
-    // THE FILL (2026-08-03, same session): the bars are also the reading
-    // position. `--mark-fill` (written by toc-rail.html on scroll) is the
-    // fraction of that section behind the reader — completed sections are
-    // solid ink, the current one is part-filled, the rest wait in gray. The
-    // whole rail is one instrument: shape = the document, ink = your progress
-    // through it. A hard gradient stop, not a nested element, because a
-    // pseudo-element can't hold children — and the stop doubles as the "you
-    // are here" edge. No transition: the fill tracks the scroll position the
-    // way a scrollbar thumb does, which is state, not animation — so there is
-    // nothing for prefers-reduced-motion to disable. The per-section `active`
-    // ink override is gone; the partially-filled bar IS the active marker now.
-    &::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: calc(0.75rem - var(--mark-h, 12px) / 2);
-      width: 1px;
-      height: var(--mark-h, 12px);
-      background: linear-gradient(
-        to bottom,
-        var(--gray-1200) 0 var(--mark-fill, 0%),
-        var(--gray-800) var(--mark-fill, 0%) 100%
-      );
-    }
-
-    // Longer bars need a longer pitch: the anchor's own box is ~25.5px and the
-    // bars now run to 28px, so each item adds half a rem of air. Scoped to the
-    // rail — below 992px this list is Quarto's off-canvas menu and stays
-    // compact.
-    @media (min-width: 992px) {
-      margin-bottom: 0.5rem;
-    }
   }
 
   .nav-link {
     color: var(--gray-1000);
 
-    // Bootstrap ships `.nav-link { transition: color .15s, background-color
-    // .15s, border-color .15s }`, so the rail's gray→ink hover was fading over
-    // 150ms while every other link on the site changes instantly — Layer 1's
-    // link rule is explicit that hovers are untransitioned. It never touched
-    // opacity or transform, so the collapse was unaffected and the leak was
-    // invisible until the reveal timings were split apart and measured.
-    // Zeroing it here also makes the base state genuinely transition-free, which
-    // is what the hover and focus reveals fall back to in order to be instant.
-    // The two scroll rules below are (1,2,0) and (1,4,0) against this (1,1,0),
-    // so they still win where they should.
+    // Bootstrap ships `.nav-link { transition: color .15s, ... }`, so the
+    // rail's gray→ink hover was fading over 150ms while every other link on
+    // the site changes instantly. Zeroed: every state change here is instant.
     transition: none;
 
     // A shim, not a style. Quarto's own theme puts a full-height `border-left`
-    // on the active TOC link, and deleting our declaration simply hands the rail
-    // back to it — a rule as tall as the item, drawn in the same column as the
-    // marks, which is the exact variable-length mark the fixed 12px ones were
-    // chosen to replace. Transparent rather than `none` so the 1px it occupies
-    // stays in the box and the labels do not shift by a pixel between themes.
+    // on the active TOC link; deleting our declaration hands the rail back to
+    // it. Transparent rather than `none` so the 1px stays in the box and the
+    // labels do not shift between themes.
     border-left: 1px solid transparent;
 
     &:hover {
       color: var(--gray-1200);
     }
 
-    // The global `:focus-visible` ring is (0,1,0) and Bootstrap ships
-    // `.nav-link:focus-visible` at (0,2,0), so the rail — alone on the site —
-    // was drawing Bootstrap's default BLUE halo, the only colour on the page
-    // outside the palette. It matters more here than it would anywhere else:
-    // keyboard is the one route by which a reader who never scrolls up can
-    // retrieve a collapsed rail, so this ring is not a rare state, it is the
-    // entire keyboard affordance. Restated at (1,2,0) to win. The accent is
-    // correct here and is not a contradiction of the monochrome active mark —
-    // focus is an interaction, and interaction is exactly what the accent is
-    // budgeted for.
+    // Bootstrap ships `.nav-link:focus-visible` at (0,2,0), which beat the
+    // site ring and drew the default blue — the only off-palette colour on
+    // the page. Keyboard is the one route to a rail whose words are hidden,
+    // so this ring is the entire keyboard affordance. Restated at (1,2,0).
     &:focus-visible {
       box-shadow:
         0 0 0 2px var(--gray-100),
@@ -1659,15 +1542,7 @@ body:has(.hero-screen) { overflow-x: hidden; }
       border-radius: 4px;
     }
 
-    // Rank by weight and ink, not by colour — Emil's move, and the one that
-    // keeps Layer 1b's spending rule honest. The accent used to mark this,
-    // which meant vermillion sat in the margin for the entire duration of a
-    // read; that is not "colour as a response to interaction", it is the only
-    // colour on the page, permanently, in peripheral vision. Gray → ink plus
-    // 400 → 500 says the same thing in materials the page already ranks with,
-    // and the rail is now monochrome in both of its states. The mark beside it
-    // runs the same ladder from `--gray-800` to ink, so label and mark rank
-    // together rather than each in its own language.
+    // Rank by weight and ink, not colour — the hover state's active label.
     &.active {
       color: var(--gray-1200);
       font-weight: 500;
@@ -1675,32 +1550,83 @@ body:has(.hero-screen) { overflow-x: hidden; }
   }
 }
 
-// ---- The rail's words exist only on request -----------------------------------
+// ---- The instrument (>=992px) -------------------------------------------------
 //
-// (2026-08-03, Ameya's call — supersedes the scroll-direction system.) The rail
-// at rest is BARS ONLY: no labels, no kicker, ever. Text appears the instant a
-// pointer enters the rail or focus lands in it, and leaves the instant they do.
-// With the bars now carrying shape (section lengths) AND position (the fill),
-// the words stopped earning any resting presence at all — and once the resting
-// state never contains text, scroll direction has nothing left to decide, so
-// the whole direction-plus-hysteresis machinery is retired from
-// assets/site/toc-rail.html. Its history — the morph, the asymmetric timings,
-// the "who asked, and with what" rule — is preserved in design/direction.md's
-// session log; what survives here is its best finding: **a request (hover,
-// Tab) is answered instantly, never on a curve.** Both directions of the
-// reveal are instant, which also means there is nothing here for
-// prefers-reduced-motion to cover.
+// At rest the rail is a stacked column of bars and nothing else — no labels,
+// no kicker, at any scroll position. Each bar's LENGTH is its section's share
+// of the document; each bar FILLS with ink as the reader moves through it;
+// the GAPS are equal (2026-08-03, Ameya: the lengths already say how big each
+// section is — even gaps are what make those lengths legible, the way a bar
+// chart needs a steady baseline). The column is scaled by toc-rail.html to
+// half the viewport's height and the sticky box centres it vertically. The
+// earlier rejection of vertical centring was of a centred TEXT rail — a list
+// floating mid-air among top-anchored objects. A wordless gauge is a
+// different object: instruments read from the middle of their range, and at
+// half-viewport scale the column is composition, not furniture.
 //
-// Scoped to >=992px: below that this list is Quarto's off-canvas menu, where
-// the labels ARE the interface and must stay visible.
+// Words exist only on request: hover or focus-within, revealed INSTANTLY in
+// both directions (the one rule kept from the retired scroll-direction
+// system: a request is never answered on a curve). Nothing here transitions,
+// so there is nothing for prefers-reduced-motion to cover.
+//
+// Scoped to >=992px: below, this list is Quarto's off-canvas menu, where the
+// labels ARE the interface — plain text, no bars, no hiding.
 @media (min-width: 992px) {
-  #TOC:not(:hover):not(:focus-within) {
-    .nav-link,
-    #toc-title {
-      opacity: 0;
-      transform: scaleX(0);
+  #TOC > ul > li {
+    // The li IS the bar slot: its height is the bar's, plus one fixed gap.
+    // `--mark-h` and `--mark-fill` are written by assets/site/toc-rail.html;
+    // the fallback keeps a small uniform rail wherever the script bails.
+    height: var(--mark-h, 0.706rem);
+    margin-bottom: 0.706rem; // 12px at calibration — THE equal gap
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    // The bar. 2px now — at half-viewport lengths a 1px hairline read as a
+    // rule, not a bar; 2px is the least width that reads as an object with a
+    // fill inside it. The gradient's hard stop is the fill: ink above the
+    // reader's position, gray below, no transition (the fill is state, like
+    // a scrollbar thumb, not animation).
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(
+        to bottom,
+        var(--gray-1200) 0 var(--mark-fill, 0%),
+        var(--gray-800) var(--mark-fill, 0%) 100%
+      );
+    }
+
+    // Labels leave the flow entirely and centre on their bars, so the bar
+    // column's geometry is pure. Ellipsis needs a bound now that the anchor
+    // no longer sizes against the rail box.
+    > a {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      max-width: 11.5rem;
+      transform: translateY(-50%);
       transform-origin: left center;
     }
+
+    // A fixed-height bar slot cannot hold a nested h3 list; neither post has
+    // one. If a post ever needs h3s in the rail, that is a design round, not
+    // an unhiding.
+    ul {
+      display: none;
+    }
+  }
+
+  // Words on request. The hide transform must carry the centring translate,
+  // or the label would jump vertically between states.
+  #TOC:not(:hover):not(:focus-within) .nav-link {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0);
   }
 }
 
