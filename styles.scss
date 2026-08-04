@@ -21,6 +21,13 @@ $headings-font-weight: 600;
 // Distill gets away with ~83ch only on 1.7em leading and larger type. 17px
 // brings us to ~75ch without narrowing the column (narrowing would shrink the
 // figures, which are already the weakest link).
+//
+// FLUID (2026-08-03): 17px is now the CALIBRATION root, not the root. The live
+// root is a clamp set on `--bs-root-font-size` in the token block below — 16px
+// on anything narrower than ~880px, exactly 17px at the 1440px viewport every
+// rhythm number in this file was tuned on, up to 19px at 2560px. This SCSS var
+// stays because Bootstrap requires it to emit `:root { font-size: … }` at all;
+// the custom property then out-cascades its value.
 $font-size-root: 17px;
 $line-height-base: 1.5;
 
@@ -31,14 +38,74 @@ $link-decoration: underline;
 
 // Equal sidebar/margin widths keep the article column truly centered while
 // the TOC occupies the left column as a normal sticky sidebar.
-$grid-body-width: 692px;
-$grid-sidebar-width: 300px;
-$grid-margin-width: 300px;
+//
+// In REM, deliberately (2026-08-03, the fluid foundation). The root scales with
+// the viewport, so a rem grid is what makes the article column genuinely widen
+// on a large display — 692px at the 17px calibration root, ~773px at 19px —
+// while the LINE stays ~75 characters, because the type grew by exactly the
+// same factor. Wider column, same measure: that is the whole trick, and it is
+// why the column is not simply set wider in px (which would trade the measure
+// discipline away to get the width). Every value here is px-at-17 ÷ 17.
+$grid-body-width: 40.706rem; // 692px
+$grid-sidebar-width: 17.647rem; // 300px
+$grid-margin-width: 17.647rem; // 300px
+
+// Quarto derives another ~20 widths from the three above using px arithmetic —
+// `math.min(500px, $grid-body-column-max)`, `$grid-body-column-max + 200px`,
+// and so on (share/formats/html/bootstrap/_bootstrap-mixins.scss). Sass cannot
+// mix px and rem in that arithmetic, so rem inputs would kill the compile —
+// EXCEPT that every derived variable is `!default`, and Sass skips a
+// `!default` right-hand side entirely when the variable is already set
+// (verified against Quarto 1.9's own dart-sass). So each one is pre-computed
+// here, in rem, with Quarto's formula in the comment. If a future Quarto adds
+// a new px-arithmetic derivation, the compile fails loudly and the new
+// variable gets added to this list — a tripwire, not a timebomb.
+$grid-body-column-min: 29.412rem; // min(500px, body-max)
+$grid-float-wide-slim-body-column-min: 26.471rem; // body-min − 50px
+$grid-float-wide-slim-body-column-max: 37.765rem; // body-max − 50px
+$grid-float-mid-body-column-max: 37.765rem; // body-max − 50px
+$grid-float-mid-slim-body-column-max: 37.765rem; // body-max − 50px
+$grid-float-mid-listing-body-column-max: 37.765rem; // body-max − 50px
+$grid-docked-body-width: 52.471rem; // body-max + 200px
+$grid-docked-wide-slim-body-column-min: 26.471rem; // body-min − 50px
+$grid-docked-wide-slim-body-column-max: 37.765rem; // body-max − 50px
+$grid-docked-mid-body-column-max: 37.765rem; // body-max − 50px
+$grid-docked-mid-slim-body-column-max: 37.765rem; // body-max − 50px
+$grid-docked-mid-listing-body-column-max: 37.765rem; // body-max − 50px
+$grid-default-body-width: 43.647rem; // body-max + 50px
+$grid-default-mid-body-column-max: 40.706rem; // default-body − 50px
+$grid-default-full-mid-body-column-max: 40.706rem; // default-body − 50px
+$grid-default-listing-mid-body-column-max: 67.176rem; // default-body + 400px
+$grid-default-slim-mid-body-column-max: 40.706rem; // default-body − 50px
+$grid-default-toc-wide-body-column-min: 26.471rem; // body-min − 50px
+$grid-default-toc-wide-body-column-max: 40.706rem; // default-body − 50px
+$grid-default-toc-mid-body-column-min: 26.471rem; // body-min − 50px
+$grid-default-toc-mid-body-column-max: 40.706rem; // default-body − 50px
 
 /*-- scss:rules --*/
 
 // ---- Tokens: warm 12-step gray (Radix Sand), no chroma --------------------
 :root {
+  // ---- The fluid root (2026-08-03) ----------------------------------------
+  // The whole page scales from this one declaration. Bootstrap emits
+  // `:root { font-size: var(--bs-root-font-size) }`; redefining the property
+  // here wins the cascade, and everything below it is stated in rem, so type,
+  // rhythm, the grid, the shell and the cap all breathe together.
+  //
+  // The line runs through two anchored points: 17px at a 1440px viewport (the
+  // width every rhythm number in this file was calibrated on — at 1440 the
+  // fluid site is pixel-identical to the fixed one it replaces) and 19px at
+  // 2560px. Floor 16px, reached below ~880px — phones and small tablets sit at
+  // the classic 16, where the collapsed single column never runs long anyway.
+  // The slope only matters between laptop and studio display, which is exactly
+  // where the fixed 17px was leaving a 2560px screen three-quarters empty.
+  //
+  // Held in px + vw on purpose: a rem-based clamp here would be circular (rem
+  // is what this rule defines), and vw alone would make font size a pure
+  // function of viewport with no floor. Media-query breakpoints elsewhere stay
+  // in px — they describe the VIEWPORT, which does not scale with the root.
+  --bs-root-font-size: clamp(16px, 14.4px + 0.18vw, 19px);
+
   --gray-100: #fdfdfc; // page bg
   --gray-200: #f9f9f8; // raised surfaces (code bg)
   --gray-300: #f1f0ef;
@@ -72,8 +139,8 @@ $grid-margin-width: 300px;
   --accent-ink: #b04d00;
 
   --hover-fill: #f5f4f4;
-  --measure-pad: 24px;
-  --shell: 1160px; // homepage-only wide layout
+  --measure-pad: 1.412rem; // 24px at calibration
+  --shell: 68.235rem; // 1160px at calibration — homepage-only wide layout
 
   // The page grid's outer slack columns are `5fr`, so on a wide display they
   // grow without bound: at a 2700px viewport each is ~784px, which strands the
@@ -81,7 +148,11 @@ $grid-margin-width: 300px;
   // the masthead reading as three unrelated objects. Capping and centring the
   // whole grid keeps the assembly composed at any width. Quarto's internal
   // geometry is untouched — no flatten, no fixed sidebar.
-  --page-max: 1440px;
+  //
+  // In rem, so the cap rises with the root: 1440px at calibration, ~1609px on a
+  // 2560px display. A px cap would quietly re-pin everything the rem grid just
+  // unpinned — the column would stop growing the moment the cap bit.
+  --page-max: 84.706rem;
 
   // ---- The apparatus tier ---------------------------------------------------
   // Prose keeps the flat Nunito scale. The apparatus — captions, dates,
@@ -263,6 +334,13 @@ body:has(.hero-screen) main.content {
 }
 
 // ---- Prose ------------------------------------------------------------------
+// FLUID NOTE: every rhythm value below is rem (px-at-calibration ÷ 17). The px
+// figures quoted in comments — "43px against a 28.9px line" and so on — are the
+// values AT THE 17px CALIBRATION ROOT (a 1440px viewport), where the fluid page
+// is pixel-identical to the fixed one. At any other root the ratios hold and
+// the pixels scale. Hairlines (1px), radii, and the rail's mark geometry stay
+// px on purpose: a border does not thicken with the viewport, and the 12px mark
+// was fixed precisely so its length says nothing.
 #quarto-content main.content {
   // Sections number themselves. The numeral is the page's one piece of ornament
   // and it earns its place: in a document with six h2s and six figures, "03" in
@@ -287,12 +365,12 @@ body:has(.hero-screen) main.content {
   // need ~104px, which would look absurd. 1.5 lines buys back about half of it;
   // the other half is paragraph length (Layer 5), not CSS.
   p {
-    margin-bottom: 43px;
+    margin-bottom: 2.529rem; // 43px
   }
 
   ul,
   ol {
-    margin-bottom: 43px;
+    margin-bottom: 2.529rem; // 43px
     padding-left: 1.25rem;
   }
 
@@ -336,8 +414,8 @@ body:has(.hero-screen) main.content {
     line-height: 1.6;
     color: var(--gray-1100);
     border-left: 1px solid var(--gray-400);
-    padding-left: 20px;
-    margin-bottom: 56px;
+    padding-left: 1.176rem; // 20px
+    margin-bottom: 3.294rem; // 56px
 
     p {
       font-size: inherit;
@@ -375,8 +453,8 @@ body:has(.hero-screen) main.content {
   h2 {
     counter-increment: section;
     position: relative;
-    margin-top: 72px;
-    margin-bottom: 29px;
+    margin-top: 4.235rem; // 72px
+    margin-bottom: 1.706rem; // 29px
     padding-bottom: 0;
     border-bottom: none;
 
@@ -405,8 +483,8 @@ body:has(.hero-screen) main.content {
   }
 
   h3 {
-    margin-top: 52px;
-    margin-bottom: 22px;
+    margin-top: 3.059rem; // 52px
+    margin-bottom: 1.294rem; // 22px
   }
 }
 
@@ -448,13 +526,13 @@ body:has(.hero-screen) main.content {
   // holding a 28px indent, which reads as a mistake rather than as a wrap. A
   // column-gap only applies between items that share a line.
   column-gap: 1.75rem;
-  padding-top: 64px;
+  padding-top: 3.765rem; // 64px
   // Four lines of the 28.9px prose rhythm. The filing line and the epistemic
   // block are both small gray text, so with anything less they read as one
   // stacked unit — and this gap is now the header's ONLY separator, doing the
   // job the hairline rule and the standfirst used to share. Space is the
   // cheapest material on the page and the only one that cannot look busy.
-  margin-bottom: 116px;
+  margin-bottom: 6.824rem; // 116px
 
   .quarto-title {
     display: contents;
@@ -510,7 +588,7 @@ body:has(.hero-screen) main.content {
   // descender line of a 27px title.
   .quarto-title-meta {
     order: 4;
-    margin-top: 20px;
+    margin-top: 1.176rem; // 20px
   }
 
   // Pushed to the far edge of the filing row, so the line reads as one ruled
@@ -524,8 +602,8 @@ body:has(.hero-screen) main.content {
     display: flex;
     flex-wrap: nowrap;
     margin-left: auto;
-    margin-top: 20px; // matches the date's, so the two halves of the filing line
-                      // sit on one baseline now that nothing precedes them
+    margin-top: 1.176rem; // 20px — matches the date's, so the two halves of the
+                          // filing line sit on one baseline
   }
 }
 
@@ -679,13 +757,14 @@ div.sourceCode {
   background: var(--gray-200);
   border: 1px solid var(--gray-400);
   border-radius: 8px;
-  margin-block: 48px; // tracks the new paragraph rhythm
+  margin-block: 2.824rem; // 48px — tracks the paragraph rhythm
 
   pre.sourceCode {
-    font-size: 13px;
+    font-size: 0.765rem; // 13px — scales with the root so code and prose keep
+                         // their ratio on a large display
     line-height: 1.6;
-    padding: 16px;
-    max-height: 332px;
+    padding: 0.941rem; // 16px
+    max-height: 19.529rem; // 332px
     overflow: auto;
   }
 }
@@ -697,7 +776,7 @@ figure,
   // the page rather than another block. Ciechanowski runs 3:1 (3em vs 1em) and
   // it is most of why his figures feel like the point of the page. These were
   // 32px against 26px, i.e. 1.2:1, which is very nearly uniform.
-  margin-block: 96px;
+  margin-block: 5.647rem; // 96px
 }
 
 // ---- Figures break the measure ----------------------------------------------
@@ -723,7 +802,9 @@ figure,
 // children. A `>` here silently matches nothing.
 @media (min-width: 1200px) {
   #quarto-content main.content .quarto-figure {
-    margin-right: -200px;
+    margin-right: -11.765rem; // −200px — rem, so the outset grows with the
+                              // margin column it reaches into (both scale from
+                              // the same root; the ratio is what was designed)
   }
 
   #quarto-content main.content .quarto-figure figcaption {
@@ -772,7 +853,7 @@ figcaption,
   font-size: var(--text-apparatus);
   line-height: 1.6;
   color: var(--gray-1000);
-  margin-top: 14px;
+  margin-top: 0.824rem; // 14px
   text-align: left;
 }
 
@@ -787,7 +868,7 @@ img {
 // old stylesheet too). Wide content scrolls inside its own box; the page body
 // never does.
 .katex-display {
-  margin: 48px 0; // tracks the new paragraph rhythm
+  margin: 2.824rem 0; // 48px — tracks the paragraph rhythm
   overflow-x: auto;
   overflow-y: hidden;
   padding-block: 2px; // the scroll box would otherwise clip integral/subscript tails
@@ -836,7 +917,7 @@ html.figure-zoom-open {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 1.176rem; // 20px
   max-height: 100%;
 
   img {
@@ -903,7 +984,7 @@ html.figure-zoom-open {
   line-height: 1.12;
   letter-spacing: -0.02em;
   color: var(--gray-1200);
-  margin: 0 0 48px;
+  margin: 0 0 2.824rem; // 48px
   text-wrap: balance;
   // Shrink the block to its longest line: the fence reads this element's rect,
   // and a full-shell <p> would fence off the empty right sliver too.
@@ -920,7 +1001,7 @@ html.figure-zoom-open {
 }
 
 .hero-filing {
-  margin-top: 56px;
+  margin-top: 3.294rem; // 56px
   // Same fence logic as the headline: without this the block spans the shell and
   // its fence rect steals the whole bottom band, not just the filing corner.
   width: fit-content;
@@ -948,7 +1029,7 @@ html.figure-zoom-open {
   }
 
   .hero-filing {
-    margin-top: 44px;
+    margin-top: 2.588rem; // 44px
   }
 }
 
@@ -988,7 +1069,7 @@ html.figure-zoom-open {
 }
 
 main.content > :last-child {
-  margin-bottom: 96px;
+  margin-bottom: 5.647rem; // 96px
 }
 
 // A single faint centred line at the foot of the homepage — a colophon whisper, not a footer:
@@ -1126,8 +1207,8 @@ body:has(.hero-screen) { overflow-x: hidden; }
     grid-template-columns: 1fr 8rem;
     gap: 2rem;
     align-items: baseline;
-    margin: 0 -12px;
-    padding: 12px;
+    margin: 0 -0.706rem; // −12px
+    padding: 0.706rem; // 12px
     border: none;
     border-radius: 8px;
 
@@ -1139,8 +1220,14 @@ body:has(.hero-screen) { overflow-x: hidden; }
       display: none;
     }
 
+    // The listing body holds the reading measure even though the shell it sits
+    // in is wide. Unbounded, a description ran the full ~1000px column — 95+
+    // characters per line on the same site that argued its way to ~75 for the
+    // posts. 40rem is the hero lede's measure; the hover pill still spans the
+    // full row, so the cap costs the interaction nothing.
     .body {
       grid-column: 1;
+      max-width: 40rem;
     }
 
     // Date + reading time: apparatus, not argument. direction.md already says
@@ -1294,7 +1381,8 @@ body:has(.hero-screen) { overflow-x: hidden; }
 }
 
 #quarto-content.page-columns #quarto-sidebar #TOC {
-  max-width: 220px; // keep the rail narrow and left-aligned in the wide band
+  max-width: 12.941rem; // 220px — rem so the rail, its labels and its ~25-char
+                        // budget all scale as one
   pointer-events: auto;
   // Quarto pads the sidebar's children, which left the rail sitting ~26px in
   // from the screen inset the masthead uses. Zeroed, so the name and the rail
