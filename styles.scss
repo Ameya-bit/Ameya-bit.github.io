@@ -1290,6 +1290,86 @@ main.content > :last-child {
   }
 }
 
+// ---- Résumé page (/resume/) -------------------------------------------------
+// The body is GENERATED — tools/resume/build.py renders resume.toml into this
+// grammar (and the same source fills the LaTeX template for the PDF). The
+// entry rows speak the homepage listing's language: the work on the left at
+// prose weight, the filing facts (dates, locations) right-aligned in the
+// apparatus tier. Headings that are links carry the standard prose underline;
+// section h2s pick up the gutter numerals and the TOC rail for free.
+#quarto-content main.content .cv-filing {
+  font-size: var(--text-filing);
+  color: var(--gray-1000);
+  margin: 0 0 1.176rem; // the h2 above the first section carries the big gap
+
+  a {
+    color: inherit;
+  }
+}
+
+.cv-entry {
+  margin: 0 0 2.118rem; // 36px between entries
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.cv-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 2rem;
+}
+
+#quarto-content main.content .cv-row p {
+  margin: 0;
+}
+
+#quarto-content main.content .cv-head {
+  font-weight: 500; // the listing's title weight
+}
+
+#quarto-content main.content .cv-when,
+#quarto-content main.content .cv-where {
+  font-size: var(--text-apparatus);
+  color: var(--gray-1000);
+  text-align: right;
+  flex-shrink: 0; // dates never compress; the heading wraps instead
+}
+
+#quarto-content main.content .cv-detail {
+  color: var(--gray-1100);
+}
+
+#quarto-content main.content .cv-points {
+  margin: 0.588rem 0 0;
+  padding-left: 1.294rem;
+
+  li {
+    margin-bottom: 0.294rem;
+  }
+}
+
+#quarto-content main.content .cv-skill {
+  margin: 0 0 0.647rem;
+}
+
+// Below the listing's own collapse point the rows stack: filing facts drop
+// under the work, left-aligned — same move as the homepage listing.
+@media (max-width: 619.98px) {
+  .cv-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+
+  #quarto-content main.content .cv-when,
+  #quarto-content main.content .cv-where {
+    text-align: left;
+  }
+}
+
 // ---- Home-page hero pandas (engine: assets/pandas/pandas.js) ---------------
 // A troupe wanders the hero; one wears the straw hat and watches the rest. The
 // stage overlays only the .hero region (which sits above the Writing cue), so they

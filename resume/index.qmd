@@ -1,0 +1,11 @@
+---
+title: "Résumé"
+toc: true
+---
+
+<!-- The body below is GENERATED from tools/resume/resume.toml (the résumé's
+     single source of truth) by tools/resume/build.py, which runs as the
+     project's pre-render hook. Edit the TOML, not _body.md. The same source
+     fills the LaTeX template for the PDF: build.py --pdf. -->
+
+{{< include _body.md >}}

@@ -1,0 +1,140 @@
+# ---------------------------------------------------------------------------
+# The résumé's single source of truth. Everything else is generated:
+#   resume/_body.md (the site page's body) and the PDF (via template.tex).
+# Edit THIS file, then:  python3 tools/resume/build.py --pdf
+# (The page body alone regenerates on every quarto render — pre-render hook.)
+#
+# Writing conventions (build.py translates per surface):
+#   " · "  separator      -> \sep in the PDF, middot on the page
+#   — and –               -> --- and -- in the PDF, themselves on the page
+#   *emphasis*            -> \emph{} in the PDF, <em> on the page
+#   χ² (optional " = n")  -> math mode in the PDF, unicode on the page
+#   & % #                 -> escaped for TeX automatically
+#
+# Per-item switches:
+#   web = false   on a contact item: PDF-only (the phone number stays off the
+#                 public page — the PDF is the subset with the private fields)
+#   url           entry link in the PDF (\entryurl line)
+#   web_url       overrides url on the page (e.g. site-relative post links)
+# ---------------------------------------------------------------------------
+
+updated = "August 2026"
+name = "Ameya Panchal"
+
+[[contact]]
+text = "State College, PA"
+
+[[contact]]
+text = "(781) 870-7474"
+web = false
+
+[[contact]]
+text = "ameyapanchal011@gmail.com"
+href = "mailto:ameyapanchal011@gmail.com"
+
+[[contact]]
+text = "ameya-bit.github.io"
+href = "https://ameya-bit.github.io"
+
+[[contact]]
+text = "github.com/Ameya-bit"
+href = "https://github.com/Ameya-bit"
+
+[[contact]]
+text = "linkedin.com/in/ameya-bit"
+href = "https://linkedin.com/in/ameya-bit"
+
+
+[[sections]]
+title = "Education"
+
+  [[sections.entries]]
+  heading = "The Pennsylvania State University"
+  location = "University Park, PA"
+  detail = "B.S. Computer Science, Minor in Physics, AI · Schreyer Honors College"
+  dates = "Expected May 2028"
+  bullets = [
+    "GPA: 3.71 / 4.00",
+    "Relevant Coursework: Linear Algebra, Data Structures & Algorithms, Systems Programming, Discrete Mathematics, Physics (Mechanics / E&M)",
+  ]
+
+
+[[sections]]
+title = "Research"
+
+  [[sections.entries]]
+  heading = "Reading GPT-2's IOI Circuit Three Ways"
+  detail = "Independent · TransformerLens"
+  dates = "Jul 2026"
+  url = "https://ameya-bit.github.io/posts/ioi-circuit/index.html"
+  web_url = "../posts/ioi-circuit/"
+  bullets = [
+    "Recovered the IOI circuit (Wang et al.) with direct logit attribution, activation patching, and path patching, each hand-implemented",
+    "Framed as a methods comparison: DLA finds the name-mover heads, patching finds what feeds them, path patching isolates the link between — each blind to what the next reveals",
+  ]
+
+  [[sections.entries]]
+  heading = "An Induction Head in Disguise — Circuit Analysis of a Character-Level Transformer"
+  detail = "Independent · PyTorch, TransformerLens · *LessWrong*"
+  dates = "Jul 2026"
+  url = "https://www.lesswrong.com/posts/x2ZdCoqAaLedpjDk3/an-induction-head-in-disguise-chasing-grammar-in-a-character"
+  web_url = "../posts/induction-head/"
+  bullets = [
+    "Trained a 6-block character-level transformer and isolated a copying head via OV-circuit eigenvalues and copying scores",
+    "*Disconfirmed* two of my own hypotheses — quotation and parenthesis grammar — with targeted QK attention-pattern controls",
+    "Found the OV circuit encodes bracket completion while the QK circuit stays blind to it: a half-built mechanism. Full code published alongside the writeup",
+  ]
+
+  [[sections.entries]]
+  heading = "Monte Carlo Radiative Transfer — Neutron-Star Pulse Profiles"
+  detail = "Penn State Multi-Campus REU · advised by Prof. Asif ud-Doula · Python"
+  dates = "Oct 2025 – Present"
+  url = "https://sites.psu.edu/mcreu/2026/07/21/where-the-error-hides-how-a-common-assumption-biases-pulse-fraction-for-neutron-stars/"
+  bullets = [
+    "Built a Monte Carlo scattering atmosphere feeding a general-relativistic pulse-profile model (Schwarzschild light-bending, Doppler) to quantify the systematic from the isotropic-emission assumption in neutron-star mass–radius measurements",
+    "Validated against Chandrasekhar's exact H-function (reduced χ² = 0.70) and Bogdanov et al. waveforms (0.11% peak error)",
+    "Showed the systematic *routes* between pulsed fraction and waveform shape by hot-spot geometry and spin; first-author paper in preparation",
+  ]
+
+
+[[sections]]
+title = "Experience"
+
+  [[sections.entries]]
+  heading = "Nittany AI Advance Internship Program"
+  location = "State College, PA"
+  detail = "Application Specialist · Client: Penn State Office of the Physical Plant"
+  dates = "Dec 2025 – Present"
+  bullets = [
+    "Scoped ambiguous client requirements into technical documentation for the Docfinity systematic",
+    "Prototyped evaluation protocols for generative and OCR-derived content, and drove requirements to consensus across a cross-functional team ahead of launch.",
+  ]
+
+  [[sections.entries]]
+  heading = "Penn State Department of Physics"
+  location = "University Park, PA"
+  detail = "Physics Learning Assistant · PHYS 211"
+  dates = "Aug – Dec 2025"
+  bullets = [
+    "Taught calculus-based mechanics in problem sessions, labs, and exam prep",
+  ]
+
+
+[[sections]]
+title = "Skills & Interests"
+
+  [[sections.skills]]
+  label = "ML & Research"
+  text = "Python, PyTorch, HuggingFace Transformers, TransformerLens, NumPy, Scikit-learn, Git"
+
+  [[sections.skills]]
+  label = "Interpretability"
+  text = "Transformer circuits, induction heads, OV/QK analysis, activation and path patching, direct logit attribution"
+
+  [[sections.skills]]
+  label = "Methods"
+  text = "Monte Carlo simulation, numerical validation, linear algebra"
+
+  [[sections.skills]]
+  label = "Also"
+  text = "Java, JavaScript / React, SQL, Flask"

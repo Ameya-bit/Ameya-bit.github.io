@@ -1,6 +1,10 @@
 project:
   type: website
   output-dir: _site
+  # The résumé page's body is generated from tools/resume/resume.toml on every
+  # render, so the page can never drift from the source. (The PDF side runs
+  # manually: python3 tools/resume/build.py --pdf.)
+  pre-render: tools/resume/build.py
   render:
     - "**/*.qmd"
     - "!design/"

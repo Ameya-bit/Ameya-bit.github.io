@@ -34,3 +34,4 @@
 # lets plot.py restyle every figure without a CPU rerun of the model.
 posts/**/figures/__pycache__/
 posts/**/figures/compute.log
+/tools/resume/build/
