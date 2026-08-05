@@ -1,0 +1,92 @@
+<!-- The rail introduces itself, once (2026-08-04) — inlined via
+     `include-after-body`.
+
+     THE PROBLEM IT SOLVES. The resting TOC rail is a wordless column of bars,
+     and its labels appear only on hover or focus. That is the right resting
+     state — but nobody hovers a blank margin, so it is entirely possible to
+     read this whole site and never learn the rail has words in it. A feature
+     nobody discovers is a feature nobody has.
+
+     THE BEAT. On the first post of a session, once the page has settled: the
+     labels fade in, hold long enough to be read as a set, and fade back out.
+     The rail then keeps its silence for the rest of the visit.
+
+     WHY THIS IS ALLOWED TO MOVE, when hover here is instant in both
+     directions. The instant rule is about REQUESTS — a reader who points at
+     the rail has asked a question and must not be answered on a curve. This is
+     not an answer; it is an ANNOUNCEMENT the reader did not ask for, and an
+     announcement that appeared instantly would read as a flicker or a bug.
+     Fading is what makes it legible as deliberate.
+
+     Motion-spec compliance (design/direction.md): the purpose is nameable
+     (explain); it is once-per-session, not high-frequency; it is never
+     keyboard-initiated; each transition is 260ms on the site curve, inside the
+     300ms budget; and it animates OPACITY ONLY — the hidden state's scaleX(0)
+     is set to 1 without a transition, so nothing ever animates from scale(0).
+
+     REFUSALS, in order: no rail on this page, reduced motion (the announcement
+     simply never exists — the labels are still reachable by hover and by
+     keyboard), below 992px where the labels ARE the interface and need no
+     introduction, a repeat visit this session, and any storage error (fail
+     toward silence, never toward re-announcing on every page).
+
+     The reader outranks the announcement: pointing at or tabbing into the rail
+     cancels it immediately and hands the state back to CSS. -->
+<script>
+  (function () {
+    "use strict";
+    var toc = document.getElementById("TOC");
+    if (!toc || !toc.querySelector(".nav-link")) return;
+    if (!window.matchMedia) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!matchMedia("(min-width: 992px)").matches) return;
+    try {
+      if (sessionStorage.getItem("rail-intro")) return;
+      sessionStorage.setItem("rail-intro", "1");
+    } catch (e) {
+      return;
+    }
+
+    var SETTLE = 600; // after load, so the bars have taken their measured heights
+    var HOLD = 1500; // long enough to read four or five labels as a set
+    var FADE = 260; // matches the CSS transition
+    var timers = [];
+
+    function end() {
+      timers.forEach(clearTimeout);
+      timers = [];
+      toc.removeAttribute("data-rail-intro");
+      toc.removeEventListener("pointerenter", end);
+      toc.removeEventListener("focusin", end);
+    }
+
+    // A reader who reaches for the rail has asked a real question; the
+    // introduction gets out of the way and lets the CSS hover state answer it.
+    toc.addEventListener("pointerenter", end);
+    toc.addEventListener("focusin", end);
+
+    function play() {
+      timers.push(
+        setTimeout(function () {
+          // Two frames: the first arms the transition and lifts scaleX to 1,
+          // the second flips opacity so the fade actually has a start value.
+          toc.setAttribute("data-rail-intro", "");
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              toc.setAttribute("data-rail-intro", "show");
+            });
+          });
+          timers.push(
+            setTimeout(function () {
+              toc.setAttribute("data-rail-intro", ""); // fade back out
+              timers.push(setTimeout(end, FADE + 60));
+            }, HOLD)
+          );
+        }, SETTLE)
+      );
+    }
+
+    if (document.readyState === "complete") play();
+    else window.addEventListener("load", play);
+  })();
+</script>

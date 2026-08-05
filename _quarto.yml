@@ -56,5 +56,8 @@ format:
       - assets/site/figure-zoom.html
       - assets/site/toc-rail.html
       - assets/site/hero-motion.html
-      # The status stamp bails instantly on any page with no .hero-pulse.
+      # The status stamp bails instantly on any page with no .hero-pulse, and
+      # the rail introduction on any page with no TOC — so posts pay only the
+      # parse for the first and the homepage only for the second.
       - assets/site/hero-status.html
+      - assets/site/rail-intro.html

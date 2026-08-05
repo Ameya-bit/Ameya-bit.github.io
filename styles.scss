@@ -2002,6 +2002,31 @@ body:has(.hero-screen) { overflow-x: hidden; }
     opacity: 0;
     transform: translateY(-50%) scaleX(0);
   }
+
+  // ---- The rail introduces itself, once (2026-08-04) ----------------------
+  // A wordless rail nobody hovers is a feature nobody discovers, so on the
+  // first post of a session the labels announce themselves and then go quiet
+  // for the rest of the visit. Armed and timed by assets/site/rail-intro.html;
+  // everything about WHY this is allowed to move on a rail whose hover is
+  // instant is documented there.
+  //
+  // OPACITY ONLY. The transform is lifted to scaleX(1) with no transition on
+  // it, so the fade never runs out of scale(0) (motion spec rule 5) — the
+  // labels appear where they live rather than growing out of the bar.
+  //
+  // Both selectors are (1,3,0), matching the hide rule above exactly, and sit
+  // after it so the cascade decides — the same specificity arithmetic that has
+  // caught three other rules in this file. `:not(:hover)` is doing real work
+  // as well as counting: while the reader is actually on the rail, the hover
+  // state owns the labels and the introduction has no opinion.
+  #TOC[data-rail-intro]:not(:hover) .nav-link {
+    transform: translateY(-50%) scaleX(1);
+    transition: opacity 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  #TOC[data-rail-intro="show"]:not(:hover) .nav-link {
+    opacity: 1;
+  }
 }
 
 // ---- Footer: none in the base layer -----------------------------------------
