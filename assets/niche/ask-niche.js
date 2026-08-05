@@ -17,6 +17,17 @@ const MAX_INPUT = 200;
 const MIN_CHARS = 160;   // then stop at the first sentence end
 const MAX_CHARS = 280;
 const CHAR_DELAY_MS = 33; // ~26 chars/s with compute; engine itself does ~177/s
+// The attention strip's ink is read from the palette rather than written as a
+// literal — a hardcoded rgb() is one more place the tokens can silently drift
+// from styles.scss. Falls back to the ink it has always used if the custom
+// property is missing, so the strip can never render invisible.
+const INK = (() => {
+  const hex = getComputedStyle(document.documentElement)
+    .getPropertyValue('--gray-1200')
+    .trim();
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  return m ? [1, 2, 3].map(i => parseInt(m[i], 16)).join(',') : '33,32,28';
+})();
 
 // Always build the DOM; the CSS media queries (pointer: coarse / ≤700px)
 // own visibility, so resizes and zoom changes behave correctly. Only skip
@@ -26,7 +37,7 @@ if (matchMedia('(pointer: fine)').matches) init();
 function init() {
   document.body.insertAdjacentHTML('beforeend', `
     <button class="niche-chip" hidden>ask Niche</button>
-    <button class="niche-fab" aria-expanded="false" aria-label="Ask Niche">N&#776;</button>
+    <button class="niche-fab" aria-expanded="false" aria-label="Ask Niche">ask Niche</button>
     <div class="niche-panel" role="dialog" aria-label="Ask Niche" data-closed="true">
       <header>
         <span class="niche-name">N&#776; Niche</span>
@@ -127,7 +138,7 @@ function init() {
     for (let j = 0; j < n; j++) {
       const rel = weights[j] / max;
       const h = 3 + rel * (H - 3);
-      c.fillStyle = `rgba(33,32,28,${0.12 + rel * 0.78})`;
+      c.fillStyle = `rgba(${INK},${0.12 + rel * 0.78})`;
       c.fillRect(j * bw, H - h, Math.max(1, bw - 0.5), h);
     }
   }
