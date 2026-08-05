@@ -956,6 +956,180 @@ img {
   padding-block: 2px; // the scroll box would otherwise clip integral/subscript tails
 }
 
+// ---- The lens figure (assets/site/ioi-lens.html) ----------------------------
+// The site's first INTERACTIVE figure. It is built from the page's existing
+// materials — no new typeface, no new colour, no chrome. The grid is bare
+// cells on the page ground, exactly as the static figures are unframed ink;
+// the toggle speaks the filing register the hero links already use; the two
+// text lines under it are apparatus.
+//
+// The one colour spend is in the cells, and it is the same spend the static
+// figures make: vermillion positive, Okabe-Ito blue negative (values written
+// as inline `background` by the script). Figures are where this site is
+// allowed colour at rest — the monochrome-until-interaction rule governs page
+// chrome, not artwork.
+//
+// `hidden` until the script runs, so the noscript fallback is what a
+// JS-less reader gets and there is never an empty box.
+// The widget sits inside a <figure>, which already carries the 96px figure
+// rhythm — so the box itself takes none, or the block would double-space.
+.ioi-lens[hidden] {
+  display: none;
+}
+
+// The head named in the caption is a numeral-ish label, so it takes the mono
+// the rest of the numbering system uses. It is not a link and must not look
+// like one.
+#quarto-content main.content .lens-callout {
+  font-family: var(--font-apparatus);
+  color: var(--gray-1200);
+}
+
+// The lens toggle: the filing voice, same as .hero-links. Instant states, and
+// the active lens is marked by ink and a solid rule rather than a fill — a
+// filled pill would be the only such object in the reading column.
+#quarto-content main.content .lens-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.8rem;
+  margin-bottom: 1.412rem; // 24px
+
+  button {
+    font-family: inherit;
+    font-size: var(--text-apparatus-mono);
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--gray-1000);
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--gray-400);
+    border-radius: 0;
+    padding: 0 0 2px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--accent-ink);
+      border-bottom-color: var(--accent);
+    }
+
+    // The active lens is the one statement in this figure that persists while
+    // the reader does nothing, so by the Layer 1b amendment it cannot be paid
+    // for in vermillion. Ink and weight rank it instead.
+    &.is-on {
+      color: var(--gray-1200);
+      border-bottom-color: var(--gray-1200);
+    }
+  }
+}
+
+.lens-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--gray-100), 0 0 0 4px var(--accent);
+    border-radius: 4px;
+  }
+}
+
+.lens-row {
+  display: grid;
+  grid-template-columns: 2.2rem repeat(12, 1fr);
+  gap: 2px;
+  align-items: stretch;
+}
+
+#quarto-content main.content .lens-rowhead {
+  font-size: var(--text-apparatus-mono);
+  font-family: var(--font-apparatus); // a layer index is a numeral, not a word
+  color: var(--gray-1000);
+  align-self: center;
+}
+
+.lens-cell {
+  position: relative;
+  height: 2.4rem;
+  cursor: pointer;
+  // A hairline so a near-zero cell is still a visible object rather than a gap
+  // in the page — the static heatmaps get the same from their cell borders.
+  box-shadow: inset 0 0 0 1px var(--gray-400);
+}
+
+// The five heads the post names keep their outline from the static figure, so
+// a reader moving between the two is looking at the same marked set.
+.lens-cell.is-named {
+  box-shadow: inset 0 0 0 1px var(--gray-1200);
+}
+
+// Selection is the accent's job: it exists only while the reader is pointing
+// at something, which is exactly what the spending rule permits.
+//
+// It carries the page colour on its inside, which is the same trick
+// :focus-visible uses site-wide and for the same reason: a plain accent ring
+// vanishes on a strongly vermillion cell — and the most vermillion cell on
+// this grid is L8H6 under patching, i.e. precisely the one the figure exists
+// to point at. The inner ring reads as a gap, so the mark is legible on every
+// fill from page-white to full accent. Inset rather than offset so a selected
+// cell never paints over its neighbours.
+.lens-cell.is-sel {
+  box-shadow:
+    inset 0 0 0 2px var(--gray-100),
+    inset 0 0 0 4px var(--accent);
+}
+
+.lens-axis {
+  display: grid;
+  grid-template-columns: 2.2rem repeat(12, 1fr);
+  gap: 2px;
+  margin-top: 0.353rem; // 6px
+
+  span {
+    font-family: var(--font-apparatus);
+    font-size: var(--text-apparatus-mono);
+    color: var(--gray-1000);
+    text-align: center;
+  }
+}
+
+#quarto-content main.content .lens-readout {
+  font-size: var(--text-apparatus);
+  line-height: 1.6;
+  color: var(--gray-1100);
+  margin: 1.176rem 0 0; // 20px
+
+  strong {
+    font-family: var(--font-apparatus);
+    font-weight: 400;
+    color: var(--gray-1200);
+  }
+}
+
+// The honesty line: the two lenses carry different units and are each scaled
+// to their own maximum, so the flip is a change of instrument, not of size.
+#quarto-content main.content .lens-scale {
+  font-size: var(--text-filing);
+  line-height: 1.6;
+  color: var(--gray-1000);
+  margin: 0.353rem 0 0; // 6px
+}
+
+// On a phone twelve columns of 2.4rem cells would each be ~8px wide and the
+// numerals underneath would collide. The grid keeps its shape but shortens,
+// and the axis drops — the row heads still say which layer is which, and the
+// readout carries every number that matters.
+@media (max-width: 619.98px) {
+  .lens-cell {
+    height: 1.6rem;
+  }
+
+  .lens-axis {
+    display: none;
+  }
+}
+
 // ---- Figure zoom (assets/site/figure-zoom.html) -----------------------------
 // Click a figure and it opens at full size over the page, so the 644px column
 // never has to widen to carry a dense chart. The overlay is the page colour, not

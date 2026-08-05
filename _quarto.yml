@@ -61,3 +61,5 @@ format:
       # parse for the first and the homepage only for the second.
       - assets/site/hero-status.html
       - assets/site/rail-intro.html
+      # The interactive lens figure — bails on every page with no #ioi-lens.
+      - assets/site/ioi-lens.html

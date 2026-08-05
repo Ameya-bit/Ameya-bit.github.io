@@ -160,7 +160,28 @@ Nothing here contradicts anything else. The methods agree on the answer.
 
 What they don't share is their blind spots, and lining those up is the actual result. Both per-head measurements ran on the same hundred prompts, so the claim can be plotted rather than asserted.
 
-![Every head in layers 8–11, scored by direct logit attribution and by patching recovery at END. Same heads, same hundred prompts, two methods.](figures/fig6_blind_spots.png)
+```{=html}
+<!-- The lens figure. Same heads, same hundred prompts, one grid — switch the
+     instrument and watch which heads the instrument can see. Data is generated
+     from _data.npz by figures/make_lens_data.py; behaviour is
+     assets/site/ioi-lens.html; styling is styles.scss. With JS off the
+     <noscript> below keeps the static scatter, which makes the same claim. -->
+<figure class="ioi-lens-figure">
+  <div id="ioi-lens" class="ioi-lens" hidden></div>
+  <noscript>
+    <img src="figures/fig6_blind_spots.png" alt="Every head in layers 8–11 scored by direct logit attribution against patching recovery at END. Four of the five named heads sit at the extremes of both measures; L8H6 sits alone, near zero on DLA and highest on patching.">
+  </noscript>
+  <figcaption>
+    Every head in layers 8–11, under both instruments, on the same hundred
+    prompts. Hover or arrow-key a cell to read it; switch the lens to change
+    what the grid is measuring. Outlined cells are the heads the IOI paper
+    names. Watch <span class="lens-callout">L8H6</span>: nearly invisible under
+    direct logit attribution, the brightest cell on the grid under patching.
+  </figcaption>
+</figure>
+```
+
+{{< include figures/_lens-data.html >}}
 
 Drawing this corrected something I had been assuming, so the sharper version of the claim is worth stating plainly.
 
