@@ -33,21 +33,21 @@ $$\text{copying score} = \frac{\sum_{i=1}^{r} \operatorname{Re}(\lambda_i)}{\sum
 
 With a copying score of 0.615, a spike relative to the others, it proposes the idea that a copying head does exist. Naturally, you would ask what it copies.
 
-![Copying score for every block-by-head combination across all 24 attention heads; B5H0 spikes to 0.615 while the next-highest head sits at 0.35.](figures/fig2_spike_copying_score.png)
+![Copying score for every block-by-head combination across all 24 attention heads; B5H0 spikes to 0.615 while the next-highest head sits at 0.35.](figures/fig2_spike_copying_score.webp)
 
 ## What does it copy?
 
 Eigenvectors are a dead end. They're already in token basis, so it's readable. However, to do that we need to cancel out the norms of the embed and unembed matrices which dominate the reading. But we can't do this with eigenvectors because it mixes all tokens together, there isn't a scalar value to cancel out the norms. So we divert to reading logits directly off the diagonal of the OV circuit — entry $(i, j)$ of $W_{\mathrm{OV}}$ is how much attending to token $j$ boosts token $i$, so the diagonal is each token's self-copy strength while an off-diagonal entry is one token boosting a different one. Here we can divide out the norms of the embed and unembed matrices, because the diagonal is per-token, we can compute the norms per token as well. This reveals high logits for many tokens, solidifying its status as a copying head.
 
-![Raw versus norm-normalized OV self-copy logits for B5H0's top tokens; dividing out the embed and unembed norms sharpens the copy signal instead of deflating it, and the quote logit stays at the top.](figures/fig1_make_ov_diagonal.png)
+![Raw versus norm-normalized OV self-copy logits for B5H0's top tokens; dividing out the embed and unembed norms sharpens the copy signal instead of deflating it, and the quote logit stays at the top.](figures/fig1_make_ov_diagonal.webp)
 
 ## Quote grammar
 
 But beyond that, it had the highest logit for quotes at 0.594. This means that when attending to `"`, the logit for `"` goes up. Maybe this head knows quotation grammar, the rules are simple enough, every quote just needs to be paired. It just needs to be shown that the QK circuit attends to unpaired `"` over other characters. So we throw in a couple test sentences — a handful of hand-written prompts, not a systematic sweep, so read these controls as suggestive rather than conclusive — and read off the attending tokens from B5H0's attention pattern. But this control reveals the head attends to tokens that follow previous iterations of the query token. **So quote grammar was a dead end, but also proves this head to be an induction head.**
 
-![B5H0 attention on a content-swap pair; the bright induction cell tracks the swapped token (cat to 'a', dog to 'o'), the query attending to the character that followed the query's own prior occurrence.](figures/fig3_divert_induction_stripe.png)
+![B5H0 attention on a content-swap pair; the bright induction cell tracks the swapped token (cat to 'a', dog to 'o'), the query attending to the character that followed the query's own prior occurrence.](figures/fig3_divert_induction_stripe.webp)
 
-![Per-prompt verdicts for the quote tests; the top attended token is the induction successor rather than a matching quote, with the honest misses and position-0 sinks kept in. Two stay in: P3-A (repeat) tops out on 'r' at $w = 0.14$ — a genuine miss, not the induction successor — while P3-B (norepeat) and P5-B (prior-closes) collapse onto the position-0 attention sink (up to $w = 1.00$) when no induction cue is present.](figures/fig4_break_quote_grammar.png)
+![Per-prompt verdicts for the quote tests; the top attended token is the induction successor rather than a matching quote, with the honest misses and position-0 sinks kept in. Two stay in: P3-A (repeat) tops out on 'r' at $w = 0.14$ — a genuine miss, not the induction successor — while P3-B (norepeat) and P5-B (prior-closes) collapse onto the position-0 attention sink (up to $w = 1.00$) when no induction cue is present.](figures/fig4_break_quote_grammar.webp)
 
 ## Parenthesis grammar
 
@@ -63,7 +63,7 @@ So it may be able to create opening parenthesis structures while preventing unne
 
 This could be learned parenthesis grammar. The most notable is the 0.556, when it sees an open parenthesis, it wants to close it. It is tempting, it looks very much like parenthesis grammar. If QK reliably attends to parentheses, and better yet if it can understand parenthesis structure, it is basically what we've been chasing after. So similar to quote analysis, we throw in a couple sentences and check the attending tokens. And the QK circuit generally does attend to parentheses, but not meaningfully enough to be considered grammar. **The head doesn't understand bracket positioning, and just attends to the latest parenthesis.** This also holds back the nested grammar that the diagonal suggested, nested parentheses require bracket position understanding, specifically depth tracking to know when to close parentheses.
 
-![Per-prompt verdicts for the parenthesis tests; B5H0 attends to brackets but never distinguishes one that still needs closing from one already closed, so it just tracks the latest bracket. The near-ties the verdict column hides: in C8 (`A (B (C) D`) the still-open '(' at position 2 ($w = 0.11$) loses to the already-closed '(' at position 5 ($w = 0.12$), so there is no depth tracking; and P7 unmatched ('(' at 3, $w = 0.40$) versus matched ('(' at 3, $w = 0.18$; ')' at 11, $w = 0.39$) shows attention following the latest bracket, not whether it needs closing.](figures/fig5_break_paren_grammar.png)
+![Per-prompt verdicts for the parenthesis tests; B5H0 attends to brackets but never distinguishes one that still needs closing from one already closed, so it just tracks the latest bracket. The near-ties the verdict column hides: in C8 (`A (B (C) D`) the still-open '(' at position 2 ($w = 0.11$) loses to the already-closed '(' at position 5 ($w = 0.12$), so there is no depth tracking; and P7 unmatched ('(' at 3, $w = 0.40$) versus matched ('(' at 3, $w = 0.18$; ')' at 11, $w = 0.39$) shows attention following the latest bracket, not whether it needs closing.](figures/fig5_break_paren_grammar.webp)
 
 ## What the head actually is
 

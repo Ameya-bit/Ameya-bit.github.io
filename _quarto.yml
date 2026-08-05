@@ -5,6 +5,12 @@ project:
   # render, so the page can never drift from the source. (The PDF side runs
   # manually: python3 tools/resume/build.py --pdf.)
   pre-render: tools/resume/build.py
+  # Figures get their intrinsic width/height and a load policy read out of the
+  # image files themselves, after Quarto has written the HTML. Doing it here
+  # rather than in the markdown means the numbers cannot drift from the files
+  # they describe. (The WebP delivery copies are generated separately and
+  # committed: python3 tools/site/figures.py)
+  post-render: tools/site/img-attrs.py
   render:
     - "**/*.qmd"
     - "!design/"

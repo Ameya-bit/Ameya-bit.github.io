@@ -27,7 +27,7 @@ That beaming function then feeds a general-relativistic pulse-profile calculatio
 
 Both halves are validated against theory before either is trusted. The transport reproduces Chandrasekhar's exact $H(\mu)$ solution with residuals inside ±2σ ($\chi^2/\text{dof} = 0.70$), and the pulse machinery matches published reference waveforms to a maximum deviation of 0.11% static and 1.35% rotating at 200 Hz.
 
-![Validation against theory. (a) The Monte Carlo beaming function against Chandrasekhar's exact $H(\mu)$, residuals within ±2σ. (b, c) Static and rotating pulse profiles against published reference waveforms — maximum deviation 0.11% and 1.35%.](figures/fig1_validation.png)
+![Validation against theory. (a) The Monte Carlo beaming function against Chandrasekhar's exact $H(\mu)$, residuals within ±2σ. (b, c) Static and rotating pulse profiles against published reference waveforms — maximum deviation 0.11% and 1.35%.](figures/fig1_validation.webp)
 
 Every run is scored by one number: the **pulsed fraction**,
 
@@ -45,7 +45,7 @@ The first anchor is PSR J0740+6620, the most massive precisely-weighed neutron s
 
 For a quantity that lives between 0 and 1, a bias of +0.14 is not a rounding error. It is the kind of number that moves a fit.
 
-![PSR J0740+6620 modeled both ways. (a, b) Pulse profiles under the Riley and Miller geometries — isotropic dashed, realistic beaming solid; the shaded area is the error under test. (c) $\Delta\mathrm{PF}$ against slab optical depth, saturating above $\tau \approx 3$.](figures/fig2_j0740.png)
+![PSR J0740+6620 modeled both ways. (a, b) Pulse profiles under the Riley and Miller geometries — isotropic dashed, realistic beaming solid; the shaded area is the error under test. (c) $\Delta\mathrm{PF}$ against slab optical depth, saturating above $\tau \approx 3$.](figures/fig2_j0740.webp)
 
 ## The zero that wasn't
 
@@ -55,7 +55,7 @@ The first reading of a perfect zero is a bug. It isn't one: J0030's geometry ecl
 
 And the bias is still there, one measurement over: the isotropic and realistic waveforms disagree in shape by an RMS of ~6% of peak flux for both geometries.
 
-![PSR J0030+0451, the anchor that shows nothing. (a, b) Both geometries pin $\mathrm{PF} = 1$ for isotropic and realistic emission alike — $\Delta\mathrm{PF} \equiv 0$ — while the waveforms disagree in shape (rms 0.061 and 0.058). (c) The shape difference against optical depth.](figures/fig3_j0030.png)
+![PSR J0030+0451, the anchor that shows nothing. (a, b) Both geometries pin $\mathrm{PF} = 1$ for isotropic and realistic emission alike — $\Delta\mathrm{PF} \equiv 0$ — while the waveforms disagree in shape (rms 0.061 and 0.058). (c) The shape difference against optical depth.](figures/fig3_j0030.webp)
 
 The result that looked like nothing turned out to be the finding. It reframed the question from *how big is the error?* to *where does the error show up?*
 
@@ -67,7 +67,7 @@ Two stars is an anecdote. Sweeping the engine over all two-spot geometries — s
 
 Both J0740 geometries sit on the live side. Both J0030 geometries sit in the saturated region. Neither star is special — they are two samples of one map.
 
-![The geometry phase diagram: $\Delta\mathrm{PF}$ at $\tau = 10$ across spot colatitude and azimuthal separation, for a J0740-like (a) and J0030-like (b) spacetime. The cyan curve is the analytic tiling boundary; stars mark the published fits. J0740 lands where the bias is visible in PF, J0030 where PF saturates and the bias moves to waveform shape.](figures/fig5_phase_diagram.png)
+![The geometry phase diagram: $\Delta\mathrm{PF}$ at $\tau = 10$ across spot colatitude and azimuthal separation, for a J0740-like (a) and J0030-like (b) spacetime. The cyan curve is the analytic tiling boundary; stars mark the published fits. J0740 lands where the bias is visible in PF, J0030 where PF saturates and the bias moves to waveform shape.](figures/fig5_phase_diagram.webp)
 
 ## Spin re-routes the error
 
@@ -75,7 +75,7 @@ One hiding place found, a second suspected. J0740 spins at 346.5 Hz — its spot
 
 A model comparison at real spin rates would conclude the isotropy assumption barely matters. **But the waveform-shape difference — RMS ≈ 0.10 of peak — does not move.** It is invariant to spin, to the energy band, and to light-travel delay, through every convention tested.
 
-![The re-routing, step by step. (a) $\Delta\mathrm{PF}$ for J0740 as spin, energy band, and light-travel delay are added — the amplitude bias collapses from +0.14/+0.20 toward +0.02/+0.07. (b) The waveform-shape difference across the same ladder: RMS ≈ 0.10, unmoved.](figures/fig4_routing.png)
+![The re-routing, step by step. (a) $\Delta\mathrm{PF}$ for J0740 as spin, energy band, and light-travel delay are added — the amplitude bias collapses from +0.14/+0.20 toward +0.02/+0.07. (b) The waveform-shape difference across the same ladder: RMS ≈ 0.10, unmoved.](figures/fig4_routing.webp)
 
 Same lesson as J0030, by a different mechanism. Geometry hid the error by saturating the meter; spin hides it by shrinking the one number a pulsed-fraction comparison would check. Both times it reappears in the waveform's shape.
 

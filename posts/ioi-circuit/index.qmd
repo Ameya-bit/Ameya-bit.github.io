@@ -56,7 +56,7 @@ No interventions, one forward pass, and the per-head projections sum back to the
 
 **The name-mover head L9H9 dominates at $+3.54$, with L9H6 a distant second at $+1.24$.** Everything else is noise by comparison.
 
-![Top ten heads by direct logit attribution to the IO−S direction, averaged over 100 prompts.](figures/fig1_dla_ranking.png)
+![Top ten heads by direct logit attribution to the IO−S direction, averaged over 100 prompts.](figures/fig1_dla_ranking.webp)
 
 On the single hand-written prompt, though, L9H6 and L9H9 come out nearly tied — $+2.11$ against $+2.10$. Averaging is what separates them, which is the first hint that one prompt is a shaky place to read a circuit.
 
@@ -80,7 +80,7 @@ Where DLA sees only direct writes, this catches components whose effect is route
 
 The first sweep patches the residual stream across every `(layer, position)`. It answers a question no static weight reading can even phrase: not just *where* the answer-relevant information lives, but *when*.
 
-![Residual-stream patching over (layer, position), mean normalized recovery across 100 prompts. Two bright bands and nothing else.](figures/fig2_resid_patching.png)
+![Residual-stream patching over (layer, position), mean normalized recovery across 100 prompts. Two bright bands and nothing else.](figures/fig2_resid_patching.webp)
 
 The signal lives at position 10 — the second, repeated subject — through the early layers, then goes dark above layer 8. At the same depth it reappears at the END token and stays lit to the top.
 
@@ -92,7 +92,7 @@ Averaging over a hundred prompts barely smears the map. That looked like a broke
 
 The second sweep localizes heads. Patch each head's output at the END position and measure recovery.
 
-![Attention-head patching at the END position, layers 8 and up, mean recovery across 100 prompts. Outlined cells are the heads the IOI paper names.](figures/fig3_head_patching.png)
+![Attention-head patching at the END position, layers 8 and up, mean recovery across 100 prompts. Outlined cells are the heads the IOI paper names.](figures/fig3_head_patching.webp)
 
 The brightest cells are not the name movers. S-inhibition heads L8H6 and L8H10 light up hardest at $+0.37$ and $+0.34$; the name mover L9H9 is positive but dimmer at $+0.26$. L10H7 goes strongly negative at $-0.58$ and L11H10 mildly so — the negative name movers, heads that push *against* the answer.
 
@@ -122,7 +122,7 @@ Grab what that delivers to block 9 and stash it. In a final clean run, patch onl
 
 Freezing everything but the sender is what turns a node measurement into an edge measurement. What decides *which* edge is how narrowly the receiver is defined, and that turns out to matter more than I first gave it credit for.
 
-![Path patching L8H6 into block 9, as a fraction of the full clean→corrupted swing, on the canonical prompt. Each bar narrows the receiver; only the bottom one is a single edge.](figures/fig5_path_patching.png)
+![Path patching L8H6 into block 9, as a fraction of the full clean→corrupted swing, on the canonical prompt. Each bar narrows the receiver; only the bottom one is a single edge.](figures/fig5_path_patching.webp)
 
 Take block 9's whole residual input as the receiver and $0.23$ of the swing comes back. But that number is not an edge: it routes the sender into layer 9's keys and values as well as its queries, and into everything layers 10 and 11 read downstream.
 
@@ -140,7 +140,7 @@ That is the thing DLA had to ignore and node patching could only assume: a measu
 
 Head numbers matching a paper's head numbers proves nothing on its own. If the labels are right, the attention patterns should show each head reading what its name claims.
 
-![Attention patterns for the two heads on the canonical prompt, same colour scale. The outlined cell in each panel is the END row's read. The BOS column is masked — see below.](figures/fig4_attention_patterns.png)
+![Attention patterns for the two heads on the canonical prompt, same colour scale. The outlined cell in each panel is the END row's read. The BOS column is masked — see below.](figures/fig4_attention_patterns.webp)
 
 L8H6's END row puts its weight on ` John`, the repeated subject. An S-inhibition head reads the duplicated name; that is what it is for.
 
@@ -169,7 +169,7 @@ What they don't share is their blind spots, and lining those up is the actual re
 <figure class="ioi-lens-figure">
   <div id="ioi-lens" class="ioi-lens" hidden></div>
   <noscript>
-    <img src="figures/fig6_blind_spots.png" alt="Every head in layers 8–11 scored by direct logit attribution against patching recovery at END. Four of the five named heads sit at the extremes of both measures; L8H6 sits alone, near zero on DLA and highest on patching.">
+    <img src="figures/fig6_blind_spots.webp" alt="Every head in layers 8–11 scored by direct logit attribution against patching recovery at END. Four of the five named heads sit at the extremes of both measures; L8H6 sits alone, near zero on DLA and highest on patching.">
   </noscript>
   <figcaption>
     Every head in layers 8–11, under both instruments, on the same hundred
