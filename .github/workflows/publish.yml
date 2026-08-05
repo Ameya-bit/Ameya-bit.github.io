@@ -1,0 +1,73 @@
+# Build always, deploy only from main.
+#
+# The working model this encodes: main is the live site. Branch off to make
+# edits, push to that branch as often as you like — each push renders the site
+# and tells you whether it still builds, but nothing is published. Merging to
+# main is the act of publishing.
+#
+# Deployment goes through the Pages artifact, not a gh-pages branch, so built
+# HTML never enters git history. This requires the repo's Pages source to be
+# set to "GitHub Actions" (Settings -> Pages -> Build and deployment -> Source).
+name: Publish
+
+on:
+  push:
+    branches-ignore:
+      - gh-pages
+  pull_request:
+  # A manual "publish now" button, for re-rendering without a commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Superseded builds of the same branch are pointless — cancel them.
+    concurrency:
+      group: build-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      # The pre-render step (tools/resume/build.py) regenerates resume/_body.md
+      # from resume.toml on every render. It is stdlib-only, but tomllib needs
+      # 3.11+. The --pdf path, which is the only part that needs LaTeX, is
+      # opt-in and never runs here.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Pinned deliberately: this site's output is design-precise, and a
+      # floating Quarto release can change emitted HTML or CSS underneath it.
+      # Bump this line and re-render locally in the same commit.
+      - uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.9.38
+
+      - name: Render site
+        run: quarto render
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    # The whole point of the split: pushes to any other branch, and pull
+    # requests, stop at `build`. Only main reaches the live site.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # Never cancel a deploy in flight; let the queue drain in order.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
