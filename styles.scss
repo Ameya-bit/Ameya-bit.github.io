@@ -566,6 +566,17 @@ body:has(.hero-screen) #title-block-header {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
+  // The title card (2026-08-04, Ameya's call): every article opens composed —
+  // the first paragraph sits astride the viewport's midline and the title
+  // floats in the head-space above it, the same grammar as the hero owning its
+  // screen. The calc is "half the viewport, minus everything that isn't this
+  // box": 5.294rem of masthead offset above main, the 6.824rem masthead gap
+  // below, and ~9.1rem for half a typical opening paragraph (≈6 prose lines),
+  // so the PARAGRAPH centers, not its top edge. On short viewports the calc
+  // dips under the header's natural height and the floor wins — laptops keep
+  // today's compact masthead; the card only unfolds where there is room.
+  min-height: calc(50svh - 21.25rem);
+  align-content: center;
   // The gap between the dates and the categories belongs to the LAYOUT, not to
   // the categories. Carried as a `margin-left` on `.quarto-categories` it
   // travelled with the element, so a filing line long enough to wrap — date ·
@@ -652,6 +663,16 @@ body:has(.hero-screen) #title-block-header {
     margin-top: 1.176rem; // 20px — matches the date's, so the two halves of the
                           // filing line sit on one baseline
   }
+}
+
+// The résumé opts out of the title card. It is the one page people visit to
+// scan, not to read — a recruiter's glance should land on Education, not on
+// composed head-space. `.cv-filing` is the generated body's first element
+// (tools/resume/build.py), which makes it an honest page discriminator: the
+// exemption travels with the résumé content itself, not with a path.
+main.content:has(.cv-filing) #title-block-header.quarto-title-block {
+  min-height: 0;
+  align-content: flex-start;
 }
 
 // Every selector here carries #title-block-header on purpose: the prose block is
@@ -1161,6 +1182,16 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   margin: 0; // alone in the foot now — the links live in the identity corner
 }
 
+// The live stamp (2026-08-04): "· pushed 6 days ago", written by
+// assets/site/hero-status.html from the experiment repo's own push time. It
+// inherits everything from .hero-status — this rule only carries the separator,
+// because the separator is punctuation between two clauses of one line and
+// belongs to the layout, not to the string the script writes. The element ships
+// `hidden`, so the middot can never appear dangling off nothing.
+.hero-pulse::before {
+  content: "\2002·\2002"; // ensp · ensp — the same chain the line already uses
+}
+
 // The heartbeat (review finding 04): one resting cursor after the experiment
 // question — the single autonomous element the whimsy fence rules permit per
 // screen. It idles like an instrument, it does not perform: 1.1s stepped, no
@@ -1168,6 +1199,12 @@ html[data-hero-entrance="play"] .hero-screen .rise {
 // state persisting while the reader does nothing cannot be paid for in
 // vermillion. Static at half-ink under reduced motion (still present: it is
 // information — "this line is live" — not decoration).
+//
+// AMENDED 2026-08-04: the cursor now ships `hidden` and is revealed only when
+// the live stamp beside it actually lands. Its entire claim is "this line is
+// live", and with JS off or the API unreachable that claim was decoration
+// pretending to be information — the one thing this page's rules forbid. What
+// blinks is now exactly what is live.
 .hero-cursor {
   display: inline-block;
   width: 0.45em;
@@ -1220,6 +1257,7 @@ html[data-hero-entrance="play"] .hero-screen .rise {
     align-items: flex-start;
     gap: 1.6rem;
   }
+
 }
 
 // The links join the filing register (review finding 06): same size and voice as
@@ -1251,12 +1289,61 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   }
 }
 
-#quarto-content main.content .writing-cue {
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--gray-1200);
-  margin: 0;
-  padding: 0;
+// The ledger (replaces the Writing cue, 2026-08-04): the hero's bottom-right
+// corner is the site's table of contents — one row per collection, the count
+// trailing in mono. Because every numeral is two digits in the same mono face,
+// plain right-alignment lines both columns up: labels flush before the
+// numerals, numerals flush at the edge. It fades with the hero like the rest
+// of the cover — that is now fine, because each list carries its own kicker.
+#quarto-content main.content .hero-ledger {
+  text-align: right;
+
+  a {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.65;
+    color: var(--gray-1200);
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--accent-ink);
+
+      .ledger-n {
+        color: var(--accent-ink);
+      }
+    }
+  }
+
+  // Same voice as the posts' gutter numerals: mono, small, quiet, 0.85ch off
+  // the words. Mono is the numbering system, nothing else.
+  .ledger-n {
+    font-family: var(--font-apparatus);
+    font-size: var(--text-apparatus-mono);
+    font-weight: 400;
+    color: var(--gray-1000);
+    margin-left: 0.85ch;
+  }
+}
+
+// In the stacked mobile frame the stacked-and-right-aligned rows read as an
+// accidental indent (right-aligned text in a left-positioned box). The ledger
+// flattens to one horizontal line instead — the same grammar as the links row
+// above it. AFTER the base rule on purpose: same specificity, cascade decides.
+@media (max-width: 799.98px) {
+  #quarto-content main.content .hero-ledger {
+    text-align: left;
+
+    a {
+      display: inline-block;
+      margin-right: 2.4rem; // the links row's gap
+
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+  }
 }
 
 .writing-section {
@@ -1264,7 +1351,40 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   margin-inline: auto;
   padding-inline: clamp(1.25rem, 5vw, 2rem);
   padding-top: 2.353rem; // 40px — the list's own air now that the cue lives in the hero frame
-  padding-bottom: clamp(5rem, 4rem + 6vw, 9rem);
+  padding-bottom: 0; // the notes section below now carries the page-end air
+}
+
+// The notes strip: the rough tier under the writing list. Same shell, same row
+// grammar (the listing rows reuse .quarto-post wholesale — a note row is just a
+// post row with no description), so the two lists read as registers of one
+// instrument rather than two sections. The kicker is what separates them.
+.notes-section {
+  max-width: var(--shell);
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 5vw, 2rem);
+  padding-top: clamp(3rem, 2.4rem + 3vw, 5rem); // more than a row gap, less than a new screen
+  padding-bottom: clamp(5rem, 4rem + 6vw, 9rem); // the page-end air, moved down from .writing-section
+}
+
+// The list kickers (WRITING / NOTES) speak the filing voice — same register as
+// the hero status line and the rail's "ON THIS PAGE": uppercase, tracked,
+// apparatus-sized, gray. A p with role=heading (not an h2) so the post-page
+// numeral counter never touches them. Both lists carry one so their names
+// survive the hero's scroll dim — the cue used to be the writing list's only
+// label, and it faded out exactly when the reader arrived at the list.
+#quarto-content main.content .list-kicker {
+  font-size: var(--text-apparatus-mono);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-1000);
+  margin: 0 0 0.706rem; // 12px — binds to the rows below, clears the hover pill's bleed
+}
+
+// Ledger anchors land the section a breath below the window edge.
+.writing-section,
+.notes-section {
+  scroll-margin-top: 1.5rem;
 }
 
 main.content > :last-child {
@@ -1565,6 +1685,37 @@ body:has(.hero-screen) { overflow-x: hidden; }
       text-align: left;
       order: -1;
     }
+  }
+}
+
+// ---- TOC-less pages: centre the column --------------------------------------
+// Quarto marks a page without a TOC `fullcontent` and switches its grid to a
+// template that KEEPS the sidebar's reserved region on the left but DROPS the
+// margin region on the right — the text column lands ~160px right of centre,
+// which read as a plain bug on /about/ and the notes (Ameya's screenshots,
+// 2026-08-04; posts never showed it because the rail fills the space the grid
+// reserves). Fix: give fullcontent pages the exact symmetric template of
+// `body.floating .page-columns`, values verbatim from the compiled grid — so
+// the column sits pixel-for-pixel where a post's does, and the title of /about/
+// lands on the same x as a post title. Desktop only: below 992px Quarto's
+// stacked single-column grids are already symmetric.
+@media (min-width: 992px) {
+  body.floating.fullcontent .page-columns {
+    grid-template-columns:
+      [screen-start] 1.5em
+      [screen-start-inset] 5fr
+      [page-start] minmax(1.7647rem, 3.5294rem)
+      [page-start-inset] minmax(3.5294rem, 10.5882rem)
+      [body-start-outset] minmax(1.7647rem, 3.5294rem)
+      [body-start] 1.5em
+      [body-content-start] minmax(29.412rem, calc(40.706rem - 3em))
+      [body-content-end] 1.5em
+      [body-end] minmax(1.7647rem, 3.5294rem)
+      [body-end-outset] minmax(3.5294rem, 10.5882rem)
+      [page-end-inset] minmax(1.7647rem, 3.5294rem)
+      [page-end] 5fr
+      [screen-end-inset] 1.5em
+      [screen-end];
   }
 }
 

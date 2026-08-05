@@ -56,3 +56,5 @@ format:
       - assets/site/figure-zoom.html
       - assets/site/toc-rail.html
       - assets/site/hero-motion.html
+      # The status stamp bails instantly on any page with no .hero-pulse.
+      - assets/site/hero-status.html

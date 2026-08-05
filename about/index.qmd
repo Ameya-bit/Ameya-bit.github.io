@@ -1,0 +1,7 @@
+---
+title: "About"
+description: "CS, physics & AI at Penn State. Independent interpretability research."
+toc: false
+---
+
+I'm an undergraduate at Penn State — computer science with minors in physics and AI, Schreyer Honors College — working toward a career in mechanistic interpretability research. I came up through physics: my first real project was a [Monte Carlo radiative-transfer code](../posts/where-the-error-hides/) for neutron-star atmospheres, the kind of work where nothing counts until it matches an exact answer. Transformers get the same treatment here: I trained a small character-level model and [traced a half-built copying mechanism in its weights](../posts/induction-head/), read [GPT-2's IOI circuit through three methods](../posts/ioi-circuit/) to see where each one goes blind, and am currently testing whether Anthropic's global-workspace result [replicates from scratch](https://github.com/Ameya-bit/jacobian-lens-from-scratch). Everything on this site is built or measured by me — controls included, especially the ones that broke my own hypotheses.

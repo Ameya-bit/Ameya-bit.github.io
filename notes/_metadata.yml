@@ -1,0 +1,4 @@
+# Notes are the rough tier: short, dated, no rail. A note is comment-sized —
+# if one grows sections and figures, it has become a post and should move to
+# posts/.
+toc: false

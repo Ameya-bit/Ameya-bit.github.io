@@ -1,0 +1,78 @@
+<!-- The live status stamp (2026-08-04) — inlined via `include-after-body`.
+
+     The hero's status line names the current experiment. This script appends
+     the one fact that proves the line is not a fossil: how long ago the
+     experiment's repository was last pushed to. The repo is named in the
+     markup (`data-repo` on `.hero-pulse`), so re-pointing the line at the next
+     project is a one-attribute edit in index.qmd, not a code change.
+
+     WHY THE TIMESTAMP AND NOT THE COMMIT MESSAGE. Commit subjects are written
+     for me, not for a reader — "fix seed", "wip", "actually fix seed". A hero
+     is the wrong place for the most private register of a project's writing.
+     Freshness is the part of a commit stream a visitor can actually use, and
+     it is always dignified.
+
+     THE CURSOR IS PART OF THE CONTRACT. Both the stamp and the blinking cursor
+     ship `hidden` in the markup, and this script reveals them together. The
+     cursor asserts "this line is live"; if the fetch fails, is rate-limited,
+     or JS never runs, nothing has proven that, so nothing blinks. The line
+     degrades to exactly the sentence it was before this file existed.
+
+     One unauthenticated GET, fired after `load` so it never competes with the
+     page's own paint. GitHub allows 60/hour per IP unauthenticated; a failure
+     of any kind (offline, 403, 404, renamed repo, malformed date) takes the
+     same silent path as no JS at all. Nothing here animates, so
+     prefers-reduced-motion has nothing to disable — the cursor's blink is
+     already handled in styles.scss. -->
+<script>
+  (function () {
+    "use strict";
+    var el = document.querySelector(".hero-pulse[data-repo]");
+    if (!el) return;
+    var repo = el.getAttribute("data-repo");
+    if (!repo || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return;
+
+    // Whole days, floored, from an ISO-8601 UTC instant. Deliberately coarse:
+    // this line is read at a glance from across a hero, and "6 days" is as
+    // much precision as that glance can use.
+    function since(iso) {
+      var then = Date.parse(iso);
+      if (!isFinite(then)) return null;
+      var days = Math.floor((Date.now() - then) / 86400000);
+      if (days < 0) return null; // a clock skewed into the future says nothing
+      if (days === 0) return "pushed today";
+      if (days === 1) return "pushed yesterday";
+      if (days < 21) return "pushed " + days + " days ago";
+      var weeks = Math.round(days / 7);
+      if (weeks < 9) return "pushed " + weeks + " weeks ago";
+      var months = Math.round(days / 30);
+      return "pushed " + months + " months ago";
+    }
+
+    function run() {
+      fetch("https://api.github.com/repos/" + repo, {
+        headers: { Accept: "application/vnd.github+json" }
+      })
+        .then(function (r) {
+          if (!r.ok) throw 0;
+          return r.json();
+        })
+        .then(function (d) {
+          var text = d && d.pushed_at ? since(d.pushed_at) : null;
+          if (!text) return;
+          el.textContent = text;
+          el.hidden = false;
+          // The cursor earns its blink only now, and only once there is
+          // something live beside it to point at.
+          var cursor = document.querySelector(".hero-status .hero-cursor");
+          if (cursor) cursor.hidden = false;
+        })
+        .catch(function () {
+          /* silent: the static question is a complete sentence on its own */
+        });
+    }
+
+    if (document.readyState === "complete") run();
+    else window.addEventListener("load", run);
+  })();
+</script>

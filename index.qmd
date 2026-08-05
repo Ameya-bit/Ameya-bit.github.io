@@ -3,14 +3,25 @@ pagetitle: "Ameya Panchal"
 page-layout: full
 toc: false
 listing:
-  id: writing
-  contents: posts
-  type: default
-  sort: "date desc"
-  fields: [title, description, date, reading-time]
-  sort-ui: false
-  filter-ui: false
-  feed: true
+  - id: writing
+    contents: posts
+    type: default
+    sort: "date desc"
+    fields: [title, description, date, reading-time]
+    sort-ui: false
+    filter-ui: false
+    feed: true
+  # The rough tier: one-line rows (title + date), no descriptions. Notes are
+  # comment-sized — paper reactions, small results, dead ends. Deliberately NOT
+  # branded a "second brain": a folder that accumulates when something is worth
+  # writing never looks stale; a system that promises upkeep does.
+  - id: notes
+    contents: notes
+    type: default
+    sort: "date desc"
+    fields: [title, date]
+    sort-ui: false
+    filter-ui: false
 ---
 
 ```{=html}
@@ -31,6 +42,7 @@ listing:
       <div class="hero-ident">
         <p class="hero-role"><span class="rise-mask"><span class="rise" style="--beat: 260ms">CS, physics &amp; AI at Penn State.<br>Independent interpretability research.</span></span></p>
         <div class="rise-mask"><nav class="hero-links rise" style="--beat: 320ms" aria-label="Profile links">
+          <a href="about/">About</a>
           <a href="https://github.com/Ameya-bit">GitHub</a>
           <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
           <a href="mailto:ameyapanchal011@gmail.com">Email</a>
@@ -38,8 +50,34 @@ listing:
         </nav></div>
       </div>
       <div class="hero-foot">
-        <p class="hero-status"><span class="rise-mask"><span class="rise" style="--beat: 400ms">Current experiment&ensp;·&ensp;Does Anthropic's global workspace result replicate?<span class="hero-cursor" aria-hidden="true"></span></span></span></p>
-        <p class="writing-cue"><span class="rise-mask"><span class="rise" style="--beat: 460ms">Writing</span></span></p>
+        <!-- The status line, now genuinely live (2026-08-04). The QUESTION is
+             editorial and stays in the markup — it is the one sentence that
+             says what I am doing right now. What JS adds is the evidence that
+             it is still happening: the last push to the experiment's repo, as
+             a relative stamp (assets/site/hero-status.html). Named by
+             `data-repo`, so pointing the line at the next project is a
+             one-attribute edit.
+             The COMMIT MESSAGE is deliberately not shown — "fix seed" in a
+             hero is worse than nothing; freshness is the only part of a commit
+             stream a visitor can use.
+             Both the stamp and the cursor ship `hidden`. The cursor's whole
+             claim is "this line is live", so it may only appear once something
+             live has actually landed — with JS off, rate-limited, or the repo
+             gone, the line renders as the plain question it always was, and
+             nothing blinks to promise otherwise. -->
+        <p class="hero-status"><span class="rise-mask"><span class="rise" style="--beat: 400ms">Current experiment&ensp;·&ensp;Does Anthropic's global workspace result replicate?<span class="hero-pulse" data-repo="Ameya-bit/jacobian-lens-from-scratch" hidden></span><span class="hero-cursor" aria-hidden="true" hidden></span></span></span></p>
+        <!-- The ledger (the banked catalogue-cover move, adopted 2026-08-04 when
+             the Notes tier made the cue ambiguous): the hero's bottom-right
+             corner is the site's table of contents — one row per collection,
+             trailing mono numerals for the honest counts (mono is the numbering
+             system, nothing else). The hardcoded counts are correct at publish
+             time; the script at the foot of this file re-reads them from the
+             rendered listings so they can never drift. About/Résumé stay in the
+             identity corner: who I am up there, what's here down here. -->
+        <nav class="hero-ledger" aria-label="Site contents"><span class="rise-mask"><span class="rise" style="--beat: 460ms">
+          <a href="#writing-section" data-counts="writing">Writing<span class="ledger-n">03</span></a>
+          <a href="#notes-section" data-counts="notes">Notes<span class="ledger-n">01</span></a>
+        </span></span></nav>
       </div>
     </div>
   </div>
@@ -51,13 +89,45 @@ listing:
      `#panda-stage` div above and the loader script from git history. -->
 ```
 
-::: {.writing-section}
+::: {#writing-section .writing-section}
 
 ```{=html}
-<h2 class="visually-hidden">Writing</h2>
+<!-- Kickers are p+role=heading, not h2: the section-numeral machinery is
+     scoped to main.content h2s and would stamp a gutter "01" on these labels
+     (same reason the hero headline is a p). Visible on BOTH lists (2026-08-04,
+     Ameya's catch): the label used to live only in the hero's cue, which the
+     seam dims on scroll — so by the time the reader reached the list, its
+     name had faded out. Labels belong to the content they label. -->
+<p class="list-kicker" role="heading" aria-level="2">Writing</p>
 ```
 
 ::: {#writing}
 :::
 
 :::
+
+::: {#notes-section .notes-section}
+
+```{=html}
+<p class="list-kicker" role="heading" aria-level="2">Notes</p>
+```
+
+::: {#notes}
+:::
+
+:::
+
+```{=html}
+<!-- The ledger's honest-count guarantee: re-read each collection's size from
+     the listings this same page just rendered. No fetch, no state — if JS is
+     off, the publish-time numbers in the markup stand (and were true when
+     written). padStart keeps the two-digit filing format the numerals share
+     with the posts' section counters. -->
+<script>
+  document.querySelectorAll(".hero-ledger a[data-counts]").forEach(function (a) {
+    var n = document.querySelectorAll("#listing-" + a.getAttribute("data-counts") + " .quarto-post").length;
+    var el = a.querySelector(".ledger-n");
+    if (el && n) el.textContent = String(n).padStart(2, "0");
+  });
+</script>
+```

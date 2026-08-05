@@ -1,0 +1,21 @@
+---
+title: "A dead-ReLU absorbing state"
+description: "The one unexplained architecture in a memorization challenge barely learns — and one discriminating experiment says why."
+date: 2026-07-27
+---
+
+Linsefors & Bushnaq's [memorization challenge](https://www.lesswrong.com/posts/KWtchKwwnJkd4bwCi/challenge-hand-coding-weights-for-efficient-sequence-1) left one architecture unexplained: MLP on, norms on, residual off, biases off, ReLU. It memorizes ~500 facts — barely more than having no MLP at all — while flipping any one of norms, bias, or activation restores 700–1024.
+
+It's a training-dynamics failure, not an expressivity limit. With ReLU, no out-projection bias, and no residual, a fact whose hidden units are all dead produces an MLP output of exactly zero; the final RMSNorm maps zero to zero, the logits go constant, and ReLU gates that fact's gradient to exactly zero. The fact is permanently unlearnable — an absorbing state. Expressivity is ruled out directly: a norms-off model trained to 100% on 672 facts (above the bad config's entire observed range) transplants into the bad config with unit norm gains and still scores 100%. The weights exist; gradient descent just can't reach them.
+
+The discriminating experiment splits the authors' single bias flag into its parts:
+
+| condition | max facts |
+|---|---|
+| bad config (no biases) | 504 |
+| + MLP *in*-bias only | 488 |
+| + MLP *out*-bias only | **1024** |
+
+An in-projection bias gives the ReLU thresholds full freedom and rescues nothing; an out-projection bias adds no threshold expressivity and rescues completely. That kills the "thresholds pinned at the origin" story — what the rescue pattern tracks is exactly whether the pre-norm vector can be zero. A dead-unit census agrees: at 640 facts the bad config leaves 112 facts with every hidden unit dead, 108 of them among its errors; with an out-bias, none.
+
+The full version — transplant details, the census, what's still unresolved (chiefly *why* the norms drive facts into collapse when norms-off mostly escapes it) — is in [my comment on the post](https://www.lesswrong.com/posts/KWtchKwwnJkd4bwCi/challenge-hand-coding-weights-for-efficient-sequence-1#comment-rknfi2yEozQyEJ6Tp) and the [repo](https://github.com/Ameya-bit/mem-toy-scratch).
