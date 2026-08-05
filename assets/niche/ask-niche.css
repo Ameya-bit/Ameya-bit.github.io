@@ -118,7 +118,7 @@
 }
 
 /* Every internal divider is the same hairline as the panel's own edge. */
-.niche-panel header,
+.niche-panel .niche-head,
 .niche-attn,
 .niche-in {
   border-color: var(--gray-400);
@@ -126,7 +126,7 @@
   border-width: 0;
 }
 
-.niche-panel header {
+.niche-panel .niche-head {
   display: flex;
   align-items: baseline;
   gap: 0.588rem;
@@ -135,7 +135,7 @@
 }
 
 /* The name is a label, not a numeral — filing register, not mono. */
-.niche-panel header .niche-name {
+.niche-panel .niche-head .niche-name {
   flex: 1;
   font-size: var(--text-label);
   font-weight: 500;
@@ -144,7 +144,7 @@
   color: var(--gray-1000);
 }
 
-.niche-panel header .niche-close {
+.niche-panel .niche-head .niche-close {
   padding: 2px 4px;
   background: none;
   border: 0;
@@ -154,7 +154,7 @@
   cursor: pointer;
 }
 
-.niche-panel header .niche-close:hover {
+.niche-panel .niche-head .niche-close:hover {
   color: var(--accent-ink);
 }
 

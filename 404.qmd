@@ -1,0 +1,25 @@
+---
+title: "404"
+# No `pagetitle` — Quarto already appends the site title, and setting both
+# produced "404 — Ameya Panchal – Ameya Panchal" in the tab.
+description: "Nothing at this address."
+toc: false
+---
+
+There is nothing at this address. The link may be old, or I may have moved
+something without leaving a forwarding note. Unlike most of the negative
+results on this site, this one is not interesting.
+
+```{=html}
+<!-- Every link here is ABSOLUTE. GitHub Pages serves this one file for a
+     missing path at ANY depth — /posts/typo/, /a/b/c/ — so a relative href
+     would resolve against whatever the reader mistyped and break a second
+     time. The row is the hero's links grammar: filing register, no
+     underline, a hairline baseline instead. -->
+<nav class="notfound-links" aria-label="Site sections">
+  <a href="/">Home</a>
+  <a href="/#writing-section">Writing</a>
+  <a href="/#notes-section">Notes</a>
+  <a href="/about/">About</a>
+</nav>
+```

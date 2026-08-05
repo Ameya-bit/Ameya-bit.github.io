@@ -37,6 +37,14 @@
     "use strict";
     var toc = document.getElementById("TOC");
     if (!toc || !toc.querySelector(".nav-link")) return;
+    // The résumé has real h2s and therefore a rail, but it is a scan document,
+    // not a read — and because it is one click from the hero, it was routinely
+    // the first railed page of a session and SPENT the one announcement there.
+    // The reader then reached their first actual post and the rail said nothing.
+    // Same discriminator the title card uses (`.cv-filing` is the generated
+    // body's first element), so it travels with the content, not with a path.
+    // Placed before the token is claimed: refusing here must not consume it.
+    if (document.querySelector(".cv-filing")) return;
     if (!window.matchMedia) return;
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (!matchMedia("(min-width: 992px)").matches) return;

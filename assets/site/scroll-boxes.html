@@ -1,0 +1,66 @@
+<!-- Scroll boxes become keyboard-reachable — but only while they actually
+     scroll (2026-08-05, from the audit).
+
+     THE DEFECT. The site's standing rule is that wide content scrolls inside
+     its own box and the page body never does: .katex-display carries
+     overflow-x, and tables now get one from tools/site/landmarks.py. But a
+     region that scrolls by mouse and cannot be reached by keyboard is a piece
+     of the document a keyboard user simply cannot read — axe rates it serious,
+     and it is the fix for the overflow problem that created it.
+
+     WHY NOT JUST PUT tabindex ON EVERY ONE. Because most of them do not
+     scroll. The physics post has twenty-five equations; making all of them tab
+     stops to serve the two that overflow would tax every keyboard user on
+     every page to fix a rare case. Focusability is granted to exactly the
+     boxes that currently need it, and withdrawn when they stop needing it —
+     which is why this is re-run on resize rather than done once at build time.
+     A box's scrollability is a function of the viewport, so the answer cannot
+     be baked into the HTML.
+
+     No role and no aria-label: tabindex alone satisfies the rule, and a
+     `role="region"` here would mint a landmark per equation, trading one
+     violation for a noisier document. -->
+<script>
+  (function () {
+    "use strict";
+    // The node list is queried on every pass, NEVER cached. Quarto renders math
+    // CLIENT-SIDE (katex.min.js, loaded in the head), so at the moment this
+    // script parses at the end of <body> there is not a single .katex-display
+    // in the document yet — an early return on an empty list here silently did
+    // nothing at all, which is exactly the bug the first version shipped with.
+    function sync() {
+      var boxes = document.querySelectorAll(".katex-display, .table-scroll");
+      for (var i = 0; i < boxes.length; i++) {
+        var el = boxes[i];
+        // 1px of slack: sub-pixel layout routinely reports a hairline of
+        // overflow on boxes that are visually flush.
+        if (el.scrollWidth > el.clientWidth + 1) {
+          if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+        } else if (el.getAttribute("tabindex") === "0" && el !== document.activeElement) {
+          // Never pull focusability out from under the element a reader is
+          // currently on — that would drop their place in the tab order.
+          el.removeAttribute("tabindex");
+        }
+      }
+    }
+
+    // Three passes, because the boxes appear at three different moments: the
+    // wrapped tables exist immediately, KaTeX substitutes its own markup around
+    // DOMContentLoaded, and the web fonts land last and change every width
+    // measured here. Each pass is idempotent, so running it too often is free.
+    sync();
+    if (document.readyState === "loading") addEventListener("DOMContentLoaded", sync);
+    addEventListener("load", sync);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync);
+
+    var t;
+    addEventListener(
+      "resize",
+      function () {
+        clearTimeout(t);
+        t = setTimeout(sync, 150);
+      },
+      { passive: true }
+    );
+  })();
+</script>

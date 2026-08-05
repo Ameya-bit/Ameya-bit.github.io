@@ -956,6 +956,46 @@ img {
   padding-block: 2px; // the scroll box would otherwise clip integral/subscript tails
 }
 
+// The same rule, applied to tables (2026-08-05, from the audit). Quarto emits a
+// bare <table> with no responsive wrapper, and the IOI post's three-column
+// comparison table cannot compress below 303px — so at 320px it dragged the
+// whole document 29px sideways, in all three engines. The wrapper is added by
+// tools/site/landmarks.py; this is what makes it a scroll box.
+//
+// Both this and .katex-display are made keyboard-reachable by
+// assets/site/scroll-boxes.html, but only while they are actually scrolling.
+// The focus ring is the site's own — inherited from the global :focus-visible,
+// not redeclared here.
+.table-scroll {
+  overflow-x: auto;
+}
+
+// The 404's link row, in the hero's links grammar: filing register, no
+// underline, a hairline baseline that takes the accent with the text at hover.
+// Needs the `#quarto-content main.content` prefix or the prose link rules
+// re-underline them — the same trap the hero links row hit.
+#quarto-content main.content .notfound-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.412rem;
+  margin-top: 2.824rem;
+
+  a {
+    font-size: var(--text-filing);
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--gray-1100);
+    text-decoration: none;
+    border-bottom: 1px solid var(--gray-400);
+
+    &:hover {
+      color: var(--accent-ink);
+      border-bottom-color: var(--accent);
+    }
+  }
+}
+
 // ---- The lens figure (assets/site/ioi-lens.html) ----------------------------
 // The site's first INTERACTIVE figure. It is built from the page's existing
 // materials — no new typeface, no new colour, no chrome. The grid is bare

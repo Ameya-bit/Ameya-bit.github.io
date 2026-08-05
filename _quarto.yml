@@ -10,7 +10,14 @@ project:
   # rather than in the markdown means the numbers cannot drift from the files
   # they describe. (The WebP delivery copies are generated separately and
   # committed: python3 tools/site/figures.py)
-  post-render: tools/site/img-attrs.py
+  post-render:
+    - tools/site/img-attrs.py
+    # Accessibility repairs to Quarto's own chrome — nav landmark names and the
+    # table scroll wrapper. Both found by the 2026-08-05 audit.
+    - tools/site/landmarks.py
+    # Quarto's own script fetches listings.json at a page-relative path; this
+    # puts the real manifest at the address it actually asks for.
+    - tools/site/listings-shim.py
   render:
     - "**/*.qmd"
     - "!design/"
@@ -69,3 +76,5 @@ format:
       - assets/site/rail-intro.html
       # The interactive lens figure — bails on every page with no #ioi-lens.
       - assets/site/ioi-lens.html
+      # Wide equations and tables become keyboard-reachable while they scroll.
+      - assets/site/scroll-boxes.html

@@ -39,10 +39,10 @@ function init() {
     <button class="niche-chip" hidden>ask Niche</button>
     <button class="niche-fab" aria-expanded="false" aria-label="Ask Niche">ask Niche</button>
     <div class="niche-panel" role="dialog" aria-label="Ask Niche" data-closed="true">
-      <header>
+      <div class="niche-head">
         <span class="niche-name">N&#776; Niche</span>
         <button class="niche-close" aria-label="Close">&times;</button>
-      </header>
+      </div>
       <div class="niche-attn">
         <canvas></canvas>
         <div class="niche-cap">B5H0 attention over your passage &mdash; waiting</div>
