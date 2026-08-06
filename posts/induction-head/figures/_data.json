@@ -1,0 +1,366 @@
+{
+ "quote": [
+  {
+   "label": "P1-A xylophone",
+   "sentence": "The man said, \"xylophone do I write?\". He then spoke, \"Grashoper",
+   "q": 54,
+   "query_char": "\"",
+   "verdict": "induction",
+   "ranked": [
+    [
+     15,
+     "x",
+     0.4226
+    ],
+    [
+     37,
+     ".",
+     0.1272
+    ],
+    [
+     0,
+     "T",
+     0.1167
+    ]
+   ]
+  },
+  {
+   "label": "P1-B what",
+   "sentence": "The man said, \"what do I write?\". He then spoke, \"Grashoper",
+   "q": 49,
+   "query_char": "\"",
+   "verdict": "induction",
+   "ranked": [
+    [
+     15,
+     "w",
+     0.6671
+    ],
+    [
+     0,
+     "T",
+     0.0771
+    ],
+    [
+     32,
+     ".",
+     0.0573
+    ]
+   ]
+  },
+  {
+   "label": "P2-A cat",
+   "sentence": "the cat sat on the mat, the cat ran",
+   "q": 28,
+   "query_char": "c",
+   "verdict": "induction",
+   "ranked": [
+    [
+     5,
+     "a",
+     0.7721
+    ],
+    [
+     6,
+     "t",
+     0.0624
+    ],
+    [
+     20,
+     "a",
+     0.032
+    ]
+   ]
+  },
+  {
+   "label": "P2-B dog",
+   "sentence": "the dog sat on the mat, the dog ran",
+   "q": 28,
+   "query_char": "d",
+   "verdict": "induction",
+   "ranked": [
+    [
+     5,
+     "o",
+     0.5766
+    ],
+    [
+     6,
+     "g",
+     0.0695
+    ],
+    [
+     22,
+     ",",
+     0.0637
+    ]
+   ]
+  },
+  {
+   "label": "P3-A repeat",
+   "sentence": "Zarathustra spoke. Later, Zarathustra",
+   "q": 26,
+   "query_char": "Z",
+   "verdict": "other",
+   "ranked": [
+    [
+     2,
+     "r",
+     0.1371
+    ],
+    [
+     0,
+     "Z",
+     0.0946
+    ],
+    [
+     21,
+     "t",
+     0.0933
+    ]
+   ]
+  },
+  {
+   "label": "P3-B norepeat",
+   "sentence": "the crowd below heard Zarathustra",
+   "q": 22,
+   "query_char": "Z",
+   "verdict": "sink",
+   "ranked": [
+    [
+     0,
+     "t",
+     0.1371
+    ],
+    [
+     1,
+     "h",
+     0.1088
+    ],
+    [
+     2,
+     "e",
+     0.1088
+    ]
+   ]
+  },
+  {
+   "label": "P4-A apple-last",
+   "sentence": "\"apple\" ... \"banana\" ... \"apple",
+   "q": 25,
+   "query_char": "\"",
+   "verdict": "induction",
+   "ranked": [
+    [
+     13,
+     "b",
+     0.2193
+    ],
+    [
+     0,
+     "\"",
+     0.1806
+    ],
+    [
+     2,
+     "p",
+     0.0864
+    ]
+   ]
+  },
+  {
+   "label": "P4-B banana-last",
+   "sentence": "\"banana\" ... \"apple\" ... \"banana",
+   "q": 25,
+   "query_char": "\"",
+   "verdict": "induction",
+   "ranked": [
+    [
+     1,
+     "b",
+     0.2099
+    ],
+    [
+     0,
+     "\"",
+     0.1961
+    ],
+    [
+     14,
+     "a",
+     0.108
+    ]
+   ]
+  },
+  {
+   "label": "P5-A prior-opens",
+   "sentence": "He said \"one. She said \"two. He said \"",
+   "q": 37,
+   "query_char": "\"",
+   "verdict": "induction",
+   "ranked": [
+    [
+     24,
+     "t",
+     0.3451
+    ],
+    [
+     0,
+     "H",
+     0.176
+    ],
+    [
+     9,
+     "o",
+     0.142
+    ]
+   ]
+  },
+  {
+   "label": "P5-B prior-closes",
+   "sentence": "one\" and two\" and three\" and",
+   "q": 23,
+   "query_char": "\"",
+   "verdict": "sink",
+   "ranked": [
+    [
+     0,
+     "o",
+     0.4691
+    ],
+    [
+     17,
+     " ",
+     0.1059
+    ],
+    [
+     13,
+     " ",
+     0.0999
+    ]
+   ]
+  }
+ ],
+ "paren": [
+  {
+   "label": "P6-A paren-succ",
+   "sentence": "x(ab x(cd",
+   "q": 5,
+   "query_char": "x",
+   "verdict": "induction",
+   "ranked": [
+    [
+     1,
+     "(",
+     0.4824
+    ],
+    [
+     0,
+     "x",
+     0.177
+    ],
+    [
+     3,
+     "b",
+     0.1619
+    ]
+   ]
+  },
+  {
+   "label": "P6-B letter-succ",
+   "sentence": "xzab xzcd",
+   "q": 5,
+   "query_char": "x",
+   "verdict": "sink",
+   "ranked": [
+    [
+     0,
+     "x",
+     0.5706
+    ],
+    [
+     1,
+     "z",
+     0.2403
+    ],
+    [
+     4,
+     " ",
+     0.0621
+    ]
+   ]
+  },
+  {
+   "label": "P7-A unmatched",
+   "sentence": "So (the cat naps",
+   "q": 15,
+   "query_char": "s",
+   "verdict": "other",
+   "ranked": [
+    [
+     3,
+     "(",
+     0.4017
+    ],
+    [
+     7,
+     " ",
+     0.0898
+    ],
+    [
+     11,
+     " ",
+     0.0847
+    ]
+   ]
+  },
+  {
+   "label": "P7-B matched",
+   "sentence": "So (the cat) naps",
+   "q": 16,
+   "query_char": "s",
+   "verdict": "other",
+   "ranked": [
+    [
+     11,
+     ")",
+     0.3937
+    ],
+    [
+     3,
+     "(",
+     0.1807
+    ],
+    [
+     0,
+     "S",
+     0.0607
+    ]
+   ]
+  },
+  {
+   "label": "C8 open-vs-closed",
+   "sentence": "A (B (C) D",
+   "q": 9,
+   "query_char": "D",
+   "verdict": "previous-token",
+   "ranked": [
+    [
+     8,
+     " ",
+     0.2589
+    ],
+    [
+     5,
+     "(",
+     0.1241
+    ],
+    [
+     7,
+     ")",
+     0.1148
+    ]
+   ]
+  }
+ ]
+}
