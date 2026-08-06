@@ -5,30 +5,18 @@
 **/*.quarto_ipynb
 /test-results/
 
-# Training corpora — binary shards, gigabytes, and re-cuttable from their manifest
-# (trainer/corpus.js is deterministic given the corpus seed). The manifest itself
-# IS committed; the shards are not.
-/trainer/corpora/*
-!/trainer/corpora/*.manifest.json
-!/trainer/corpora/*.sample.jsonl
-/trainer/node_modules/
-# npm-linked playwright for the browser gates (parity.mjs, policy-bench.mjs) —
-# a runtime ask, never a dependency.
+# The panda trainer — corpora, parity fixtures, the Python training env and the
+# weights it exports — moved to Ameya-bit/panda-engine on 2026-08-02, and its
+# ignore rules moved with it (they described a /trainer/ tree that no longer
+# exists here; the last of them claimed the exported weights were committed at
+# assets/pandas/engine/policy/, which this repo deliberately does not ship —
+# see assets/pandas/engine/README.md). What stays is the one rule about a
+# directory that IS here:
+#
+# npm-linked playwright for the browser gates — a runtime ask, never a
+# dependency. It matters because _quarto.yml lists assets/pandas/ as a site
+# resource, so anything left under it is swept into _site by a local render.
 /assets/pandas/engine/node_modules/
-
-# Parity reference arrays — regenerable with trainer/py/reference.py, 128MB of frames.
-# The committed contract is trainer/parity/parity-fixture.json. Deliberately OUTSIDE
-# assets/: _quarto.yml lists assets/pandas/ as a site resource, so anything under it
-# is swept into _site by a local render — 250MB of test fixtures on the public site.
-/trainer/parity/*
-!/trainer/parity/parity-fixture.json
-
-# The Python training env and its run artefacts. The weights it exports ARE committed
-# (assets/pandas/engine/policy/weights) — they are what the page fetches.
-/trainer/py/.venv/
-/trainer/py/runs/
-/trainer/py/__pycache__/
-/trainer/py/uv.lock
 
 # Figure pipeline scratch. `_data.npz` (6kb) IS committed on purpose — it is what
 # lets plot.py restyle every figure without a CPU rerun of the model.

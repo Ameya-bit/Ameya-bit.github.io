@@ -1,6 +1,8 @@
 # Layer 3 — Whimsy: candidate designs
 
-*2026-07-10. Workshop doc for the whimsy layer (Layer 2 minimap TOC deferred by decision — the current text TOC stays for now). Status: **"Ask Niche" is the lead; engine drafted & tested; UI mocked. Nothing shipped to the site yet.** Parent spec: [direction.md](direction.md); ma5a fencing rules there are binding.*
+*2026-07-10. Workshop doc for the whimsy layer. Parent spec: [direction.md](direction.md); ma5a fencing rules there are binding.*
+
+> **Status (2026-08-05, doc audit) — the 2026-07-10 header below is three decisions out of date, so here is where this layer actually stands.** ~~Layer 2 minimap TOC deferred by decision — the current text TOC stays for now~~: **the rail was built 2026-08-03.** ~~"Ask Niche" is the lead; engine drafted & tested; UI mocked. Nothing shipped to the site yet~~: **Ask Niche shipped on the induction post** (built 2026-07-10, restyled into the post-reset language 2026-08-05) and the **panda troupe shipped on the homepage** (2026-07-23 → 2026-07-27), **then came off it on 2026-08-03**. Layer 3 is **paused, not cancelled** — the re-entry condition is that the minimal base reads as finished with the hero empty. The panda project itself moved to [Ameya-bit/panda-engine](https://github.com/Ameya-bit/panda-engine) on 2026-08-02; see [panda-engine.md](panda-engine.md). Everything below is the candidate workshop that produced those picks, kept as the record.
 
 > **2026-07-22 amendment (Ameya):** the site-wide Niche mascot is **retired** — it only ever related to the induction-head post, and the research is moving fast (next: replicating Anthropic's J-space paper). Homepage whimsy goes **identity-native** instead: the **panda troupe (candidate 6, new lead)**. Ask Niche survives as a *post-local* figure on the induction post. Candidates 5 and 3A are cut. Amended allocation model and fencing rules below.
 

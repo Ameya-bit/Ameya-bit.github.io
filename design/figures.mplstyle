@@ -107,9 +107,10 @@ patch.linewidth:  0.8
 legend.frameon:   False
 
 # ---- Colour cycle: Okabe-Ito, colourblind-safe ------------------------------
-# The induction-head post already uses this set; the IOI post uses matplotlib's
-# tab10 defaults. Standardising on Okabe-Ito makes the two posts one body of
-# work, and #d55e00 — the vermillion that marks the finding in the copying-score
+# Written when the induction-head post already used this set and the IOI post
+# was still on matplotlib's tab10 defaults; as of 2026-08-06 all three posts are
+# regenerated through this file. Standardising on Okabe-Ito makes them one body
+# of work, and #d55e00 — the vermillion that marks the finding in the copying-score
 # and DLA charts — is now the site's accent colour too, so a highlighted bar and
 # a hovered link are literally the same colour.
 axes.prop_cycle: cycler('color', ['0072b2', 'd55e00', '009e73', 'cc79a7', 'e69f00', '56b4e9', 'f0e442', '000000'])
