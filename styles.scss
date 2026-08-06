@@ -675,6 +675,25 @@ main.content:has(.cv-filing) #title-block-header.quarto-title-block {
   align-content: flex-start;
 }
 
+// The 404 keeps the title card but re-reckons it (2026-08-05, Ameya's call:
+// "structure 404 like my about page"). Structurally the two pages were already
+// identical — same min-height, same align-content, same title position. What
+// differs is the PARAGRAPH, and the card's constant is a claim about paragraph
+// length: 21.25rem reserves head-space for half a *typical* opening of about
+// six prose lines. The 404's opener is three, so its midpoint landed 85px above
+// the viewport midline and the page read top-heavy while /about/ reads composed.
+//
+// Same arithmetic, its own paragraph. 14.6rem = the masthead offset and gap as
+// before, with the half-paragraph term measured from this page's own three lines
+// instead of assumed from six, then trued up against the rendered page. Floor
+// still wins on short viewports, so the card unfolds only where there is room.
+//
+// `.notfound-links` is the discriminator, the same move as `.cv-filing` above:
+// it travels with the content, so the rule cannot be orphaned by a path change.
+main.content:has(.notfound-links) #title-block-header.quarto-title-block {
+  min-height: calc(50svh - 14.6rem);
+}
+
 // Every selector here carries #title-block-header on purpose: the prose block is
 // scoped `#quarto-content main.content p`, and the title block sits inside
 // main.content, so an unqualified `.quarto-title-meta-contents p.date` loses the
