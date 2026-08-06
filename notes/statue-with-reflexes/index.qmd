@@ -1,0 +1,21 @@
+---
+title: "A statue with reflexes"
+description: "Cloning a privileged expert taught the policy to walk without teaching it where — and RL was right to delete the walking."
+date: 2026-08-05
+---
+
+The hat panda's world is a deterministic simulation, and the panda that plays it is a hand-written rules expert: it reads the incident feed and every panda's true position, then decides where to stand. The plan for replacing it was the obvious one — clone the expert with behavior cloning, then let RL improve on the clone. Seven iterations of that plan converged on the same policy every time: still, with reflexes intact. It dodges. It does not walk anywhere.
+
+**The teacher cheats.** The clone sees through a 120° cone; the expert sees everything. So the clone watches the expert set off across the room for no reason present in its own inputs, and learns "sometimes walk" without "where to" — direction-given-movement lands at 50–74% toward the target, against the expert's 95.5%. Sequence-model imitation theory (Swamy et al. 2022) predicts exactly this, and predicts *latching* alongside it: a recurrent clone of a hidden-information expert learns "keep doing what I have been doing," and for an expert that holds on 86% of decisions, that means HOLD.
+
+**RL's verdict on that walking is correct.** Aimless walking really does lose money — step costs, knock exposure, forfeited escrows — so the gradient crushes all stepping: 63% → 0.1% move mass on fixed probe rows inside 2M steps. This is not a malfunction. It is right, on the policy's own data. Then the trap closes: a policy that never walks never generates the good walks that would show walking pays. Still-with-reflexes is a local optimum with no gradient out of it, a training-dynamics trap of the same shape as [the dead-ReLU absorbing state](../dead-relu-collapse/) reached from a different direction.
+
+**Aim, not effort, is the binding constraint,** and two probes separate them. Forcing more movement at the current direction quality earns nothing — a step-bias sweep lifts move mass 3% → 21% and the score falls. Directed near approaches, meanwhile, are worth +6.3 each and go unexploited. The missing skill is pointing the walk using cone-and-memory information, and it is absent from every demonstration in the corpus, because the cheating expert never needed it.
+
+**The optimizer was not the problem.** Six literature-backed suspects — Adam's second moment, the anchor's KL direction, confident-HOLD gradient mass, trunk representation damage, committed exploration, the credit horizon — were built as flags and run as seven matched 6M-step arms. All seven demolished identically. The collapse is head-level and advantage-driven and immune to hygiene; only changing *the data the advantages see*, or the update family itself, is left. Both of the phase's partial successes had been data-side, which is the same finding arrived at twice.
+
+**What replaces it is a teacher that cannot cheat.** Take the expert apart and strip every power the network does not have: a scripted planner perceiving only through the deployed sensor — 120° cone, peripheral band, fence occlusion, 520px range — plus an honest, hand-written notebook. Per-panda tracks whose confidence decays with staleness. Event memory keyed on *witnessed* collisions, so a body lying still is a sleeper unless something was seen to hit it. A scan routine for when the notebook says something may be live but nothing qualifying is in the cone.
+
+It will score well below the privileged expert, and that is the point. Every decision it makes is a function of the student's own observable history, so imitation can succeed and the latching pressure disappears — and the behavior that was missing from every demonstration is finally present in one. The literature had already named this: the optimal privileged teacher is not the best teacher.
+
+Beside it goes a curriculum in the real game rather than a different one. Each rung changes only the situation — arena size, roster, whether the incident starts behind him — while the engine, the sensor and the shipped economy stay fixed. Advance on mastery rather than on schedule, never drop an unlocked rung, and let the last rung be the game itself, because it is the only score that counts.
