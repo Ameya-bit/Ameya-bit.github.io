@@ -938,8 +938,10 @@ figure img,
   border-radius: 0;
   cursor: zoom-in;
   // A figure narrower than its box centres in it rather than hugging the left
-  // edge — matters for the induction post, whose figures predate the one-width
-  // export rule and come in at assorted natural sizes.
+  // edge. All three posts now export at the one width, so this is a guard
+  // rather than a workaround — it is what keeps a future figure drawn at some
+  // other size from silently sitting off-axis instead of looking obviously
+  // wrong.
   display: block;
   margin-inline: auto;
 

@@ -1,11 +1,18 @@
 # Figure style for ameyapanchal.github.io
 #
-# Applied to both posts as of 2026-08-05 (IOI 2026-08-03, induction-head
-# 2026-08-05). Each post carries its own compute.py / plot.py pair under
-# figures/: compute.py runs the model once and caches every number, plot.py
-# reads the cache and needs only numpy + matplotlib. That split is what makes
-# this file cheap to obey — a restyle costs seconds, not a model load. The
-# reason the file exists:
+# Applied to all three posts as of 2026-08-06 (IOI 2026-08-03, induction-head
+# 2026-08-05, pulse profiles 2026-08-06). Each post carries its own compute.py /
+# plot.py pair under figures/: compute.py runs the model once and caches every
+# number, plot.py reads the cache and needs only numpy + matplotlib. That split
+# is what makes this file cheap to obey — a restyle costs seconds, not a model
+# load.
+#
+# ⚠ plot.py MUST SELECT THE Agg BACKEND BEFORE IMPORTING pyplot. On macOS the
+# default backend is `macosx`, which carries a 2x device-pixel ratio that
+# savefig honours: the 8.0in canvas pinned below writes 2560px instead of 1280.
+# Nothing warns, the figure looks right, and the one-width rule breaks by a
+# factor of two depending on which interpreter ran the script. The reason the
+# file exists:
 #
 # THE PROBLEM. The eleven figures currently on the site were exported between
 # 1128px and 2210px wide and are all displayed at the same column width. The

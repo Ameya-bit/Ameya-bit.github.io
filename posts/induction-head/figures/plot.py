@@ -28,9 +28,20 @@ from pathlib import Path
 
 import matplotlib as mpl
 import numpy as np
-from matplotlib import font_manager
-from matplotlib import pyplot as plt
-from matplotlib.patches import Rectangle
+
+# Agg BEFORE pyplot, and this line is load-bearing rather than boilerplate. On
+# macOS the default backend is `macosx`, which carries a 2x device-pixel ratio
+# that savefig honours: the same 8.0in figure the style file pins to 1280px
+# writes 2560px instead. It is silent — nothing warns and the figure looks
+# correct — so the one-width rule breaks by a factor of two depending on which
+# interpreter ran the script. This set happened to be drawn under a venv that
+# had already fallen back to Agg; running it with the system python would have
+# produced a different width from the same committed source.
+mpl.use("Agg")
+
+from matplotlib import font_manager                  # noqa: E402
+from matplotlib import pyplot as plt                 # noqa: E402
+from matplotlib.patches import Rectangle             # noqa: E402
 
 HERE = Path(__file__).parent
 DESIGN = HERE.parents[2] / "design"
