@@ -1,0 +1,170 @@
+---
+title: "Colophon"
+description: "What this site is made of, and which of its decisions are load-bearing."
+toc: false
+---
+
+What this site is made of. The five sections below are the five axes the
+stylesheet itself is organised on — type, colour, measure, motion, machinery —
+so this page and the file it describes cannot fall out of step.
+
+Every number here is measured rather than estimated. Where a decision has a
+reason, the reason is the part in italics.
+
+## Type
+
+```{=html}
+<!-- The specimen is the point of the section: this is the only page on the site
+     where a material is DISPLAYED rather than used. Nunito at display scale, its
+     own name, beside the one thing it is not allowed to set. -->
+<div class="colo-specimen">
+  <p class="colo-specimen-face">Nunito</p>
+  <p class="colo-specimen-note">Weights 400–700. One family, no pairing.</p>
+  <p class="colo-specimen-mono">0 1 2 3 4 5 6 7 8 9</p>
+</div>
+```
+
+::: {.colo-spec}
+Family
+:   Nunito alone, committed 2026-08-03. *Chosen for the character its rounded
+    terminals give the display sizes; the consequence is that every scale
+    decision has to make that character an asset rather than reach for a second
+    face.*
+
+Numerals
+:   `ui-monospace`, at 13.8px. *Mono is the numbering system and nothing else —
+    section numerals in the article gutter, counts in the hero ledger. The moment
+    it touches words it stops reading as instrumentation and starts reading as a
+    second font.*
+
+Prose
+:   One size, flat, hierarchy carried by weight. *Under it sits an apparatus tier
+    at 14px and `--gray-1000` for captions, dates and filing lines — the rule
+    being that nothing which carries argument may use it.*
+:::
+
+## Colour
+
+```{=html}
+<!-- Twelve chips, edge to edge, each labelled with the step it is. The gap
+     between 500 and 800 is real: those steps are simply never used, and showing
+     the ramp with its holes is more honest than renumbering it to look full. -->
+<div class="colo-swatches" role="img" aria-label="The site's twelve-step warm gray ramp, from #fdfdfc through #21201c, followed by the two vermillion accent steps.">
+  <div style="--c:#fdfdfc" data-step="100"></div>
+  <div style="--c:#f9f9f8" data-step="200"></div>
+  <div style="--c:#f1f0ef" data-step="300"></div>
+  <div style="--c:#e9e9e7" data-step="400"></div>
+  <div style="--c:#e2e1de" data-step="500"></div>
+  <div style="--c:#bcbbb5" data-step="800"></div>
+  <div style="--c:#8d8d86" data-step="900"></div>
+  <div class="on" style="--c:#6f6f69" data-step="1000"></div>
+  <div class="on" style="--c:#63635e" data-step="1100"></div>
+  <div class="on" style="--c:#21201c" data-step="1200"></div>
+  <div class="on" style="--c:#d55e00" data-step="acc"></div>
+  <div class="on" style="--c:#b04d00" data-step="ink"></div>
+</div>
+```
+
+::: {.colo-spec}
+Ramp
+:   Radix Sand, twelve steps, zero chroma. *Warm gray rather than neutral, which
+    is what lets a vermillion accent sit on it without the page splitting into two
+    temperatures.*
+
+Accent
+:   `#d55e00` at 3.80:1 for marks and rules, `#b04d00` at 5.28:1 for text.
+    *One colour cannot do both jobs: the lighter step clears the 3:1 bar for
+    non-text and fails the 4.5:1 bar for small type, so the darker step exists
+    only to carry words.*
+
+Spending rule
+:   Interaction only — link hover, figure hover, focus ring, the active rail
+    mark. *At rest the page is monochrome, so colour reads as a response rather
+    than as decoration.*
+
+Tertiary text
+:   `#6f6f69` at 4.97:1. *It was `#82827c` at 3.80:1, which failed AA while
+    carrying every caption, date and timestamp on the site. One Radix step
+    darker, same hue and chroma.*
+:::
+
+## Measure
+
+::: {.colo-spec}
+Column
+:   ~646px of prose, declared in rem. *So the column widens on a large display
+    while the line stays near 75 characters — the width, not the character
+    count, is what scales.*
+
+Root
+:   16px below ~880px, 17px at 1440px, 19px at 2560px. *Every rhythm number in
+    the stylesheet was calibrated at 17px/1440, where the fluid site is
+    pixel-identical to the fixed one it replaced.*
+
+Rail budget
+:   Section headings fit one line in the TOC rail: ~25 characters, floor 20.
+    *Measured against the live rail — a 184px label box, Nunito running 7.4–8.0px
+    per character. The rail sets `text-overflow: ellipsis` as a tripwire, so an
+    ellipsis appearing there is a bug report about the heading, not about the
+    rail.*
+
+Audit
+:   Zero automated violations, zero horizontal overflow, 2026-08-05.
+:::
+
+## Motion
+
+::: {.colo-spec}
+Navigation
+:   Cross-document view transitions, two lines and no JavaScript. *The masthead
+    name is the shared element, so it holds still while the page changes under
+    it.*
+
+Hero
+:   A staggered entrance: three headline beats, then the role, links, status and
+    ledger. *It runs once per session — a repeat visit within the same session
+    renders the resting page directly, because an entrance that plays on every
+    navigation stops being an entrance.*
+
+Rail
+:   The TOC collapses to hairlines on scroll-down and restores its words on
+    scroll-up, hover or focus.
+
+Everything
+:   Transform and opacity only, and all of it cancelled under
+    `prefers-reduced-motion`. *Including the transitions the browser generates
+    itself, which the media query does not cover on its own.*
+:::
+
+## Machinery
+
+::: {.colo-spec}
+Maths
+:   KaTeX 0.18.1, vendored and pinned. *The default emits `katex@latest` from a
+    CDN, which is two problems in one script tag: a floating version that can
+    retypeset every equation here without a commit, and a third party in the
+    critical path of a page whose maths renders client-side.*
+
+Résumé
+:   One TOML file compiles to both the web page and the PDF. *The page body
+    regenerates on every render, so the two surfaces cannot drift; the PDF's only
+    difference is the private fields the page is not given.*
+
+Figures
+:   `compute.py` runs the model once and caches every number; `plot.py` draws
+    from the cache and needs only numpy and matplotlib. *A post's entire visual
+    language can be reworked in seconds instead of a two-thousand-forward-pass
+    rerun, and the figures stay reproducible by someone without the model.*
+
+Build
+:   Four post-render passes: image dimensions read from the files themselves,
+    accessibility repairs to the generated chrome, a listings manifest, and the
+    icon-set removal. *The last one re-proves on every render that the icon set
+    is still unused and fails the build rather than serving a page a missing
+    glyph — 273 KB that this site had been shipping for an icon it never had.*
+
+Published
+:   Quarto to GitHub Pages, built by Actions. *Every branch renders and reports
+    whether the site still builds; merging to main is the act of publishing, and
+    built HTML never enters the history.*
+:::

@@ -73,10 +73,26 @@ listing:
              system, nothing else). The hardcoded counts are correct at publish
              time; the script at the foot of this file re-reads them from the
              rendered listings so they can never drift. About/Résumé stay in the
-             identity corner: who I am up there, what's here down here. -->
+             identity corner: who I am up there, what's here down here.
+
+             INSTRUMENTS (2026-08-06) is the first row that leaves this page, and
+             the first whose count the script cannot check: /instruments/ is a
+             hand-written page, not a Quarto listing, so there is nothing on the
+             homepage to count. It therefore carries no `data-counts` and the
+             script skips it by construction rather than by accident. The rows on
+             that page are the source of truth — add one there, change the 05
+             here. That is the trade for a page whose rows carry claims rather
+             than front matter.
+
+             The row also finished the composition. The hero used to load two
+             corners and leave the other two thin, which read as an empty middle;
+             the fix was never an object in the void, it was a third thing worth
+             filing. -->
+
         <nav class="hero-ledger" aria-label="Site contents"><span class="rise-mask"><span class="rise" style="--beat: 460ms">
           <a href="#writing-section" data-counts="writing">Writing<span class="ledger-n">03</span></a>
           <a href="#notes-section" data-counts="notes">Notes<span class="ledger-n">02</span></a>
+          <a href="instruments/">Instruments<span class="ledger-n">05</span></a>
         </span></span></nav>
       </div>
     </div>
@@ -116,6 +132,15 @@ listing:
 :::
 
 :::
+
+```{=html}
+<!-- The colophon whisper (2026-08-06). /colophon/ is deliberately NOT a ledger
+     row: the ledger files work, and a page about how the site is built is the
+     site talking about itself. A quiet centred line under everything is the rank
+     that claim deserves — and it is the exact object this rule was written for
+     back when it carried a panda credit. -->
+<p class="site-colophon"><a href="colophon/">Colophon</a> — how this site is built.</p>
+```
 
 ```{=html}
 <!-- The ledger's honest-count guarantee: re-read each collection's size from

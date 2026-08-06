@@ -41,14 +41,32 @@ website:
   description: "Mechanistic interpretability and machine learning notes."
   # A standing panda, cel 0 of the `down` row of the hero sprite sheet, pulled
   # straight out of assets/pandas/engine/render/art-data.js and cropped to its
-  # own bounds. Same drawing as the troupe on the homepage, so the tab mark and
-  # the site are literally the same artwork — and nothing new had to be drawn.
+  # own bounds — nothing new had to be drawn. It was the same drawing as the
+  # homepage troupe until that troupe was disabled (2026-08-03); the favicon
+  # stays because it is a static cel — art, not motion — and it is now the only
+  # panda visible anywhere on the site.
   favicon: assets/favicon.svg
   # Research circulates as links on X, LessWrong and the Alignment Forum. Without
   # these every share of these posts rendered as a bare URL: no title card, no
   # image, no author — while five publication-grade figures sat in each post
-  # unable to be the preview. Both posts already declare `image:` in their
-  # front matter, so cards populate immediately.
+  # unable to be the preview. Every post declares `image:` in its front matter,
+  # so post cards populate immediately.
+  #
+  # The homepage's own card closed 2026-08-06 (design/direction.md, open #5). It
+  # is the site's cover recomposed for a 1200x630 frame, GENERATED rather than
+  # drawn — tools/og-card/build.py reads the ramp and the type stack out of
+  # styles.scss and renders with the committed Nunito, so the card cannot drift
+  # into being a second design. Re-run it when the hero copy or the palette
+  # changes; it is a deliberate step, not a render hook. This key is the DEFAULT,
+  # so a post's own `image:` still wins on that post.
+  #
+  # LEADING SLASH, and it is load-bearing. Written bare, Quarto resolves this
+  # per page rather than once for the site: the index got
+  # `/assets/og-card.png` and every other page got `<its own dir>/assets/
+  # og-card.png` — /about/assets/…, /colophon/assets/… — three 404s that no
+  # crawler would have reported back. Site-absolute, every page names the one
+  # file that exists.
+  image: /assets/og-card.png
   open-graph: true
   twitter-card:
     card-style: summary_large_image

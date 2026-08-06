@@ -1,0 +1,103 @@
+---
+title: "Instruments"
+description: "The code behind the writing."
+toc: false
+---
+
+The code behind the writing. Every figure and every number on this site
+regenerates from one of these repositories.
+
+```{=html}
+<!-- The rows ARE the homepage listing's rows — same grid, same two registers —
+     because the site's cohesion rule is few materials used often, and a list of
+     work is a list of work. The shared geometry is a mixin in styles.scss so the
+     two cannot drift.
+
+     The names are `p` + role=heading, not h2, for the same reason the homepage
+     kickers are: the section-numeral machinery is scoped to `main.content h2`
+     and would stamp a gutter "01"–"05" down this page. Those numerals mean
+     "section N of an argument"; five instruments are a set, not a sequence.
+
+     BOTH DESTINATIONS ARE NAMED (2026-08-06, Ameya's catch). The first build
+     made the repo name itself the only link to the repo, on the reasoning that
+     a repo name is self-evidently a repo. It is not: an underline says "link",
+     it does not say "GitHub", and the row read as though the code were missing
+     from the page whose entire job is to point at the code. The name is now
+     plain text — it is the row's title — and the two destinations sit together
+     in the filing register underneath, where a reader can see there are two.
+
+     Every row that has a post links to it. That is the whole reason this page
+     can exist without becoming a gallery: nothing here floats free of the
+     writing that explains what it was for. -->
+<div class="instruments">
+
+  <div class="instrument">
+    <div class="body">
+      <p class="instrument-name" role="heading" aria-level="2">mc-radiative-transfer</p>
+      <p class="instrument-claim">Monte Carlo radiative transfer through a scattering
+        atmosphere. Reproduces Chandrasekhar's H function, and the pulse machinery
+        matches published reference waveforms to 0.11%.</p>
+      <p class="instrument-links">
+        <a href="https://github.com/Ameya-bit/mc-radiative-transfer">Repository</a>
+        <a href="../posts/where-the-error-hides/">The post</a>
+      </p>
+    </div>
+    <div class="metadata">Python<br>2026</div>
+  </div>
+
+  <div class="instrument">
+    <div class="body">
+      <p class="instrument-name" role="heading" aria-level="2">IOI</p>
+      <p class="instrument-claim">Direct logit attribution, activation patching and path
+        patching over GPT-2's IOI circuit. Four notebooks; every figure in the post
+        regenerates from one cached run.</p>
+      <p class="instrument-links">
+        <a href="https://github.com/Ameya-bit/IOI">Repository</a>
+        <a href="../posts/ioi-circuit/">The post</a>
+      </p>
+    </div>
+    <div class="metadata">Jupyter<br>2026</div>
+  </div>
+
+  <div class="instrument">
+    <div class="body">
+      <p class="instrument-name" role="heading" aria-level="2">QuotesByNiche</p>
+      <p class="instrument-claim">A character-level transformer trained on Nietzsche, and
+        the head analysis that found a copying circuit with half a bracket-completion
+        mechanism in it.</p>
+      <p class="instrument-links">
+        <a href="https://github.com/Ameya-bit/QuotesByNiche">Repository</a>
+        <a href="../posts/induction-head/">The post</a>
+      </p>
+    </div>
+    <div class="metadata">Jupyter<br>2026</div>
+  </div>
+
+  <div class="instrument">
+    <div class="body">
+      <p class="instrument-name" role="heading" aria-level="2">mem-toy-scratch</p>
+      <p class="instrument-claim">The memorisation-challenge sweeps: the bias split, the
+        transplant control, and the dead-unit census behind the absorbing-state
+        result.</p>
+      <p class="instrument-links">
+        <a href="https://github.com/Ameya-bit/mem-toy-scratch">Repository</a>
+        <a href="../notes/dead-relu-collapse/">The note</a>
+      </p>
+    </div>
+    <div class="metadata">Python<br>2026</div>
+  </div>
+
+  <div class="instrument">
+    <div class="body">
+      <p class="instrument-name" role="heading" aria-level="2">jacobian-lens-from-scratch</p>
+      <p class="instrument-claim">Reimplementing the global-workspace result from scratch.
+        In progress — this is the experiment the homepage names.</p>
+      <p class="instrument-links">
+        <a href="https://github.com/Ameya-bit/jacobian-lens-from-scratch">Repository</a>
+      </p>
+    </div>
+    <div class="metadata">In progress<br>2026</div>
+  </div>
+
+</div>
+```

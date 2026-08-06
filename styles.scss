@@ -1,11 +1,31 @@
 /*-- scss:defaults --*/
 
 // ---------------------------------------------------------------------------
-// Layer 1: the Emil base (see design/direction.md).
-// One type size (16px) for the entire site — hierarchy is weight, warm-gray
-// steps, and whitespace only. 644px measure. No chromatic color, no accent,
-// no page motion, instant hovers. Everything else (TOC minimap, whimsy,
-// transitions) layers on top of this later, one at a time.
+// The site's stylesheet (see design/direction.md for why any of it is the way
+// it is). It started as "Layer 1, the Emil base": one 16px type size for the
+// whole site, a 644px measure, no accent, no motion. Three of those four have
+// since moved, and this header used to still claim them — as built today:
+//
+//   TYPE      flat in the prose, hierarchy by weight, but at a FLUID root —
+//             16px under ~880px, 17px at the 1440px calibration viewport every
+//             rhythm number here was tuned on, 19px at 2560px. Under the prose
+//             sits an apparatus tier (14px, --gray-1000) for captions, filing
+//             lines and the rail; mono is reserved for numerals only.
+//   MEASURE   ~646px at the calibration root, and it scales with the root —
+//             the grid is declared in rem, so the column widens on a large
+//             display while the line stays ~75 characters.
+//   COLOR     warm-gray ramp, plus ONE accent (--accent / --accent-ink,
+//             vermillion out of the figures) spent only on interaction:
+//             link hover, figure hover, focus ring. At rest the page is
+//             monochrome.
+//   MOTION    no longer "none": cross-document view transitions on the
+//             masthead name, the hero's entrance choreography, and the TOC
+//             rail's collapse/reveal. All transform/opacity, all cancelled
+//             under prefers-reduced-motion.
+//
+// Layer 2 (the rail) is built; Layer 3 (whimsy — the panda troupe) is paused
+// and its markup is out of index.qmd, so any .panda-* or .site-colophon rules
+// below currently match nothing.
 // ---------------------------------------------------------------------------
 
 $font-family-sans-serif: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -839,8 +859,16 @@ main.content:has(.notfound-links) #title-block-header.quarto-title-block {
 }
 
 // ---- Code -------------------------------------------------------------------
+// The list is per-element rather than a blanket `code`, so block listings keep
+// their own treatment. `dd` joined it 2026-08-06 with /colophon/: pandoc emits a
+// TIGHT definition list — the text sits directly in the `dd`, with no `p` — so
+// every inline code span on that page fell through to Quarto's default and
+// rendered in a purple that exists nowhere in this palette. On a page that
+// spends four rows explaining that the site is monochrome until you interact
+// with it, that was the loudest colour on screen.
 p code:not(.sourceCode),
 li code:not(.sourceCode),
+dd code:not(.sourceCode),
 td code:not(.sourceCode) {
   font-size: 0.857em;
   background: var(--gray-200);
@@ -1692,13 +1720,24 @@ main.content > :last-child {
   margin-bottom: 5.647rem; // 96px
 }
 
-// A single faint centred line at the foot of the homepage — a colophon whisper, not a footer:
-// no border, no fill, no nav chrome, and homepage-only (posts carry no troupe, so the credit
-// lives where the pandas actually are). The no-footer stance holds; this is a signature, not a bar.
+// A single faint centred line at the foot of the homepage — a whisper, not a
+// footer: no border, no fill, no nav chrome, homepage-only. The no-footer stance
+// holds; this is a signature, not a bar.
+//
+// Written for a panda credit, unused from 2026-08-03 when the troupe came off,
+// and revived 2026-08-06 for the job it turns out to be shaped for: the one link
+// to /colophon/. A page about how the site is built has no business in the hero
+// ledger — the ledger files WORK, and this is the site talking about itself — but
+// it still has to be reachable, and a quiet centred line below everything is
+// exactly the rank that claim deserves.
+//
+// The margin-top is gone (was a 2.5–5.5rem clamp): .notes-section already ends
+// the page with 5–9rem of padding, and stacking both put ~250px of nothing above
+// a 12px line. The air above the whisper is now the list's page-end air, and the
+// 96px below it is main's last-child rule.
 .site-colophon {
   max-width: var(--shell);
   margin-inline: auto;
-  margin-top: clamp(2.5rem, 1.5rem + 5vw, 5.5rem);   // extra air above → it sits well down the page
   padding-inline: clamp(1.25rem, 5vw, 2rem);
   text-align: center;
   font-size: 0.75rem;            // a hair under the caption scale — a quiet whisper
@@ -1891,6 +1930,35 @@ body:has(.hero-screen) { overflow-x: hidden; }
 }
 .hat_loose svg { display: block; fill: #7c5322; }
 
+// ---- The row grammar, held in one place -------------------------------------
+// Two pages list work: the homepage (writing + notes, via Quarto listings) and
+// /instruments/ (hand-written). They are the same object — the work on the left
+// at prose weight, the filing facts right-aligned in the apparatus tier — so the
+// geometry lives in a mixin rather than being typed twice and drifting. What the
+// two do NOT share is stated at each call site, with the reason.
+@mixin listing-row {
+  display: grid;
+  grid-template-columns: 1fr 8rem;
+  gap: 2rem;
+  align-items: baseline;
+  margin: 0 -0.706rem; // −12px
+  padding: 0.706rem; // 12px
+  border: none;
+  border-radius: 8px;
+}
+
+// Date + reading time, or language + year: apparatus, not argument.
+// direction.md already says listing metadata belongs to the small tier, but the
+// CSS had it pinned at 1rem, so a timestamp carried the same weight as the post
+// title next to it. Small and gray, not mono — see the note on the TOC.
+@mixin listing-meta {
+  grid-column: 2;
+  font-size: var(--text-apparatus);
+  line-height: 1.7;
+  color: var(--gray-1000);
+  text-align: right;
+}
+
 // ---- Writing list: stacked title + description, instant hover pill ---------
 // Nested under the content id so these outrank the prose a/h3/p rules above.
 #quarto-content main.content {
@@ -1903,15 +1971,11 @@ body:has(.hero-screen) { overflow-x: hidden; }
   }
 
   .quarto-post {
-    display: grid;
-    grid-template-columns: 1fr 8rem;
-    gap: 2rem;
-    align-items: baseline;
-    margin: 0 -0.706rem; // −12px
-    padding: 0.706rem; // 12px
-    border: none;
-    border-radius: 8px;
+    @include listing-row;
 
+    // The pill is the whole row's affordance, and it is honest here because on
+    // a listing the whole row IS one link. /instruments/ deliberately has no
+    // pill — see the note there.
     &:hover {
       background: var(--hover-fill);
     }
@@ -1930,19 +1994,8 @@ body:has(.hero-screen) { overflow-x: hidden; }
       max-width: 40rem;
     }
 
-    // Date + reading time: apparatus, not argument. direction.md already says
-    // listing metadata belongs to the small tier, but the CSS had it pinned at
-    // 1rem, so a timestamp carried the same weight as the post title next to it.
-    // Date + reading time: apparatus, not argument. direction.md already says
-    // listing metadata belongs to the small tier, but the CSS had it pinned at
-    // 1rem, so a timestamp carried the same weight as the post title next to it.
-    // Small and gray, not mono — see the note on the TOC.
     .metadata {
-      grid-column: 2;
-      font-size: var(--text-apparatus);
-      line-height: 1.7;
-      color: var(--gray-1000);
-      text-align: right;
+      @include listing-meta;
 
       a {
         color: var(--gray-1000);
@@ -1976,8 +2029,246 @@ body:has(.hero-screen) { overflow-x: hidden; }
   }
 }
 
+// ---- /instruments/ ----------------------------------------------------------
+// The homepage's row, with three deliberate differences, each one a consequence
+// of the same fact: a listing row is ONE link and an instrument row is two.
+//
+//   NO HOVER PILL. Lighting a whole listing row is honest because the whole row
+//   is the target. An instrument row points at a repo and at the post that used
+//   it, so a full-row pill would promise a single destination that does not
+//   exist. Hairline rules separate the rows instead, and the links carry their
+//   own hover.
+//
+//   THE NAME IS NOT A LINK. It was one in the first build — the only route to
+//   the repo — and the page read as though the code were missing from it
+//   (Ameya, 2026-08-06). An underline says "link"; it does not say "GitHub". The
+//   name is the row's title now, and both destinations are named below it.
+//
+//   A THIRD LINE. Repository and post sit under the claim in the filing
+//   register — the same uppercase-and-tracked voice as the hero's links row,
+//   which is this site's word for "navigation, not argument". Two links side by
+//   side also say, without a word, that there ARE two.
+.instruments {
+  margin-top: 2.353rem; // 40px — the lede's air before the list starts
+}
+
+#quarto-content main.content {
+  .instrument {
+    @include listing-row;
+    border-top: 1px solid var(--gray-400);
+    border-radius: 0;
+    // Each row is its own section, and the rule sits in the middle of the space
+    // between two of them. At the pill's 12px inset the rows crowded each other
+    // (Ameya, 2026-08-06): a hairline reads as a separator only when there is
+    // enough air on both sides for the gap to belong to the pair rather than to
+    // whichever row is louder. 40px a side puts the total at 80, which is the
+    // h2's 72px section rhythm arrived at symmetrically — symmetric because
+    // these are equal items in a set, not headings introducing what follows.
+    padding-block: 2.353rem; // 40px
+
+    &:last-child {
+      border-bottom: 1px solid var(--gray-400);
+    }
+
+    .metadata {
+      @include listing-meta;
+    }
+  }
+
+  .instrument-name {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.65;
+    color: var(--gray-1200);
+    margin: 0;
+  }
+
+  .instrument-claim {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--gray-1100);
+    margin: 0.235rem 0 0; // 4px — binds the claim to the name above it
+  }
+
+  // The hero's links grammar, reused verbatim — same size, weight, tracking and
+  // gap. One material used often: this is the third place on the site where a
+  // row of destinations sits under a block of prose.
+  .instrument-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2.4rem;
+    margin: 0.882rem 0 0; // 15px — the claim's own line, clear of its descenders
+    font-size: var(--text-apparatus-mono);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+
+    a {
+      color: var(--gray-1000);
+      text-decoration: none;
+      border-bottom: 1px solid var(--gray-400);
+      padding-bottom: 2px;
+
+      &:hover,
+      &:focus-visible {
+        color: var(--accent-ink);
+        border-bottom-color: var(--accent);
+      }
+    }
+  }
+}
+
+// ---- /colophon/ -------------------------------------------------------------
+// The one page allowed to show the site's materials as SPECIMENS rather than use
+// them. Everywhere else the ramp is a palette and the face is just what the words
+// are set in; here they are the subject, so they get to be objects.
+//
+// ⚠ The label column is NOT mono, though every instinct says a spec sheet's
+// labels should be. The standing rule outranks the genre: mono is the numbering
+// system and nothing else, and a column of mono words here would be the exact
+// "second voice" failure the apparatus tier was pulled back from in 2026-08-02.
+// The labels take the tier's other half instead — uppercase, tracked, gray, at
+// the apparatus size — which is the same voice as the list kickers and the hero
+// status line, and already means "filing, not argument" everywhere else.
+#quarto-content main.content {
+  .colo-specimen {
+    border-top: 1px solid var(--gray-400);
+    border-bottom: 1px solid var(--gray-400);
+    padding: 1.412rem 0 1.647rem; // 24 / 28
+    margin-bottom: 2.353rem; // 40
+  }
+
+  .colo-specimen-face {
+    font-size: clamp(2.6rem, 1.4rem + 3.4vw, 3.8rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    color: var(--gray-1200);
+    margin: 0 0 0.7rem;
+  }
+
+  // The note and the numerals share a baseline: what the face is, beside the one
+  // thing the face is not allowed to set.
+  .colo-specimen-note,
+  .colo-specimen-mono {
+    display: inline-block;
+    font-size: var(--text-apparatus);
+    line-height: 1.6;
+    color: var(--gray-1000);
+    margin: 0;
+  }
+
+  .colo-specimen-mono {
+    float: right;
+    font-family: var(--font-apparatus);
+    font-size: var(--text-apparatus-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .colo-swatches {
+    display: flex;
+    border: 1px solid var(--gray-400);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 2.353rem; // 40
+
+    div {
+      flex: 1;
+      height: 3.8rem;
+      background: var(--c);
+      position: relative;
+    }
+
+    // The step number rides inside its own chip, so the ramp needs no legend.
+    div::after {
+      content: attr(data-step);
+      position: absolute;
+      inset: auto 0 0.35rem;
+      text-align: center;
+      font-family: var(--font-apparatus);
+      font-size: 0.625rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--gray-1000);
+    }
+
+    // Chips dark enough that a gray numeral would fail on them.
+    div.on::after {
+      color: rgba(255, 255, 255, 0.92);
+    }
+  }
+
+  // The spec rows. A definition list is the honest element here — these are
+  // terms and their definitions — and Quarto writes one straight out of the
+  // markdown, so the content stays editable as prose rather than as markup.
+  .colo-spec dl {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr;
+    gap: 0 1.412rem; // 24
+    margin: 0;
+  }
+
+  .colo-spec dt {
+    grid-column: 1;
+    font-size: var(--text-apparatus);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gray-1000);
+    padding: 1.059rem 0; // 18
+    border-top: 1px solid var(--gray-400);
+  }
+
+  .colo-spec dd {
+    grid-column: 2;
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--gray-1200);
+    margin: 0;
+    padding: 1.059rem 0; // 18
+    border-top: 1px solid var(--gray-400);
+  }
+
+  .colo-spec dd p {
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+    margin: 0;
+  }
+
+  // The "why" clause. Italic marks it as commentary on the fact above it, and
+  // the drop to secondary gray keeps the fact itself the thing you read first.
+  .colo-spec dd em {
+    color: var(--gray-1100);
+  }
+}
+
 @media (max-width: 620px) {
-  #quarto-content main.content .quarto-post {
+  // Stacked, the label sits above its value and the rule belongs to the pair,
+  // not to each half of it.
+  #quarto-content main.content .colo-spec dl {
+    grid-template-columns: 1fr;
+  }
+
+  #quarto-content main.content .colo-spec dt {
+    padding-bottom: 0;
+  }
+
+  #quarto-content main.content .colo-spec dd {
+    border-top: none;
+    padding-top: 0.235rem; // 4
+  }
+
+  #quarto-content main.content .colo-specimen-mono {
+    float: none;
+    display: block;
+    margin-top: 0.4rem;
+  }
+}
+
+@media (max-width: 620px) {
+  #quarto-content main.content .quarto-post,
+  #quarto-content main.content .instrument {
     grid-template-columns: 1fr;
     gap: 0.25rem;
 
