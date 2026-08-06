@@ -18,6 +18,11 @@ project:
     # Quarto's own script fetches listings.json at a page-relative path; this
     # puts the real manifest at the address it actually asks for.
     - tools/site/listings-shim.py
+    # Bootstrap Icons: 97 KB of render-blocking stylesheet and a 176 KB font,
+    # for an icon set this site uses nowhere. Removed with a tripwire — the
+    # step re-proves the set is unused on every render and fails the build
+    # rather than serving a page a missing glyph.
+    - tools/site/drop-icons.py
   render:
     - "**/*.qmd"
     - "!design/"
