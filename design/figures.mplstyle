@@ -1,8 +1,11 @@
 # Figure style for ameyapanchal.github.io
 #
-# Not applied to anything yet — the existing figures live in other repos (IOI,
-# Niche) and are not regenerated here. This is the spec to plot against next
-# time, and the reason it exists:
+# Applied to both posts as of 2026-08-05 (IOI 2026-08-03, induction-head
+# 2026-08-05). Each post carries its own compute.py / plot.py pair under
+# figures/: compute.py runs the model once and caches every number, plot.py
+# reads the cache and needs only numpy + matplotlib. That split is what makes
+# this file cheap to obey — a restyle costs seconds, not a model load. The
+# reason the file exists:
 #
 # THE PROBLEM. The eleven figures currently on the site were exported between
 # 1128px and 2210px wide and are all displayed at the same column width. The
@@ -11,7 +14,10 @@
 # figure the reader is looking at — a 2x swing in apparent type size between
 # figures in the same post. That is why the figures read as inconsistent even
 # though each one is individually well made, and it is why the quote-grammar
-# table is illegible without clicking.
+# table was illegible without clicking. (That one was not a figure problem at
+# all: it was a TABLE, drawn as pixels. It is real markup now — see the
+# 2026-08-05 session-log entry. A table exported as a PNG is the case where
+# this file's width rule is treating a symptom.)
 #
 # THE RULE (transformer-circuits.pub's, verified in their shipped CSS): every
 # figure carries `max-width: calc(var(--img-width) / 1.5)` — exported at exactly

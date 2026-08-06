@@ -76,7 +76,7 @@ listing:
              identity corner: who I am up there, what's here down here. -->
         <nav class="hero-ledger" aria-label="Site contents"><span class="rise-mask"><span class="rise" style="--beat: 460ms">
           <a href="#writing-section" data-counts="writing">Writing<span class="ledger-n">03</span></a>
-          <a href="#notes-section" data-counts="notes">Notes<span class="ledger-n">01</span></a>
+          <a href="#notes-section" data-counts="notes">Notes<span class="ledger-n">02</span></a>
         </span></span></nav>
       </div>
     </div>

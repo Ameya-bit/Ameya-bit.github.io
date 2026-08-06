@@ -25,6 +25,10 @@ project:
     - "assets/niche/"
     - "assets/pandas/"
     - "!assets/pandas/engine/node_modules/"
+    # The vendored KaTeX dist. Listed explicitly because the only reference to
+    # it is in the script/link tags Quarto generates itself, which its resource
+    # scanner does not follow.
+    - "assets/katex/"
 
 website:
   title: "Ameya Panchal"
@@ -55,10 +59,24 @@ format:
       - styles.scss
     toc: true
     toc-depth: 3
+    # Table captions go under the table, where this site's figure captions
+    # already are. Quarto's default puts them on top, which would make the two
+    # kinds of float in a post read as two different conventions.
+    tbl-cap-location: bottom
     toc-location: left
     code-copy: true
     link-external-newwindow: true
-    html-math-method: katex
+    # KaTeX is vendored, not fetched (2026-08-05). Quarto's default emits
+    # `katex@latest` from a CDN, which is two problems wearing one script tag: a
+    # floating version that can change the typesetting of every equation on this
+    # site without a commit, and a third-party origin in the critical path of a
+    # page whose math renders client-side. assets/katex/ holds a pinned 0.18.1
+    # dist (js + css + woff2 subset of the fonts; VERSION records the pin).
+    # Bump it the way the Quarto pin gets bumped — deliberately, with a local
+    # render in the same commit.
+    html-math-method:
+      method: katex
+      url: "/assets/katex/"
     include-in-header:
       - text: |
           <link rel="preconnect" href="https://fonts.googleapis.com">

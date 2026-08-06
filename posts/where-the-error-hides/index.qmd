@@ -31,7 +31,7 @@ Both halves are validated against theory before either is trusted. The transport
 
 Every run is scored by one number: the **pulsed fraction**,
 
-$$\mathrm{PF} = \frac{F_{\max} - F_{\min}}{F_{\max} + F_{\min}} ,$$
+$$\mathrm{PF} = \frac{F_{\mathrm{max}} - F_{\mathrm{min}}}{F_{\mathrm{max}} + F_{\mathrm{min}}} ,$$
 
 how deeply the star's light curve breathes. The systematic under test is the difference between modeling the same star both ways,
 

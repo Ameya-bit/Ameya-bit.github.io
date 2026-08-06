@@ -506,11 +506,21 @@ body:has(.hero-screen) #title-block-header {
     border-bottom: none;
 
     // Below the hanging breakpoint the numeral sits inline, ahead of the title.
+    //
+    // Nunito, not mono (2026-08-05, Ameya's call). The numerals kept their keep
+    // — they identify sections in the article, which is a job the rail's marks
+    // cannot do — but they lost their mono counterpart when the rail's numerals
+    // went, and a lone mono object on a page of Nunito is the "one material used
+    // once" failure rather than a numbering *system*. Set in the page's own face
+    // at the apparatus size, they rank by position and colour instead of by
+    // family, which is the same move the rail made when it dropped the accent
+    // tick. `tabular-nums` keeps the gutter column true: proportional figures
+    // would let 01 and 11 start on different vertical lines.
     &::before {
       content: counter(section, decimal-leading-zero);
-      font-family: var(--font-apparatus);
-      font-size: var(--text-apparatus-mono);
+      font-size: var(--text-apparatus);
       font-weight: 400;
+      font-variant-numeric: tabular-nums;
       color: var(--gray-1000);
       margin-right: 0.85ch;
     }
@@ -987,6 +997,62 @@ img {
 // not redeclared here.
 .table-scroll {
   overflow-x: auto;
+}
+
+// The induction post's two verdict tables (2026-08-05). They used to be
+// matplotlib PNGs exported at 2210px and displayed at 646px — which is why the
+// style file names them as the reason the one-width rule exists — and a table
+// of characters, positions and weights baked into an image is unselectable,
+// unsearchable, silent to a screen reader, and illegible without clicking.
+//
+// As markdown they arrive as Quarto table floats, so they inherit the figure
+// rules above for free: the same 96px rhythm, the same symmetric outset to
+// ~846px at >=1200px, the same caption held back at reading measure. Nothing
+// new was invented to hold them; the figure's own material was reused, which is
+// the cohesion rule (few materials used often) working in the right direction.
+//
+// What this block does is only what the content needs: the apparatus tier,
+// because a grid of measurements is not the argument, and — the load-bearing
+// one — inline code WITHOUT its pill. The site sets `<code>` as a bordered,
+// filled, rounded chip, which is right for a token quoted inside a sentence and
+// catastrophic sixty times inside one table.
+// Scoped `#quarto-content main.content` throughout: the prose rules for `code`
+// and Quarto's own float-caption rules both carry id weight, and a bare
+// `.verdict-table code` loses to them silently — the first build shipped sixty
+// bordered chips and a centred caption because of exactly that.
+#quarto-content main.content .verdict-table {
+  font-size: var(--text-apparatus);
+
+  code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 1em; // the tier is already set on the table; don't shrink twice
+    color: inherit;
+  }
+
+  // Left, like every figure caption on the site. Quarto centres float captions.
+  figcaption {
+    text-align: left;
+  }
+
+  th {
+    font-weight: 500;
+    color: var(--gray-1000);
+    white-space: nowrap;
+  }
+
+  td,
+  th {
+    padding: 0.5rem 0.9rem 0.5rem 0;
+    vertical-align: baseline;
+  }
+
+  // Every column but the test string holds three or four characters, so they
+  // are kept on one line; only the strings are allowed to wrap.
+  td:not(:nth-child(2)) {
+    white-space: nowrap;
+  }
 }
 
 // The 404's link row, in the hero's links grammar: filing register, no

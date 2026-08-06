@@ -82,7 +82,7 @@
     <p class="cv-where">State College, PA</p>
   </div>
   <ul class="cv-points">
-    <li>Scoped ambiguous client requirements into technical documentation for the Docfinity systematic</li>
+    <li>Scoped ambiguous client requirements into technical documentation for the Docfinity system</li>
     <li>Prototyped evaluation protocols for generative and OCR-derived content, and drove requirements to consensus across a cross-functional team ahead of launch.</li>
   </ul>
 </article>
