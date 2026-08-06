@@ -69,7 +69,11 @@ So we throw in a couple test sentences — a handful of hand-written prompts, no
 
 ![B5H0 attention on a content-swap pair; the induction cell tracks the swapped token — 'a' for cat, 'o' for dog — the character that followed the query's own prior occurrence.](figures/fig3_divert_induction_stripe.webp)
 
-![Per-prompt verdicts for the quote tests; the top attended token is the induction successor rather than a matching quote, with the honest misses and position-0 sinks kept in. Two stay in: P3-A (repeat) tops out on 'r' at $w = 0.14$ — a genuine miss, not the induction successor — while P3-B (norepeat) and P5-B (prior-closes) collapse onto the position-0 attention sink (up to $w = 1.00$) when no induction cue is present.](figures/fig4_break_quote_grammar.webp)
+::: {.verdict-table}
+{{< include figures/_quote-table.md >}}
+:::
+
+Two stay in: P3-A (repeat) tops out on 'r' at $w = 0.14$ — a genuine miss, not the induction successor — while P3-B (norepeat) and P5-B (prior-closes) collapse onto the position-0 attention sink (up to $w = 1.00$) when no induction cue is present.
 
 ## Parenthesis grammar
 
@@ -91,7 +95,11 @@ And the QK circuit generally does attend to parentheses, but not meaningfully en
 
 This also holds back the nested grammar that the diagonal suggested, nested parentheses require bracket position understanding, specifically depth tracking to know when to close parentheses.
 
-![Per-prompt verdicts for the parenthesis tests; B5H0 attends to brackets but never distinguishes one that still needs closing from one already closed, so it just tracks the latest bracket. The near-ties the verdict column hides: in C8 (`A (B (C) D`) the still-open '(' at position 2 ($w = 0.11$) loses to the already-closed '(' at position 5 ($w = 0.12$), so there is no depth tracking; and P7 unmatched ('(' at 3, $w = 0.40$) versus matched ('(' at 3, $w = 0.18$; ')' at 11, $w = 0.39$) shows attention following the latest bracket, not whether it needs closing.](figures/fig5_break_paren_grammar.webp)
+::: {.verdict-table}
+{{< include figures/_paren-table.md >}}
+:::
+
+The near-ties the verdict column hides: in C8 (`A (B (C) D`) the still-open '(' at position 2 ($w = 0.11$) loses to the already-closed '(' at position 5 ($w = 0.12$), so there is no depth tracking; and P7 unmatched ('(' at 3, $w = 0.40$) versus matched ('(' at 3, $w = 0.18$; ')' at 11, $w = 0.39$) shows attention following the latest bracket, not whether it needs closing.
 
 ## What the head actually is
 

@@ -59,6 +59,10 @@ format:
       - styles.scss
     toc: true
     toc-depth: 3
+    # Table captions go under the table, where this site's figure captions
+    # already are. Quarto's default puts them on top, which would make the two
+    # kinds of float in a post read as two different conventions.
+    tbl-cap-location: bottom
     toc-location: left
     code-copy: true
     link-external-newwindow: true
