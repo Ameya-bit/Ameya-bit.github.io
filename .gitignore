@@ -34,4 +34,9 @@
 # lets plot.py restyle every figure without a CPU rerun of the model.
 posts/**/figures/__pycache__/
 posts/**/figures/compute.log
+
+# The post-render steps. Quarto runs them as scripts, which leaves no bytecode,
+# but importing one to test it does — `drop-icons.py`'s tripwire was checked
+# that way and left a __pycache__ behind.
+tools/**/__pycache__/
 /tools/resume/build/
