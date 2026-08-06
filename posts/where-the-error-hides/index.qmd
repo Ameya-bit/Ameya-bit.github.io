@@ -67,7 +67,7 @@ Two stars is an anecdote. Sweeping the engine over all two-spot geometries — s
 
 Both J0740 geometries sit on the live side. Both J0030 geometries sit in the saturated region. Neither star is special — they are two samples of one map.
 
-![The geometry phase diagram: $\Delta\mathrm{PF}$ at $\tau = 10$ across spot colatitude and azimuthal separation, for a J0740-like (a) and J0030-like (b) spacetime. The cyan curve is the analytic tiling boundary; stars mark the published fits. J0740 lands where the bias is visible in PF, J0030 where PF saturates and the bias moves to waveform shape.](figures/fig5_phase_diagram.webp)
+![The geometry phase diagram: $\Delta\mathrm{PF}$ at $\tau = 10$ across spot colatitude and azimuthal separation, for a J0740-like (a) and J0030-like (b) spacetime. The dark curve is the analytic tiling boundary, solid under the linear bending map and dashed under the exact one; stars mark the published fits. J0740 lands where the bias is visible in PF, J0030 where PF saturates and the bias moves to waveform shape.](figures/fig5_phase_diagram.webp)
 
 ## Spin re-routes the error
 
