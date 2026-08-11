@@ -1,0 +1,68 @@
+---
+title: "Better than the last one"
+description: "limitations of vibecoding vs the need for something meaningful for a birthday video"
+date: 2026-08-10
+image: figures/fig1_traversal.png
+---
+
+167 family photographs, one film for my mom's birthday, one rule: nothing on screen could be generated. The rule was easy to keep against generated images. It did not cover the place it was actually needed. The result was something that left me unsatisfied.
+
+**The control case.** The first build rearranged the pixels of multiple photographs into one — a technique I had [vibe-coded before](https://github.com/Ameya-bit/image-to-image), so the spec was concrete: which pixels get priority when the input and output disagree, how long the sort can run before the motion stops reading as pixels, what edge detection has to preserve for a face to survive the transit. Output that came back wrong could be named as wrong, and why. It worked.
+
+**The variable.** Every build after it carried one spec, *better than the last one* — a golden spiral, a Droste portal, a depth dive, high-dimensional solids with photographs mounted on their faces. Each started from beating the previous round rather than from a specific thing that should exist.
+
+Both halves were vibecoded. That was constant. The only variable was whether I had a direction.
+
+**The result: an unspecified target is specified by the model.** If the destination is undefined, something still selects, and what selects is whatever is generating. The rule was written against generated pixels, which is the obvious case and the easy one. The decisions above the pixels — what the shot is, why this construction and not another — were handed over without being noticed, and the same substitution was running there the whole time.
+
+**Where the substitution was visible.** The depth dive pushes a camera into a still photograph so the room gains volume. Parallax reveals pixels behind people, and those pixels do not exist. Quantile depth bands put boundaries through bodies, so a person landed on two layers at two scales and tore; a double-Otsu split into near/mid/far cards, morphology-cleaned, keeps each person rigid and fixes the tearing entirely. Neither version fixes the hole. Filling it requires an inpainting model or a generative dolly, so the dive was retired — the one round where the missing thing was literally missing, and therefore the only one I caught.
+
+**Where it wasn't.** I did not know what a Droste effect was when I asked for one, which leaves yes-or-no on a finished render as the only available judgement. The conformal twist failed because Escher's construction needs the whole plane to be self-similar and a photograph is self-similar nowhere; applied anyway, the copy chain holds and everything around it smears. The high-dimensional solids were striking and unreadable — foreshortened faces, half of them pointing away, nothing holding still long enough to be looked at. Both are known properties of the construction, found one render at a time instead of in an afternoon of reading. 
+
+**What shipped** is a traversal of the co-occurrence graph: a route chosen by beam search to meet as many distinct people as possible, each hop welding two photographs at a shared face, and the transition between them the pixel rearrangement from the control case — the one technique I understood. On top of it the field assembles, each community composing its representative's face out of its own photographs. It came together once a direction finally arrived, late, and in the form of a constraint: *nothing appears that the graph did not already contain.* It is not my best work.
+
+```{=html}
+<!-- The traversal, looping. Behaviour is assets/site/loop-figure.html: it
+     starts when it scrolls into view and stops when it leaves, so a reader who
+     never reaches it never downloads it, and it never moves at all under
+     prefers-reduced-motion. Styling is styles.scss under "Looping video
+     figure". The controls are hidden here and revealed by the script, so with
+     JS off the browser's own controls take over rather than leaving two dead
+     words on the page. -->
+<figure class="loop-figure">
+  <video loop muted playsinline preload="none"
+         width="1280" height="720"
+         poster="figures/fig1_traversal.webp">
+    <source src="figures/fig1_traversal.mp4" type="video/mp4">
+    <p>This browser will not play the clip.
+       <a href="figures/fig1_traversal.mp4">Download it instead</a> (MP4, 53s, 3.7 MB).</p>
+  </video>
+  <div class="loop-controls" hidden>
+    <button type="button" data-loop-toggle>Pause</button>
+    <button type="button" data-loop-replay>Replay</button>
+  </div>
+  <figcaption>
+    Fifty-three seconds of the finished piece, looping, and rendered entirely
+    from stand-ins: each white rectangle is one photograph, carrying a square
+    head per detected face at the position and size that face actually occupies
+    in it. Colour is identity — the five most-photographed people, everyone else
+    grey. The first forty-one seconds are the traversal, where every hop crosses
+    one edge of the co-occurrence graph and moves the way that edge actually
+    runs, so the neighbours drifting past are the real ones, and the person
+    about to be travelled through lights up before each departure. The last
+    twelve are the closing act: the field lifting, each community assembling its
+    representative's face out of its own photographs, and the routes converging
+    on the one person they all pass through. Nothing here is a photograph; the
+    arrangement is the one the graph produced. It stops where the footage would
+    have begun.
+  </figcaption>
+</figure>
+```
+
+Vibecoding is an abstraction, and abstractions trade control for reach. In production that trade is mostly invisible, because the requirement sits below the ceiling and the ceiling never gets tested. A birthday video has a specific requirement. The ceiling shows up immediately, and the only thing that raises it is knowing the domain well enough to make the decisions the abstraction is otherwise making for you.
+
+When I vibecode, it necessitates knowledge, research, and taste. Without them, the spec defaults to *better*, and *better* is filled in by whatever is doing the generating.
+
+What I do not know is what supplying them actually looks like. I have handcoded with a model advising, and I have vibecoded outright. I have not worked where only the direction stays mine at the granularity the work needs — the closest I came here drifted away the moment the problems went past what I understood.
+
+Code: [photo-constellation](https://github.com/Ameya-bit/photo-constellation). The traversal runs on any folder of photographs; the superseded rounds are there to read rather than to run. No photographs, no embeddings, no derived data.

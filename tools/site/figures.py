@@ -22,7 +22,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-POSTS = ROOT / "posts"
+# Notes are the rough tier and mostly carry no figures at all, but nothing
+# about the delivery copy is specific to a post — a note that does carry one
+# wants the same WebP beside the same archival PNG.
+FIGURE_DIRS = (ROOT / "posts", ROOT / "notes")
 
 
 def convert(png: Path) -> tuple[int, int] | None:
@@ -44,7 +47,7 @@ def main() -> None:
         sys.exit("cwebp not found (brew install webp)")
 
     before = after = 0
-    for png in sorted(POSTS.glob("*/figures/*.png")):
+    for png in sorted(p for d in FIGURE_DIRS for p in d.glob("*/figures/*.png")):
         result = convert(png)
         if result is None:
             continue

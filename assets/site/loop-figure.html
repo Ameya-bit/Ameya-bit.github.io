@@ -1,0 +1,102 @@
+<!--
+  Looping video figures — inlined into every page via `include-after-body` in
+  _quarto.yml. Bails instantly on any page with no .loop-figure, so everywhere
+  else pays only the parse.
+
+  WHY A SCRIPT AND NOT `autoplay loop`. Two reasons, and both are the site's
+  standing rules rather than preferences.
+
+  Weight: a bare `autoplay` attribute pulls the whole clip on page load, for
+  every reader, whether or not they ever scroll to it. Here the element starts
+  at preload="none" and is upgraded to preload="auto" and played only when it
+  actually enters the viewport — so a reader who stops before the figure pays
+  the poster and nothing else. It pauses again on the way out, because a clip
+  looping in a scrolled-past section is spending a battery for nobody.
+
+  Motion: `prefers-reduced-motion` cannot be honoured by CSS on a video that
+  autoplays. Under that setting nothing here ever starts on its own; the
+  element keeps its poster and gains native controls, so the figure is still
+  fully available, just never in motion unasked.
+
+  The controls are `hidden` in the markup and revealed here, which is the same
+  progressive-enhancement shape .ioi-lens uses: with JS off the reader gets a
+  plain <video> with controls and no dead chrome.
+
+  Styles live in styles.scss under "Looping video figure".
+-->
+<script>
+(function () {
+  var figures = document.querySelectorAll(".loop-figure");
+  if (!figures.length) return;
+
+  var reduced = window.matchMedia
+    && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  figures.forEach(function (figure) {
+    var video = figure.querySelector("video");
+    if (!video) return;
+
+    var controls = figure.querySelector(".loop-controls");
+    var toggle = figure.querySelector("[data-loop-toggle]");
+    var replay = figure.querySelector("[data-loop-replay]");
+
+    // Reduced motion: hand the clip over to the browser's own controls and
+    // leave. No observer, no autoplay, poster stays until it is asked for.
+    if (reduced) {
+      video.controls = true;
+      return;
+    }
+
+    if (controls) controls.hidden = false;
+
+    function label() {
+      if (toggle) toggle.textContent = video.paused ? "Play" : "Pause";
+    }
+
+    // Set once the reader has deliberately paused, so scrolling back into
+    // view does not override the decision and start it again.
+    var held = false;
+
+    if (toggle) {
+      toggle.addEventListener("click", function () {
+        if (video.paused) { held = false; video.play(); }
+        else { held = true; video.pause(); }
+        label();
+      });
+    }
+    if (replay) {
+      replay.addEventListener("click", function () {
+        video.currentTime = 0;
+        held = false;
+        video.play();
+        label();
+      });
+    }
+    video.addEventListener("play", label);
+    video.addEventListener("pause", label);
+
+    if (!("IntersectionObserver" in window)) {
+      video.preload = "auto";
+      return;                     // no observer: let the reader press play
+    }
+
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          if (video.preload !== "auto") video.preload = "auto";
+          if (!held) {
+            var attempt = video.play();
+            // Autoplay can still be refused by policy. Nothing to recover —
+            // the poster and the controls are already the fallback.
+            if (attempt && attempt.catch) attempt.catch(function () {});
+          }
+        } else if (!video.paused) {
+          video.pause();
+        }
+      });
+    }, { threshold: 0.25 }).observe(video);
+
+    label();
+  });
+})();
+</script>

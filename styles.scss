@@ -1285,6 +1285,63 @@ img {
   }
 }
 
+// ---- Looping video figure (assets/site/loop-figure.html) --------------------
+// A clip that behaves like a figure rather than like a video player: it sits in
+// the same 96px rhythm, wears the same hairline and hover outline the static
+// figures wear, and carries a caption in the same voice. The chrome is two
+// words of apparatus under it, not a scrubber — the clip is 53 seconds of
+// looping diagram, and a timeline would imply there is a moment to seek to.
+//
+// It deliberately does NOT join the `figure img` selector: that rule carries
+// `cursor: zoom-in` for the lightbox, and figure-zoom.html only ever collects
+// `figure img`, so a video wearing that cursor would promise a click that
+// nothing answers. The hover outline is the part worth sharing, so that much
+// is restated here — same accent, same offset, same instant response.
+#quarto-content main.content .loop-figure {
+  video {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-inline: auto;
+
+    &:hover,
+    &:focus-visible {
+      outline: 1px solid var(--accent);
+      outline-offset: 6px;
+    }
+  }
+}
+
+// The controls: the filing voice, same as .lens-toggle and .hero-links.
+// `hidden` in the markup and revealed by the script, so a JS-less reader gets
+// the browser's own controls instead of two dead words.
+#quarto-content main.content .loop-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.8rem;
+  margin-top: 0.706rem; // 12px — closer to the clip than to the caption
+
+  button {
+    font-family: inherit;
+    font-size: var(--text-apparatus-mono);
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--gray-1000);
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--gray-400);
+    border-radius: 0;
+    padding: 0 0 2px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--accent-ink);
+      border-bottom-color: var(--accent);
+    }
+  }
+}
+
 // ---- Figure zoom (assets/site/figure-zoom.html) -----------------------------
 // Click a figure and it opens at full size over the page, so the 644px column
 // never has to widen to carry a dense chart. The overlay is the page colour, not

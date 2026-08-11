@@ -34,6 +34,13 @@ project:
     # it is in the script/link tags Quarto generates itself, which its resource
     # scanner does not follow.
     - "assets/katex/"
+    # Video posters. The scanner follows <img src> and <video>'s <source src>,
+    # but not a <video poster> — so a poster referenced only from that
+    # attribute renders perfectly in preview and 404s in production, which is
+    # the worst shape a bug can have. Named explicitly for the same reason
+    # KaTeX is.
+    - "notes/**/figures/*.webp"
+    - "posts/**/figures/*.webp"
 
 website:
   title: "Ameya Panchal"
@@ -117,5 +124,8 @@ format:
       - assets/site/rail-intro.html
       # The interactive lens figure — bails on every page with no #ioi-lens.
       - assets/site/ioi-lens.html
+      # Looping video figures: in-view autoplay, so a reader who never scrolls
+      # to one never downloads it. Bails on every page with no .loop-figure.
+      - assets/site/loop-figure.html
       # Wide equations and tables become keyboard-reachable while they scroll.
       - assets/site/scroll-boxes.html
