@@ -18,7 +18,6 @@
   </div>
   <ul class="cv-points">
     <li>GPA: 3.71 / 4.00</li>
-    <li>Relevant Coursework: Linear Algebra, Data Structures &amp; Algorithms, Systems Programming, Discrete Mathematics, Physics (Mechanics / E&amp;M)</li>
   </ul>
 </article>
 ```
@@ -28,15 +27,15 @@
 ```{=html}
 <article class="cv-entry">
   <div class="cv-row">
-    <p class="cv-head"><a href="../posts/ioi-circuit/">Reading GPT-2&#x27;s IOI Circuit Three Ways</a></p>
+    <p class="cv-head"><a href="../notes/dead-relu-collapse/">A Dead-ReLU Absorbing State — Resolving an Open Memorization Anomaly</a></p>
     <p class="cv-when">Jul 2026</p>
   </div>
   <div class="cv-row">
-    <p class="cv-detail">Independent · TransformerLens</p>
+    <p class="cv-detail">Independent · PyTorch · <em>LessWrong</em></p>
   </div>
   <ul class="cv-points">
-    <li>Recovered the IOI circuit (Wang et al.) with direct logit attribution, activation patching, and path patching, each hand-implemented</li>
-    <li>Framed as a methods comparison: DLA finds the name-mover heads, patching finds what feeds them, path patching isolates the link between — each blind to what the next reveals</li>
+    <li>Explained the one architecture Linsefors &amp; Bushnaq left unresolved in their memorization challenge: a training-dynamics failure, not an expressivity limit — a fact whose hidden units all die has its gradient gated to exactly zero</li>
+    <li>Split their conflated bias flag for the discriminating experiment — an out-projection bias rescues completely (1024 facts), an in-projection bias not at all (488) — <em>overturning</em> the published account; a transplanted 672-fact witness rules out expressivity outright</li>
   </ul>
 </article>
 <article class="cv-entry">
@@ -48,9 +47,21 @@
     <p class="cv-detail">Independent · PyTorch, TransformerLens · <em>LessWrong</em></p>
   </div>
   <ul class="cv-points">
-    <li>Trained a 6-block character-level transformer and isolated a copying head via OV-circuit eigenvalues and copying scores</li>
     <li><em>Disconfirmed</em> two of my own hypotheses — quotation and parenthesis grammar — with targeted QK attention-pattern controls</li>
-    <li>Found the OV circuit encodes bracket completion while the QK circuit stays blind to it: a half-built mechanism. Full code published alongside the writeup</li>
+    <li>Trained a 6-block character-level transformer and isolated a copying head via OV-circuit eigenvalues and copying scores</li>
+    <li>Found the OV circuit encodes bracket completion while the QK circuit stays blind to it: a half-built mechanism</li>
+  </ul>
+</article>
+<article class="cv-entry">
+  <div class="cv-row">
+    <p class="cv-head"><a href="../posts/ioi-circuit/">Reading GPT-2&#x27;s IOI Circuit Three Ways</a></p>
+    <p class="cv-when">Jul 2026</p>
+  </div>
+  <div class="cv-row">
+    <p class="cv-detail">Independent · TransformerLens</p>
+  </div>
+  <ul class="cv-points">
+    <li>Recovered the IOI circuit (Wang et al.) with direct logit attribution, activation patching, and path patching, each hand-implemented</li>
   </ul>
 </article>
 <article class="cv-entry">
@@ -64,7 +75,7 @@
   <ul class="cv-points">
     <li>Built a Monte Carlo scattering atmosphere feeding a general-relativistic pulse-profile model (Schwarzschild light-bending, Doppler) to quantify the systematic from the isotropic-emission assumption in neutron-star mass–radius measurements</li>
     <li>Validated against Chandrasekhar&#x27;s exact H-function (reduced χ² = 0.70) and Bogdanov et al. waveforms (0.11% peak error)</li>
-    <li>Showed the systematic <em>routes</em> between pulsed fraction and waveform shape by hot-spot geometry and spin; first-author paper in preparation</li>
+    <li>Showed the systematic <em>routes</em> between pulsed fraction and waveform shape; first-author paper in preparation</li>
   </ul>
 </article>
 ```
@@ -83,7 +94,7 @@
   </div>
   <ul class="cv-points">
     <li>Scoped ambiguous client requirements into technical documentation for the Docfinity system</li>
-    <li>Prototyped evaluation protocols for generative and OCR-derived content, and drove requirements to consensus across a cross-functional team ahead of launch.</li>
+    <li>Prototyped evaluation protocols for generative and OCR-derived content; drove requirements to consensus ahead of launch</li>
   </ul>
 </article>
 <article class="cv-entry">
@@ -101,11 +112,28 @@
 </article>
 ```
 
-## Skills & Interests
+## Projects
+
+```{=html}
+<article class="cv-entry">
+  <div class="cv-row">
+    <p class="cv-head">CrashAI — Crash-Risk Analysis Platform</p>
+    <p class="cv-when">Feb – Jul 2026</p>
+  </div>
+  <div class="cv-row">
+    <p class="cv-detail">Founder &amp; Technical Lead · Scoped with PennDOT safety staff · Python, TypeScript</p>
+  </div>
+  <ul class="cv-points">
+    <li>Built a crash-severity model — XGBoost over 81 roadway and behavioral features — with per-site SHAP attribution and what-if simulation</li>
+    <li>Led a team across the stack: a 33-tool agent reasoning loop, RAG over agency engineering manuals, a hash-verified artifact pipeline, and an eval harness</li>
+  </ul>
+</article>
+```
+
+## Skills
 
 ```{=html}
 <p class="cv-skill"><strong>ML &amp; Research:</strong> Python, PyTorch, HuggingFace Transformers, TransformerLens, NumPy, Scikit-learn, Git</p>
 <p class="cv-skill"><strong>Interpretability:</strong> Transformer circuits, induction heads, OV/QK analysis, activation and path patching, direct logit attribution</p>
-<p class="cv-skill"><strong>Methods:</strong> Monte Carlo simulation, numerical validation, linear algebra</p>
-<p class="cv-skill"><strong>Also:</strong> Java, JavaScript / React, SQL, Flask</p>
+<p class="cv-skill"><strong>Methods &amp; Tools:</strong> Monte Carlo simulation, numerical validation, linear algebra · Java, JavaScript / React, SQL, Flask</p>
 ```

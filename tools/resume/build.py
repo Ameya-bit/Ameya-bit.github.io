@@ -16,8 +16,9 @@ artifact, never edited by hand.
 
 Same split as the figures' compute.py/plot.py: content computed once,
 presentation per surface. The PDF is the SUBSET renderer (contact items with
-web = false — the phone number — never reach the public page); the page is
-the superset (entry headings become real links via web_url/url).
+web = false — the phone number — never reach the public page). Both surfaces
+link entry headings; the page resolves web_url before url, and the PDF names
+the destination inline with link_label, having no hover to reveal it.
 
 Zero dependencies beyond Python 3.11+ (tomllib) and, for --pdf, the TeX
 toolchain the template already requires (latexmk + carlito).
@@ -55,6 +56,18 @@ def tex_text(s: str) -> str:
     return s
 
 
+def tex_url(s: str) -> str:
+    """URL -> \\href's first argument.
+
+    The heading reaches \\href through \\entry and a parbox, so the URL is read
+    as an ordinary macro argument rather than verbatim and TeX's specials have
+    to be escaped. A fragment's # is the one that actually shows up.
+    """
+    for a, b in (("#", r"\#"), ("%", r"\%"), ("&", r"\&")):
+        s = s.replace(a, b)
+    return s
+
+
 def web_text(s: str) -> str:
     """Plain content string -> page HTML (unicode kept as itself)."""
     s = html.escape(s)
@@ -84,12 +97,17 @@ def gen_tex(data: dict) -> str:
         out.append("\\section{" + tex_text(sec["title"]) + "}")
 
         for e in sec.get("entries", []):
+            # The heading IS the link here, the way it already is on the page;
+            # link_label names the destination in its place. See \entrymarker.
+            head = tex_text(e["heading"])
+            if "url" in e:
+                head = f"\\href{{{tex_url(e['url'])}}}{{{head}}}"
+                if "link_label" in e:
+                    head += f"\\entrymarker{{{tex_text(e['link_label'])}}}"
             out.append("")
             out.append("\\entry")
-            out.append(f"  {{{tex_text(e['heading'])}}}{{{tex_text(e.get('location', ''))}}}")
+            out.append(f"  {{{head}}}{{{tex_text(e.get('location', ''))}}}")
             out.append(f"  {{{tex_text(e['detail'])}}}{{{tex_text(e['dates'])}}}")
-            if "url" in e:
-                out.append(f"\\entryurl{{{e['url']}}}")
             out.append("\\begin{points}")
             for b in e.get("bullets", []):
                 out.append("  \\item " + tex_text(b))

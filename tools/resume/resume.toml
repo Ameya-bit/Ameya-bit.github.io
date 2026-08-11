@@ -14,7 +14,8 @@
 # Per-item switches:
 #   web = false   on a contact item: PDF-only (the phone number stays off the
 #                 public page — the PDF is the subset with the private fields)
-#   url           entry link in the PDF (\entryurl line)
+#   url           makes the entry heading a link on both surfaces
+#   link_label    names that link's destination in the PDF, which has no hover
 #   web_url       overrides url on the page (e.g. site-relative post links)
 # ---------------------------------------------------------------------------
 
@@ -55,7 +56,6 @@ title = "Education"
   dates = "Expected May 2028"
   bullets = [
     "GPA: 3.71 / 4.00",
-    "Relevant Coursework: Linear Algebra, Data Structures & Algorithms, Systems Programming, Discrete Mathematics, Physics (Mechanics / E&M)",
   ]
 
 
@@ -63,14 +63,15 @@ title = "Education"
 title = "Research"
 
   [[sections.entries]]
-  heading = "Reading GPT-2's IOI Circuit Three Ways"
-  detail = "Independent · TransformerLens"
+  heading = "A Dead-ReLU Absorbing State — Resolving an Open Memorization Anomaly"
+  detail = "Independent · PyTorch · *LessWrong*"
   dates = "Jul 2026"
-  url = "https://ameya-bit.github.io/posts/ioi-circuit/index.html"
-  web_url = "../posts/ioi-circuit/"
+  url = "https://www.lesswrong.com/posts/KWtchKwwnJkd4bwCi/challenge-hand-coding-weights-for-efficient-sequence-1#comment-rknfi2yEozQyEJ6Tp"
+  link_label = "LessWrong"
+  web_url = "../notes/dead-relu-collapse/"
   bullets = [
-    "Recovered the IOI circuit (Wang et al.) with direct logit attribution, activation patching, and path patching, each hand-implemented",
-    "Framed as a methods comparison: DLA finds the name-mover heads, patching finds what feeds them, path patching isolates the link between — each blind to what the next reveals",
+    "Explained the one architecture Linsefors & Bushnaq left unresolved in their memorization challenge: a training-dynamics failure, not an expressivity limit — a fact whose hidden units all die has its gradient gated to exactly zero",
+    "Split their conflated bias flag for the discriminating experiment — an out-projection bias rescues completely (1024 facts), an in-projection bias not at all (488) — *overturning* the published account; a transplanted 672-fact witness rules out expressivity outright",
   ]
 
   [[sections.entries]]
@@ -78,11 +79,23 @@ title = "Research"
   detail = "Independent · PyTorch, TransformerLens · *LessWrong*"
   dates = "Jul 2026"
   url = "https://www.lesswrong.com/posts/x2ZdCoqAaLedpjDk3/an-induction-head-in-disguise-chasing-grammar-in-a-character"
+  link_label = "LessWrong"
   web_url = "../posts/induction-head/"
   bullets = [
-    "Trained a 6-block character-level transformer and isolated a copying head via OV-circuit eigenvalues and copying scores",
     "*Disconfirmed* two of my own hypotheses — quotation and parenthesis grammar — with targeted QK attention-pattern controls",
-    "Found the OV circuit encodes bracket completion while the QK circuit stays blind to it: a half-built mechanism. Full code published alongside the writeup",
+    "Trained a 6-block character-level transformer and isolated a copying head via OV-circuit eigenvalues and copying scores",
+    "Found the OV circuit encodes bracket completion while the QK circuit stays blind to it: a half-built mechanism",
+  ]
+
+  [[sections.entries]]
+  heading = "Reading GPT-2's IOI Circuit Three Ways"
+  detail = "Independent · TransformerLens"
+  dates = "Jul 2026"
+  url = "https://ameya-bit.github.io/posts/ioi-circuit/index.html"
+  link_label = "writeup"
+  web_url = "../posts/ioi-circuit/"
+  bullets = [
+    "Recovered the IOI circuit (Wang et al.) with direct logit attribution, activation patching, and path patching, each hand-implemented",
   ]
 
   [[sections.entries]]
@@ -90,10 +103,11 @@ title = "Research"
   detail = "Penn State Multi-Campus REU · advised by Prof. Asif ud-Doula · Python"
   dates = "Oct 2025 – Present"
   url = "https://sites.psu.edu/mcreu/2026/07/21/where-the-error-hides-how-a-common-assumption-biases-pulse-fraction-for-neutron-stars/"
+  link_label = "poster"
   bullets = [
     "Built a Monte Carlo scattering atmosphere feeding a general-relativistic pulse-profile model (Schwarzschild light-bending, Doppler) to quantify the systematic from the isotropic-emission assumption in neutron-star mass–radius measurements",
     "Validated against Chandrasekhar's exact H-function (reduced χ² = 0.70) and Bogdanov et al. waveforms (0.11% peak error)",
-    "Showed the systematic *routes* between pulsed fraction and waveform shape by hot-spot geometry and spin; first-author paper in preparation",
+    "Showed the systematic *routes* between pulsed fraction and waveform shape; first-author paper in preparation",
   ]
 
 
@@ -107,7 +121,7 @@ title = "Experience"
   dates = "Dec 2025 – Present"
   bullets = [
     "Scoped ambiguous client requirements into technical documentation for the Docfinity system",
-    "Prototyped evaluation protocols for generative and OCR-derived content, and drove requirements to consensus across a cross-functional team ahead of launch.",
+    "Prototyped evaluation protocols for generative and OCR-derived content; drove requirements to consensus ahead of launch",
   ]
 
   [[sections.entries]]
@@ -121,7 +135,23 @@ title = "Experience"
 
 
 [[sections]]
-title = "Skills & Interests"
+title = "Projects"
+
+  # Private repo, so no url: the entry claims only what was built and led.
+  # PennDOT is named as work performed, never as a deal — the pilot was
+  # scoped over roughly a year and never converted.
+  [[sections.entries]]
+  heading = "CrashAI — Crash-Risk Analysis Platform"
+  detail = "Founder & Technical Lead · Scoped with PennDOT safety staff · Python, TypeScript"
+  dates = "Feb – Jul 2026"
+  bullets = [
+    "Built a crash-severity model — XGBoost over 81 roadway and behavioral features — with per-site SHAP attribution and what-if simulation",
+    "Led a team across the stack: a 33-tool agent reasoning loop, RAG over agency engineering manuals, a hash-verified artifact pipeline, and an eval harness",
+  ]
+
+
+[[sections]]
+title = "Skills"
 
   [[sections.skills]]
   label = "ML & Research"
@@ -132,9 +162,5 @@ title = "Skills & Interests"
   text = "Transformer circuits, induction heads, OV/QK analysis, activation and path patching, direct logit attribution"
 
   [[sections.skills]]
-  label = "Methods"
-  text = "Monte Carlo simulation, numerical validation, linear algebra"
-
-  [[sections.skills]]
-  label = "Also"
-  text = "Java, JavaScript / React, SQL, Flask"
+  label = "Methods & Tools"
+  text = "Monte Carlo simulation, numerical validation, linear algebra · Java, JavaScript / React, SQL, Flask"
