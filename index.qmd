@@ -25,16 +25,34 @@ listing:
 ---
 
 ```{=html}
-<!-- The staircase hero (2026-08-04, iteration B of the six): the tricolon
-     headline steps rightward — three beats, three indents, the editorial Z
-     drawn inside the type block. Corners carry semantic jobs: identity corner
-     top-right (role line + links — contact belongs with identity), status
-     alone bottom-left, the Writing cue alone bottom-right (this is what fixed
-     the cue/links baseline collision). DOM order stays headline → role →
-     filing (the reading order); the identity corner's position is visual only
-     (flex `order`). Each .rise-mask/.rise pair is one beat of the entrance
-     choreography (assets/site/hero-motion.html); --beat is that line's delay.
-     With no JS or with prefers-reduced-motion the masks are inert wrappers. -->
+<!-- The CV first screen (2026-08-16). The staircase hero used to spend the whole
+     viewport on a slogan, five links and a status line: forty words about the
+     author, and it read as any generated minimal site. The corners stay
+     (identity top-right, status bottom-left, ledger bottom-right) but the middle
+     is now CONTENT — a Now paragraph in first person, a selected-work strip, and
+     a figure plate — the same move the reference sites make (Cadile's Now block,
+     McCurdy's featured work): a first screen you can read like a résumé without
+     clicking. This overturns the 2026-08-06 verdict that "the middle was never a
+     hole"; design/direction.md 2026-08-16 records why.
+
+     THE PLATE. "A head reads this page": the site's own headline, set as
+     characters, with a head of the induction post's model — Niche, the 6-block
+     character transformer — reading it left to right, its attention drawn as
+     arcs. The weights are REAL and baked (assets/site/hero-plate-data.html, from
+     tools/hero-plate/compute.py); no model runs in the browser, canvas only, no
+     WebGL, so it is identical in every browser (cross-browser parity rule). It
+     is general mech-interp imagery — attention arcs are the field's shared
+     picture — pointed at something specific and true: our model, our head, our
+     headline. With JS off the plate is the headline text and its caption; under
+     prefers-reduced-motion the full arc field draws once, still.
+
+     The Now paragraph is prose that goes stale. It is the one block here that
+     is meant to be rewritten by hand as the work moves; the status line below
+     it stays the machine-checked freshness claim.
+
+     DOM order stays reading order: headline → identity → now/work/plate → foot;
+     the identity corner is placed visually with flex `order`. Each
+     .rise-mask/.rise pair is one beat of the entrance (assets/site/hero-motion.html). -->
 <section class="hero-screen">
   <div class="hero" aria-labelledby="hero-headline">
     <div class="hero-inner">
@@ -49,8 +67,40 @@ listing:
           <a href="resume/">Résumé</a>
         </nav></div>
       </div>
+
+      <div class="hero-mid">
+        <div class="hero-cv">
+          <div class="rise-mask"><div class="rise hero-now" style="--beat: 380ms">
+            <p class="hero-kicker" role="heading" aria-level="2">Now</p>
+            <p>I train small transformers and take them apart. Right now: checking whether Anthropic's global-workspace result <em>replicates</em> in a from-scratch Jacobian lens, and finishing the neutron-star paper — a Monte Carlo atmosphere that puts a number on the isotropy shortcut in pulse-profile fits. Third year at Penn State, CS with a physics minor.</p>
+          </div></div>
+          <div class="rise-mask"><div class="rise hero-work" style="--beat: 440ms">
+            <p class="hero-kicker" role="heading" aria-level="2">Selected work</p>
+            <ol>
+              <li><a href="posts/induction-head/">An induction head in disguise</a><span class="hero-work-year">2026</span><span class="hero-work-dek">A copying head with half a bracket mechanism; two of my own hypotheses disconfirmed. On LessWrong.</span></li>
+              <li><a href="posts/ioi-circuit/">GPT-2's IOI circuit three ways</a><span class="hero-work-year">2026</span><span class="hero-work-dek">DLA, activation patching, path patching — each blind to what the next reveals.</span></li>
+              <li><a href="posts/where-the-error-hides/">Where the error hides</a><span class="hero-work-year">2026</span><span class="hero-work-dek">The isotropy bias in neutron-star pulse profiles: measured, then relocated.</span></li>
+            </ol>
+          </div></div>
+        </div>
+
+        <div class="rise-mask"><figure class="rise hero-plate" id="hero-plate" style="--beat: 500ms">
+          <p class="hero-kicker">Plate <span class="hero-n">01</span> · a head reads this page</p>
+          <div class="hero-plate-stage">
+            <canvas class="hero-plate-arcs" aria-hidden="true"></canvas>
+            <p class="hero-plate-text" aria-label="The headline, read one character at a time by an attention head">LLM circuitry — implemented, documented, shown off.</p>
+          </div>
+          <figcaption class="hero-plate-cap"><b>Real attention, on the site's own headline.</b> A head of the induction post's character-level model reads it left to right; each arc is where the head looks. At the second <b>-ented,</b> B5H0 reaches back to the end of the first — the copying move from <a href="posts/induction-head/">An induction head in disguise</a>. The long arcs to the first letter are the attention sink.</figcaption>
+          <div class="hero-plate-heads" role="group" aria-label="Which head to show">
+            <button type="button" aria-pressed="true" data-head="induction">Induction · B5H0</button>
+            <button type="button" aria-pressed="false" data-head="prev">Previous token · B0H1</button>
+            <button type="button" aria-pressed="false" data-head="both">Both</button>
+          </div>
+        </figure></div>
+      </div>
+
       <div class="hero-foot">
-        <!-- The status line, now genuinely live (2026-08-04). The QUESTION is
+        <!-- The status line, genuinely live (2026-08-04). The QUESTION is
              editorial and stays in the markup — it is the one sentence that
              says what I am doing right now. What JS adds is the evidence that
              it is still happening: the last push to the experiment's repo, as
@@ -65,15 +115,13 @@ listing:
              live has actually landed — with JS off, rate-limited, or the repo
              gone, the line renders as the plain question it always was, and
              nothing blinks to promise otherwise. -->
-        <p class="hero-status"><span class="rise-mask"><span class="rise" style="--beat: 400ms">Current experiment&ensp;·&ensp;Does Anthropic's global workspace result replicate?<span class="hero-pulse" data-repo="Ameya-bit/jacobian-lens-from-scratch" hidden></span><span class="hero-cursor" aria-hidden="true" hidden></span></span></span></p>
-        <!-- The ledger (the banked catalogue-cover move, adopted 2026-08-04 when
-             the Notes tier made the cue ambiguous): the hero's bottom-right
-             corner is the site's table of contents — one row per collection,
-             trailing mono numerals for the honest counts (mono is the numbering
-             system, nothing else). The hardcoded counts are correct at publish
-             time; the script at the foot of this file re-reads them from the
-             rendered listings so they can never drift. About/Résumé stay in the
-             identity corner: who I am up there, what's here down here.
+        <p class="hero-status"><span class="rise-mask"><span class="rise" style="--beat: 560ms">Current experiment&ensp;·&ensp;Does Anthropic's global workspace result replicate?<span class="hero-pulse" data-repo="Ameya-bit/jacobian-lens-from-scratch" hidden></span><span class="hero-cursor" aria-hidden="true" hidden></span></span></span></p>
+        <!-- The ledger (the banked catalogue-cover move, adopted 2026-08-04): the
+             hero's bottom-right corner is the site's table of contents — one row
+             per collection, trailing mono numerals for the honest counts (mono is
+             the numbering system, nothing else). The hardcoded counts are correct
+             at publish time; the script at the foot of this file re-reads them
+             from the rendered listings so they can never drift.
 
              INSTRUMENTS (2026-08-06) is the first row that leaves this page, and
              the first whose count the script cannot check: /instruments/ is a
@@ -81,17 +129,10 @@ listing:
              homepage to count. It therefore carries no `data-counts` and the
              script skips it by construction rather than by accident. The rows on
              that page are the source of truth — add one there, change the 05
-             here. That is the trade for a page whose rows carry claims rather
-             than front matter.
-
-             The row also finished the composition. The hero used to load two
-             corners and leave the other two thin, which read as an empty middle;
-             the fix was never an object in the void, it was a third thing worth
-             filing. -->
-
-        <nav class="hero-ledger" aria-label="Site contents"><span class="rise-mask"><span class="rise" style="--beat: 460ms">
+             here. -->
+        <nav class="hero-ledger" aria-label="Site contents"><span class="rise-mask"><span class="rise" style="--beat: 620ms">
           <a href="#writing-section" data-counts="writing">Writing<span class="ledger-n">03</span></a>
-          <a href="#notes-section" data-counts="notes">Notes<span class="ledger-n">02</span></a>
+          <a href="#notes-section" data-counts="notes">Notes<span class="ledger-n">03</span></a>
           <a href="instruments/">Instruments<span class="ledger-n">05</span></a>
         </span></span></nav>
       </div>

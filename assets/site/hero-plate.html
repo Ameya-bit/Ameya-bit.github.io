@@ -1,0 +1,213 @@
+<!-- The hero plate: a head reads this page (2026-08-16) — inlined via
+     `include-after-body`, bails instantly on any page without #hero-plate.
+
+     WHAT IT DRAWS. The headline, one <i> per character, and a canvas behind
+     it. A cursor walks the characters left to right, ~9 per second, and at
+     each one draws arcs from the current character to the positions the head
+     attends to (weight → stroke and opacity; the strongest target is marked
+     under its letter). Past arcs stay, faded, so by the end the whole field is
+     visible; then it starts again. Three chips choose which head is read:
+     the induction post's B5H0, the model's cleanest previous-token head B0H1,
+     or both together.
+
+     WHERE THE WEIGHTS COME FROM. #hero-plate-data — a JSON block that
+     tools/hero-plate/compute.py bakes from the induction post's model (Niche)
+     over exactly this string, sparse (top-4 targets ≥ 0.05 per position). Real
+     attention, no inference in the browser, ~3 KB. If the block is missing
+     or names a different string than the plate's markup, nothing draws and
+     the plate stays what it is without JS: the headline text and its caption.
+     The chip row hides in that case, so it never offers a control that does
+     nothing.
+
+     MOTION RULES. Redraw is rAF-driven but stops when the plate is off-screen
+     (IntersectionObserver) and never runs under prefers-reduced-motion — there
+     the full arc field is drawn once, still, and the chips redraw it still.
+     Nothing here interpolates; a frame is a full redraw from state.
+
+     PARITY. Canvas 2D only, DPR-aware, no WebGL, no fonts measured except by
+     the DOM itself (arc endpoints are read from the <i> boxes, so whatever
+     face and size the CSS resolves to, the arcs land under the right letter). -->
+<script>
+  (function () {
+    "use strict";
+    var plate = document.getElementById("hero-plate");
+    if (!plate) return;
+    var dataEl = document.getElementById("hero-plate-data");
+    var textEl = plate.querySelector(".hero-plate-text");
+    var canvas = plate.querySelector(".hero-plate-arcs");
+    var chips = plate.querySelector(".hero-plate-heads");
+    if (!dataEl || !textEl || !canvas || !canvas.getContext) return;
+
+    var data;
+    try { data = JSON.parse(dataEl.textContent); } catch (e) { return; }
+    var text = textEl.textContent;
+    if (!data || !data.heads || data.text !== text) {
+      // The baked string and the markup have drifted: draw nothing rather
+      // than draw the wrong head over the wrong letters.
+      if (chips) chips.hidden = true;
+      return;
+    }
+
+    // One <i> per character; the arcs are anchored to these boxes.
+    var chars = text.split("").map(function (c) {
+      var i = document.createElement("i");
+      // A lone space inside an inline-block collapses to nothing; nbsp keeps
+      // the word gaps (and their arc anchors) at their true width.
+      i.textContent = c === " " ? "\u00A0" : c;
+      return i;
+    });
+    textEl.textContent = "";
+    chars.forEach(function (i) { textEl.appendChild(i); });
+
+    var ctx = canvas.getContext("2d");
+    var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var STEP_MS = 110;      // one character per ~110ms
+    var HOLD_STEPS = 16;    // rest on the full field before starting again
+    var head = "induction";
+    var pos = reduce ? chars.length : 1;
+    var xs = [], baseline = 0, W = 0, H = 0, lastTick = 0, running = false, visible = true;
+
+    function tokens() {
+      // The two shown heads have different characters: B5H0 in ink/accent,
+      // B0H1 (previous token) in the tertiary gray so "both" stays readable.
+      var cs = getComputedStyle(plate);
+      return {
+        ink: cs.getPropertyValue("--gray-1200").trim() || "#21201c",
+        accent: cs.getPropertyValue("--accent").trim() || "#d55e00",
+        gray: cs.getPropertyValue("--gray-1000").trim() || "#66625a"
+      };
+    }
+
+    function measure() {
+      // The line is nowrap and must fit its column at any width: reset, then
+      // scale the font down by exactly the overflow ratio.
+      textEl.style.fontSize = "";
+      var need = textEl.scrollWidth, have = textEl.clientWidth;
+      if (need > have && have > 0) {
+        var px = parseFloat(getComputedStyle(textEl).fontSize);
+        textEl.style.fontSize = (px * have / need * 0.985) + "px";
+      }
+      var r = canvas.getBoundingClientRect();
+      var dpr = window.devicePixelRatio || 1;
+      W = r.width; H = r.height;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var t = textEl.getBoundingClientRect();
+      baseline = t.top - r.top;
+      xs = chars.map(function (el) {
+        var b = el.getBoundingClientRect();
+        return b.left - r.left + b.width / 2;
+      });
+    }
+
+    function heads() {
+      if (head === "both") return ["induction", "prev"];
+      return [head];
+    }
+
+    function arc(from, to, width, alpha, color) {
+      var x1 = xs[from], x2 = xs[to];
+      var d = Math.abs(x2 - x1);
+      var h = Math.min(baseline - 4, 14 + d * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(x1, baseline - 3);
+      ctx.bezierCurveTo(x1, baseline - 3 - h, x2, baseline - 3 - h, x2, baseline - 3);
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = width;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      var t = tokens();
+      var hs = heads();
+      // Past positions: the whole field so far, faded.
+      for (var i = 1; i < pos; i++) {
+        hs.forEach(function (name) {
+          var row = data.heads[name].rows[i] || [];
+          row.forEach(function (tw) {
+            var j = tw[0], w = tw[1];
+            if (j === i) return; // self-attention draws no arc
+            var col = name === "prev" ? t.gray : (w >= 0.3 ? t.accent : t.ink);
+            arc(j, i, 0.6 + w * 1.4, 0.10 + w * 0.22, col);
+          });
+        });
+      }
+      // Read characters go quiet while the cursor is moving; once the whole
+      // line is read (and in the still, reduced-motion field) the text is
+      // plain ink again with the field above it.
+      var reading = pos < chars.length;
+      chars.forEach(function (el, i) { el.className = reading && i < pos ? "is-past" : ""; });
+      // The current position: full strength, and its top target marked.
+      if (pos < chars.length) {
+        chars[pos].className = "is-hot";
+        hs.forEach(function (name) {
+          var row = data.heads[name].rows[pos] || [];
+          row.forEach(function (tw, k) {
+            var j = tw[0], w = tw[1];
+            if (j === pos) return;
+            var col = name === "prev" ? t.gray : (w >= 0.3 ? t.accent : t.ink);
+            arc(j, pos, 1 + w * 2.4, 0.45 + w * 0.55, col);
+            if (k === 0) chars[j].className = "is-src";
+          });
+        });
+      }
+    }
+
+    function tick(ts) {
+      if (!running) return;
+      if (ts - lastTick > STEP_MS) {
+        lastTick = ts;
+        pos += 1;
+        if (pos > chars.length + HOLD_STEPS) pos = 1;
+        draw();
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function start() {
+      if (reduce || running || !visible) return;
+      running = true;
+      lastTick = 0;
+      requestAnimationFrame(tick);
+    }
+    function stop() { running = false; }
+
+    if (chips) {
+      chips.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-head]");
+        if (!b || !data.heads[b.dataset.head] && b.dataset.head !== "both") return;
+        head = b.dataset.head;
+        chips.querySelectorAll("button").forEach(function (x) {
+          x.setAttribute("aria-pressed", String(x === b));
+        });
+        pos = reduce ? chars.length : 1;
+        draw();
+      });
+    }
+
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        visible = entries.some(function (en) { return en.isIntersecting; });
+        if (visible) start(); else stop();
+      }, { threshold: 0.05 }).observe(plate);
+    }
+
+    var resizeTimer = 0;
+    addEventListener("resize", function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () { measure(); draw(); }, 80);
+    });
+
+    function boot() {
+      measure();
+      draw();
+      start();
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot);
+    else boot();
+  })();
+</script>
