@@ -122,11 +122,6 @@ format:
       # parse for the first and the homepage only for the second.
       - assets/site/hero-status.html
       - assets/site/rail-intro.html
-      # The hero plate: real attention over the headline. The data block is
-      # GENERATED (tools/hero-plate/compute.py); the script bails on every page
-      # with no #hero-plate. Data first, so the script finds it.
-      - assets/site/hero-plate-data.html
-      - assets/site/hero-plate.html
       # The interactive lens figure — bails on every page with no #ioi-lens.
       - assets/site/ioi-lens.html
       # Looping video figures: in-view autoplay, so a reader who never scrolls

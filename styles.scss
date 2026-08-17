@@ -1450,23 +1450,11 @@ html.figure-zoom-open {
   align-items: stretch; // the inner column owns the full frame height
 }
 
-// The frame's grid (2026-08-16): headline and identity corner share the top
-// row — the headline was stacked UNDER the corner when the middle arrived, and
-// that cost the first screen 100px it did not have. Row 2 (the middle) takes
-// the flexible space; row 3 is the foot. DOM order stays headline → identity →
-// middle → foot; the grid places, so `order` is no longer needed.
 .hero-inner {
   width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  column-gap: 2rem;
+  display: flex;
+  flex-direction: column;
 }
-
-#quarto-content main.content .hero-headline { grid-column: 1; grid-row: 1; }
-.hero-ident { grid-column: 2; grid-row: 1; }
-.hero-mid { grid-column: 1 / -1; grid-row: 2; }
-.hero-foot { grid-column: 1 / -1; grid-row: 3; }
 
 // ---- The entrance's material: a mask that clips, a line that rises inside it.
 // Inert (no transform, no transition) unless <html> carries data-hero-entrance,
@@ -1496,14 +1484,12 @@ html.figure-zoom-open {
 // itself. The indent is on the MASK, not the rising line, so the entrance's
 // vertical rise happens inside an already-placed step and the stagger reads
 // as the staircase assembling in place. 100/200px at calibration.
-// 60/120px at calibration — the 100/200px steps of the 4.7rem headline scaled
-// with the type, so the Z keeps its angle.
 .hl-step-2 {
-  margin-left: 3.529rem;
+  margin-left: 5.882rem;
 }
 
 .hl-step-3 {
-  margin-left: 7.059rem;
+  margin-left: 11.765rem;
 }
 
 html[data-hero-entrance] .hero-screen .rise {
@@ -1525,19 +1511,21 @@ html[data-hero-entrance="play"] .hero-screen .rise {
 }
 
 // Scoped under the content id so these outrank the prose p rules.
-// The display size (2026-08-16, the CV first screen): down from the ~4.7rem
-// cap of the staircase-only hero to ~2.65rem at 1440. The headline is still the
-// display object — Nunito's rounded terminals still do the identity work — but
-// it no longer holds the whole screen by itself; the middle below it does. If
-// the copy ever wraps past three lines the lever is shorter copy, not smaller
-// type. The top margin is fixed now (the middle takes the flexible space).
+// The display jump (review finding 01): the old 2.75rem cap was a size chosen
+// so the copy set as two even paragraph-ish lines — a prose concern. At ~4.3rem
+// (1440) the headline becomes the object that holds the screen, and Nunito's
+// rounded terminals finally do identity work. If the copy ever reads as a
+// wall, the lever is shorter copy, not smaller type. Top margin auto = the
+// flexible space: the headline sits low, the Now paragraph under it, then the
+// filing corner. (A 2026-08-16 build shrank this to ~2.65rem to fit a fuller
+// middle; that middle was cut the same day and the size came back.)
 #quarto-content main.content .hero-headline {
   font-weight: 600;
-  font-size: clamp(1.9rem, 0.9rem + 2.1vw, 2.65rem);
-  line-height: 1.06;
+  font-size: clamp(2.35rem, 1rem + 3.9vw, 4.7rem);
+  line-height: 1.05;
   letter-spacing: -0.025em;
   color: var(--gray-1200);
-  margin: 1.4rem 0 0;
+  margin: auto 0 0;
 }
 
 // The identity corner (top-right, visual only — `order` moves it; the DOM
@@ -1546,7 +1534,8 @@ html[data-hero-entrance="play"] .hero-screen .rise {
 // the links up here is what gave the bottom edge back to one object per
 // corner — the cue no longer shares a baseline with anything.
 .hero-ident {
-  align-self: start;
+  order: -1;
+  align-self: flex-end;
   text-align: right;
   margin-top: 0.5rem;
 }
@@ -1562,28 +1551,15 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   justify-content: flex-end;
 }
 
-// ---- The middle (2026-08-16): where the CV lives ---------------------------
-// A two-column grid that takes the frame's flexible space and centres in it:
-// Now + selected work on the left, the plate on the right. Both columns are
-// minmax(0, …) so a long word or the plate's nowrap line can never widen the
-// frame — the plate script scales its text down to fit instead.
-.hero-mid {
-  flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: 1.4rem 4.5rem;
-  align-content: center;
-  padding-block: 1rem 1.2rem;
+// ---- Now (2026-08-16) -----------------------------------------------------
+// One paragraph of first-person prose under the headline, with a kicker in the
+// list-kicker voice (uppercase, tracked, tertiary; p + role=heading, not h2, for
+// the same reason as the list kickers). 50px to the filing corner, the gap the
+// headline used to hold on its own.
+#quarto-content main.content .hero-now {
+  margin: 1.6rem 0 2.941rem;
 }
 
-.hero-cv {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-// The kicker voice — the list-kicker's, verbatim (uppercase, tracked, tertiary).
-// p + role=heading, not h2, for the same reason as the list kickers.
 #quarto-content main.content .hero-kicker {
   font-size: var(--text-label);
   font-weight: 500;
@@ -1593,195 +1569,12 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   margin: 0 0 0.6rem;
 }
 
-// Mono is the numbering system, nothing else — the plate number is a numeral.
-.hero-n {
-  font-family: var(--font-apparatus);
-  font-size: var(--text-apparatus-mono);
-  letter-spacing: 0;
-  text-transform: none;
-  margin-left: 0.85ch;
-}
-
-// Now: prose, first person, the one block here that is rewritten by hand.
 #quarto-content main.content .hero-now p:not(.hero-kicker) {
   font-size: 1.02rem;
   line-height: 1.55;
   max-width: 34rem;
   margin: 0;
-
-  em {
-    font-style: normal;
-    font-weight: 600;
-  }
-}
-
-// Selected work: three rows, title + year on one line, dek beneath. Rows are
-// hairline-separated like the listings; the title carries the link, no
-// underline (the hover accent is the affordance, as in the ledger).
-#quarto-content main.content .hero-work ol {
-  list-style: none;
-  margin: 0;
-  padding: 0; // Bootstrap's ol indent has no marker to make room for
-  border-top: 1px solid var(--gray-400);
-}
-
-#quarto-content main.content .hero-work li {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.1rem 1rem;
-  align-items: baseline;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid var(--gray-300);
-
-  margin: 0;
-  padding-left: 0;
-
-  > a {
-    grid-column: 1;
-    grid-row: 1;
-    font-weight: 600;
-    text-decoration: none;
-    color: var(--gray-1200);
-
-    &:hover,
-    &:focus-visible {
-      color: var(--accent-ink);
-    }
-  }
-}
-
-.hero-work-year {
-  grid-column: 2;
-  grid-row: 1;
-  font-family: var(--font-apparatus);
-  font-size: var(--text-apparatus-mono);
-  color: var(--gray-1000);
-}
-
-.hero-work-dek {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: var(--gray-1100);
-  text-wrap: initial; // the .rise wrapper balances; a dek fills its line
-}
-
-// The plate: a figure, in the figure grammar — hairline top, kicker, stage,
-// caption in the apparatus tier. The stage is a fixed-height box: the arcs
-// need vertical room above the text, and a fixed height keeps the frame from
-// reflowing as the script draws.
-#quarto-content main.content .hero-plate {
-  align-self: start;
-  margin: 0;
-  border-top: 1px solid var(--gray-400);
-  padding-top: 0.9rem;
-}
-
-.hero-plate-stage {
-  position: relative;
-  height: 8.235rem; // 140px
-  overflow: hidden;
-}
-
-.hero-plate-arcs {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-#quarto-content main.content .hero-plate-text {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 1rem;
-  margin: 0;
-  font-weight: 500;
-  font-size: 1.28rem;
-  letter-spacing: 0.01em;
-  line-height: 1;
-  white-space: nowrap;
-
-  i {
-    font-style: normal;
-    display: inline-block;
-    transition: color 250ms;
-  }
-
-  // The character being read; the strongest target of the current read; the
-  // characters already read. Colour only — the accent is spent where the
-  // model's attention is, which is the one place on this page it means data.
-  .is-hot {
-    color: var(--accent-ink);
-    font-weight: 600;
-  }
-
-  .is-src {
-    text-decoration: underline;
-    text-decoration-color: var(--accent);
-    text-underline-offset: 0.28em;
-  }
-
-  .is-past {
-    color: var(--gray-1100);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #quarto-content main.content .hero-plate-text i {
-    transition: none;
-  }
-}
-
-#quarto-content main.content .hero-plate-cap {
-  margin: 0.4rem 0 0;
-  font-size: var(--text-apparatus);
-  line-height: 1.5;
-  color: var(--gray-1000);
-  max-width: 32rem;
-
-  b {
-    font-weight: 600;
-    color: var(--gray-1200);
-  }
-}
-
-// The chips: the filing voice (same as .hero-links), pressed = accent rule.
-.hero-plate-heads {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.6rem;
-  margin-top: 0.7rem;
-
-  button {
-    font: inherit;
-    font-size: var(--text-label);
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    background: none;
-    border: 0;
-    border-bottom: 1px solid transparent;
-    border-radius: 0;
-    padding: 0 0 2px;
-    color: var(--gray-1000);
-    cursor: pointer;
-
-    &[aria-pressed="true"] {
-      color: var(--gray-1200);
-      border-bottom-color: var(--accent);
-    }
-
-    &:hover {
-      color: var(--accent-ink);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
-    }
-  }
+  text-wrap: initial; // the .rise wrapper balances; prose fills its lines
 }
 
 // The bottom edge: status alone left, Writing cue alone right, baselines aligned.
@@ -1869,20 +1662,15 @@ html[data-hero-entrance="play"] .hero-screen .rise {
     margin-left: 0;
   }
 
-  .hero-inner {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-  }
-
-  #quarto-content main.content .hero-headline { grid-row: 1; }
-  .hero-ident { grid-column: 1; grid-row: 2; }
-  .hero-mid { grid-row: 3; }
-  .hero-foot { grid-row: 4; }
-
   .hero-ident {
-    align-self: start;
+    order: 0;
+    align-self: flex-start;
     text-align: left;
     margin-top: 1.4rem;
+  }
+
+  #quarto-content main.content .hero-now {
+    margin: 1.6rem 0 2rem;
   }
 
   .hero-ident .hero-links {
@@ -1896,19 +1684,6 @@ html[data-hero-entrance="play"] .hero-screen .rise {
     gap: 1.6rem;
   }
 
-  // The middle stacks: Now, work, then the plate, no centring — the stack
-  // reads from the top and the foot holds the fold.
-  .hero-mid {
-    grid-template-columns: 1fr;
-    gap: 1.6rem;
-    align-content: start;
-    padding-block: 1.6rem 2rem;
-    flex: 0 0 auto;
-  }
-
-  #quarto-content main.content .hero-plate-text {
-    font-size: 1rem;
-  }
 }
 
 // The links join the filing register (review finding 06): same size and voice as

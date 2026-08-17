@@ -124,16 +124,9 @@ Navigation
 
 Hero
 :   A staggered entrance: three headline beats, then the role, links, the Now
-    block, the work strip, the plate, status and ledger. *It runs once per session — a repeat visit within the same session
+    paragraph, status and ledger. *It runs once per session — a repeat visit within the same session
     renders the resting page directly, because an entrance that plays on every
     navigation stops being an entrance.*
-
-Plate
-:   The hero's figure — a head of the induction post's character-level model
-    reading the headline, its attention drawn as arcs. *The weights are real and
-    baked once, offline (`tools/hero-plate/compute.py`); nothing runs a model in
-    the browser, and the canvas is 2D only, so the plate is the same in every
-    browser. Under `prefers-reduced-motion` the whole field draws once, still.*
 
 Rail
 :   The TOC collapses to hairlines on scroll-down and restores its words on
