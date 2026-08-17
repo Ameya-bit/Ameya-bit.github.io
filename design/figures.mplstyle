@@ -53,12 +53,16 @@ savefig.dpi:     160
 savefig.bbox:    standard
 figure.constrained_layout.use: True
 # The canvas is the PAGE colour, not white. Figures on post pages are unframed
-# (no border, no radius), so a white PNG on a #fdfdfc page draws a faint
+# (no border, no radius), so a white PNG on a #eeece6 page draws a faint
 # rectangle exactly where the frame was removed from. Matching the page is what
 # finishes the "ink printed on the page" idea rather than half-doing it. The
 # zoom overlay is the same colour, so an expanded figure has no seam either.
-figure.facecolor: "#fdfdfc"
-savefig.facecolor: "#fdfdfc"
+figure.facecolor: "#eeece6"
+savefig.facecolor: "#eeece6"
+# The axes too (2026-08-16, the stone paper). Matplotlib's axes default is pure
+# white; on the old near-white page that panel was invisible, on stone it was a
+# white rectangle exactly the size of the plot area. Same colour, no panel.
+axes.facecolor:   "#eeece6"
 
 # ---- Type: match the page ---------------------------------------------------
 # Nunito is the site's typeface; DejaVu Sans is matplotlib's fallback. Naming
@@ -91,10 +95,10 @@ axes.titlepad:    12
 # ---- Ink: the site's palette, not matplotlib's ------------------------------
 text.color:       "#21201c"
 axes.labelcolor:  "#21201c"
-axes.edgecolor:   "#bcbbb5"
-xtick.color:      "#6f6f69"
-ytick.color:      "#6f6f69"
-grid.color:       "#e9e9e7"
+axes.edgecolor:   "#aca99f"
+xtick.color:      "#66625a"
+ytick.color:      "#66625a"
+grid.color:       "#d8d5cc"
 grid.linewidth:   0.8
 axes.grid:        True
 axes.grid.axis:   y

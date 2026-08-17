@@ -62,7 +62,7 @@
     // these are the same two inks the static figures already use.
     var POS = [213, 94, 0];
     var NEG = [0, 114, 178];
-    var PAGE = [253, 253, 252];
+    var PAGE = [238, 236, 230];
 
     function mix(a, b, t) {
       return "rgb(" + a.map(function (v, i) { return Math.round(v + (b[i] - v) * t); }).join(",") + ")";

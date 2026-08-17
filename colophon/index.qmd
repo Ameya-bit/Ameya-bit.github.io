@@ -49,16 +49,16 @@ Prose
 <!-- Twelve chips, edge to edge, each labelled with the step it is. The gap
      between 500 and 800 is real: those steps are simply never used, and showing
      the ramp with its holes is more honest than renumbering it to look full. -->
-<div class="colo-swatches" role="img" aria-label="The site's twelve-step warm gray ramp, from #fdfdfc through #21201c, followed by the two vermillion accent steps.">
-  <div style="--c:#fdfdfc" data-step="100"></div>
-  <div style="--c:#f9f9f8" data-step="200"></div>
-  <div style="--c:#f1f0ef" data-step="300"></div>
-  <div style="--c:#e9e9e7" data-step="400"></div>
-  <div style="--c:#e2e1de" data-step="500"></div>
-  <div style="--c:#bcbbb5" data-step="800"></div>
-  <div style="--c:#8d8d86" data-step="900"></div>
-  <div class="on" style="--c:#6f6f69" data-step="1000"></div>
-  <div class="on" style="--c:#63635e" data-step="1100"></div>
+<div class="colo-swatches" role="img" aria-label="The site's twelve-step warm gray ramp, from #eeece6 through #21201c, followed by the two vermillion accent steps.">
+  <div style="--c:#eeece6" data-step="100"></div>
+  <div style="--c:#e8e6df" data-step="200"></div>
+  <div style="--c:#e1dfd8" data-step="300"></div>
+  <div style="--c:#d8d5cc" data-step="400"></div>
+  <div style="--c:#cfccc2" data-step="500"></div>
+  <div style="--c:#aca99f" data-step="800"></div>
+  <div style="--c:#86837a" data-step="900"></div>
+  <div class="on" style="--c:#66625a" data-step="1000"></div>
+  <div class="on" style="--c:#57544c" data-step="1100"></div>
   <div class="on" style="--c:#21201c" data-step="1200"></div>
   <div class="on" style="--c:#d55e00" data-step="acc"></div>
   <div class="on" style="--c:#b04d00" data-step="ink"></div>
@@ -67,12 +67,14 @@ Prose
 
 ::: {.colo-spec}
 Ramp
-:   Radix Sand, twelve steps, zero chroma. *Warm gray rather than neutral, which
-    is what lets a vermillion accent sit on it without the page splitting into two
-    temperatures.*
+:   Twelve steps of warm gray on a stone paper (`#eeece6`), zero chroma — the
+    Radix Sand ramp re-derived one notch off white. *Warm gray rather than
+    neutral, which is what lets a vermillion accent sit on it without the page
+    splitting into two temperatures; stone rather than white, because a
+    near-white page had stopped reading as a choice.*
 
 Accent
-:   `#d55e00` at 3.80:1 for marks and rules, `#b04d00` at 5.28:1 for text.
+:   `#d55e00` at 3.27:1 for marks and rules, `#b04d00` at 4.55:1 for text.
     *One colour cannot do both jobs: the lighter step clears the 3:1 bar for
     non-text and fails the 4.5:1 bar for small type, so the darker step exists
     only to carry words.*
@@ -121,10 +123,17 @@ Navigation
     it.*
 
 Hero
-:   A staggered entrance: three headline beats, then the role, links, status and
-    ledger. *It runs once per session — a repeat visit within the same session
+:   A staggered entrance: three headline beats, then the role, links, the Now
+    block, the work strip, the plate, status and ledger. *It runs once per session — a repeat visit within the same session
     renders the resting page directly, because an entrance that plays on every
     navigation stops being an entrance.*
+
+Plate
+:   The hero's figure — a head of the induction post's character-level model
+    reading the headline, its attention drawn as arcs. *The weights are real and
+    baked once, offline (`tools/hero-plate/compute.py`); nothing runs a model in
+    the browser, and the canvas is 2D only, so the plate is the same in every
+    browser. Under `prefers-reduced-motion` the whole field draws once, still.*
 
 Rail
 :   The TOC collapses to hairlines on scroll-down and restores its words on

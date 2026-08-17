@@ -56,11 +56,11 @@ plt.style.use(str(DESIGN / "figures.mplstyle"))
 
 # --- The site's tokens, straight from design/direction.md --------------------
 INK = "#21201c"        # --gray-1200
-SECONDARY = "#63635e"  # --gray-1100
-TERTIARY = "#6f6f69"   # --gray-1000
-BORDER = "#bcbbb5"     # --gray-800
-RULE = "#e9e9e7"       # --gray-400
-PAGE = "#fdfdfc"       # --gray-100
+SECONDARY = "#57544c"  # --gray-1100
+TERTIARY = "#66625a"   # --gray-1000
+BORDER = "#aca99f"     # --gray-800
+RULE = "#d8d5cc"       # --gray-400
+PAGE = "#eeece6"       # --gray-100
 ACCENT = "#d55e00"     # marks
 ACCENT_INK = "#b04d00" # accent text (5.28:1)
 
