@@ -91,11 +91,12 @@ body{{
 }}
 .top{{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}}
 .name{{font-size:25px;font-weight:600;letter-spacing:-.012em}}
-.role{{font-size:19px;font-weight:400;line-height:1.55;color:{t['--gray-1100']};text-align:right}}
-.hl{{font-size:72px;font-weight:600;line-height:1.05;letter-spacing:-.026em}}
+.kicker{{
+  font-size:15px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  color:{t['--gray-1000']};margin-bottom:14px;
+}}
+.hl{{font-size:52px;font-weight:600;line-height:1.12;letter-spacing:-.026em}}
 .hl b{{display:block;font-weight:600}}
-.hl b:nth-child(2){{margin-left:84px}}
-.hl b:nth-child(3){{margin-left:168px}}
 .foot{{
   display:flex;justify-content:space-between;align-items:flex-end;gap:24px;
   border-top:1px solid {t['--gray-400']};padding-top:24px;
@@ -111,13 +112,15 @@ body{{
 </style></head><body>
   <div class="top">
     <span class="name">Ameya Panchal</span>
-    <span class="role">CS, physics &amp; AI at Penn State.<br>Independent interpretability research.</span>
   </div>
-  <div class="hl"><b>LLM circuitry&nbsp;&mdash;</b><b>implemented, documented,</b><b>shown&nbsp;off.</b></div>
+  <div>
+    <div class="kicker">Now</div>
+    <div class="hl"><b>CS, physics &amp; AI at Penn State.</b><b>Independent interpretability research.</b></div>
+  </div>
   <div class="foot">
     <div class="ledger">
       <span>Writing<em>03</em></span>
-      <span>Notes<em>02</em></span>
+      <span>Notes<em>03</em></span>
       <span>Instruments<em>05</em></span>
     </div>
     <span class="url">ameya-bit.github.io</span>

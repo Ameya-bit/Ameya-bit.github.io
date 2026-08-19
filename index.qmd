@@ -25,15 +25,32 @@ listing:
 ---
 
 ```{=html}
-<!-- The staircase hero, with a Now paragraph (2026-08-16). The tricolon
-     headline steps rightward — three beats, three indents — set low in the
-     frame; the Now paragraph sits directly under it, the one block of prose
-     here and the one meant to be rewritten by hand as the work moves. Corners
-     carry semantic jobs: identity top-right (role line + links), status alone
-     bottom-left, the ledger alone bottom-right. DOM order stays headline →
-     role → now → filing (the reading order); the identity corner's position is
-     visual only (flex `order`). Each .rise-mask/.rise pair is one beat of the
-     entrance choreography (assets/site/hero-motion.html).
+<!-- The Now hero (2026-08-18). One lead block — kicker, headline, paragraph —
+     set low in the frame, with the corners keeping their semantic jobs: links
+     top-right, status alone bottom-left, the ledger alone bottom-right. DOM
+     order is lead → links → filing (the reading order); the links corner's
+     position is visual only (flex `order`). Each .rise-mask/.rise pair is one
+     beat of the entrance choreography (assets/site/hero-motion.html).
+
+     WHAT CHANGED, AND WHY. The headline was a tricolon slogan — "LLM circuitry
+     — implemented, documented, shown off" — stepping rightward in three indents.
+     It was the best-composed thing on the page and the emptiest: the largest
+     object on the first screen carried the one sentence a reader could not
+     check, while Penn State, the manuscript and the live experiment sat under
+     it in 14–17px gray. Eight researcher sites worth copying were surveyed
+     (juancadile, katiemccurdy, thesephist, wattenberger, neelnanda, colah,
+     ciechanow.ski) and not one leads with a tagline about its subject area;
+     they lead with a name, a role, or a thing they are doing this month. So the
+     credentials take the display slot and the Now paragraph — Ameya's own
+     words, rewritten by hand as the work moves — stays directly underneath.
+     The staircase goes with the tricolon: two hand-set lines are not a stair.
+
+     The role line left the identity corner in the same move. It is the
+     headline now, and a page should not state its one durable fact twice on
+     one screen; the corner keeps the links, which is still an object in it.
+
+     The share card mirrors this composition and is regenerated deliberately,
+     not on render: python3 tools/og-card/build.py.
 
      The 2026-08-16 build first tried a fuller "CV first screen" — a selected-
      work strip and a figure plate (a head of the induction post's model reading
@@ -45,9 +62,15 @@ listing:
 <section class="hero-screen">
   <div class="hero" aria-labelledby="hero-headline">
     <div class="hero-inner">
-      <p id="hero-headline" class="hero-headline" role="heading" aria-level="1"><span class="rise-mask"><span class="rise" style="--beat: 0ms">LLM circuitry&nbsp;—</span></span><span class="rise-mask hl-step-2"><span class="rise" style="--beat: 80ms">implemented, documented,</span></span><span class="rise-mask hl-step-3"><span class="rise" style="--beat: 160ms">shown&nbsp;off.</span></span></p>
+      <div class="hero-lead">
+        <p class="hero-kicker"><span class="rise-mask"><span class="rise" style="--beat: 0ms">Now</span></span></p>
+        <p id="hero-headline" class="hero-headline" role="heading" aria-level="1"><span class="rise-mask"><span class="rise" style="--beat: 60ms">CS, physics &amp; AI at Penn State.</span></span><span class="rise-mask"><span class="rise" style="--beat: 140ms">Independent interpretability research.</span></span></p>
+        <div class="rise-mask"><div class="rise hero-now" style="--beat: 240ms">
+          <p>I am in the process of publishing a neutron-star paper, and am transitioning into AI safety research in mechanistic interpretability. Currently I am working to reproduce the early-layer degradation result from the Global Workspace paper (Gurnee et al., 2026).</p>
+        </div></div>
+      </div>
+
       <div class="hero-ident">
-        <p class="hero-role"><span class="rise-mask"><span class="rise" style="--beat: 260ms">CS, physics &amp; AI at Penn State.<br>Independent interpretability research.</span></span></p>
         <div class="rise-mask"><nav class="hero-links rise" style="--beat: 320ms" aria-label="Profile links">
           <a href="about/">About</a>
           <a href="https://github.com/Ameya-bit">GitHub</a>
@@ -56,15 +79,6 @@ listing:
           <a href="resume/">Résumé</a>
         </nav></div>
       </div>
-
-      <!-- Now (2026-08-16): the one paragraph of prose in the hero, first person,
-           rewritten by hand as the work moves. Under the headline, in the low
-           position the headline holds — the status line beneath it stays the
-           machine-checked freshness claim. -->
-      <div class="rise-mask"><div class="rise hero-now" style="--beat: 380ms">
-        <p class="hero-kicker" role="heading" aria-level="2">Now</p>
-        <p>I am in the process of publishing a neutron-star paper, and am transitioning into AI safety research in mechanistic interpretability. Currently I am working to reproduce the early-layer degradation result from the Global Workspace paper (Gurnee et al., 2026).</p>
-      </div></div>
 
       <div class="hero-foot">
         <!-- The status line, genuinely live (2026-08-04). The QUESTION is

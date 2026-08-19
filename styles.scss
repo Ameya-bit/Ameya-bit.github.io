@@ -1479,19 +1479,6 @@ html.figure-zoom-open {
   text-wrap: initial;
 }
 
-// The staircase (iteration B): the tricolon's three beats step rightward —
-// three lines, three indents, the editorial Z drawn inside the type block
-// itself. The indent is on the MASK, not the rising line, so the entrance's
-// vertical rise happens inside an already-placed step and the stagger reads
-// as the staircase assembling in place. 100/200px at calibration.
-.hl-step-2 {
-  margin-left: 5.882rem;
-}
-
-.hl-step-3 {
-  margin-left: 11.765rem;
-}
-
 html[data-hero-entrance] .hero-screen .rise {
   transform: translateY(118%); // parked below its own mask, pre-entrance
 }
@@ -1510,41 +1497,46 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   }
 }
 
-// Scoped under the content id so these outrank the prose p rules.
-// The display jump (review finding 01): the old 2.75rem cap was a size chosen
-// so the copy set as two even paragraph-ish lines — a prose concern. At ~4.3rem
-// (1440) the headline becomes the object that holds the screen, and Nunito's
-// rounded terminals finally do identity work. If the copy ever reads as a
-// wall, the lever is shorter copy, not smaller type. Top margin auto = the
-// flexible space: the headline sits low, the Now paragraph under it, then the
-// filing corner. (A 2026-08-16 build shrank this to ~2.65rem to fit a fuller
-// middle; that middle was cut the same day and the size came back.)
-#quarto-content main.content .hero-headline {
-  font-weight: 600;
-  font-size: clamp(2.35rem, 1rem + 3.9vw, 4.7rem);
-  line-height: 1.05;
-  letter-spacing: -0.025em;
-  color: var(--gray-1200);
-  margin: auto 0 0;
+// ---- The Now block (2026-08-18) -------------------------------------------
+// The lead is now ONE object — kicker, headline, paragraph — and it holds the
+// flexible space as a group, so the whole block sits low in the frame the way
+// the headline used to on its own.
+.hero-lead {
+  margin-top: auto;
 }
 
-// The identity corner (top-right, visual only — `order` moves it; the DOM
-// keeps headline → role → filing, which is the reading order): the role line
-// with the links directly under it. Contact belongs with identity, and moving
-// the links up here is what gave the bottom edge back to one object per
-// corner — the cue no longer shares a baseline with anything.
+// Scoped under the content id so these outrank the prose p rules.
+// The headline is the CREDENTIALS now, not a slogan (2026-08-18). The tricolon
+// it replaces — "LLM circuitry — implemented, documented, shown off" — spent
+// the page's largest object on the one sentence a reader could not check;
+// every research site worth copying puts a fact there instead. Two hand-set
+// lines: what he is, and what he does.
+//
+// The size steps down from ~4.3rem to ~3.15rem (1440) because the copy got
+// four times longer: at the old size line two ran past the shell. Total ink is
+// comparable — this is the same display object carrying more information, not
+// a quieter one. Floor 1.75rem so the long line still wraps to two on a phone
+// rather than three.
+#quarto-content main.content .hero-headline {
+  font-weight: 600;
+  font-size: clamp(1.75rem, 0.62rem + 3vw, 3.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: var(--gray-1200);
+  margin: 0;
+}
+
+// The identity corner (top-right, visual only — `order` moves it; the DOM keeps
+// lead → links → filing, which is the reading order). It carries the LINKS
+// ALONE since 2026-08-18: the role line that used to sit above them is the
+// headline now, and repeating it here would be the page stating its one durable
+// fact twice on one screen. The corner still holds an object, which is what the
+// four-corner rule actually asks for.
 .hero-ident {
   order: -1;
   align-self: flex-end;
   text-align: right;
   margin-top: 0.5rem;
-}
-
-#quarto-content main.content .hero-role {
-  font-size: 1rem;
-  line-height: 1.65;
-  color: var(--gray-1100);
-  margin: 0 0 0.9rem;
 }
 
 .hero-ident .hero-links {
@@ -1569,7 +1561,7 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   margin: 0 0 0.6rem;
 }
 
-#quarto-content main.content .hero-now p:not(.hero-kicker) {
+#quarto-content main.content .hero-now p {
   font-size: 1.02rem;
   line-height: 1.55;
   max-width: 34rem;
@@ -1653,13 +1645,8 @@ html[data-hero-entrance="play"] .hero-screen .rise {
 // corner back to the left after it, the foot pinned to the bottom edge with
 // the cue under the status line.
 @media (max-width: 799.98px) {
-  #quarto-content main.content .hero-headline {
-    margin: 1rem 0 0;
-  }
-
-  .hl-step-2,
-  .hl-step-3 {
-    margin-left: 0;
+  .hero-lead {
+    margin-top: 1rem;
   }
 
   .hero-ident {
