@@ -1759,8 +1759,24 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   }
 }
 
+// 56rem, not the hero's shell (2026-08-20, Ameya's catch). Capping the listing
+// at the article measure closed the 276px hole, but the SECTION was still the
+// full 1160px shell, so the row was left-flush inside a frame half again its
+// width and the page went visibly lopsided — ~180px of dead margin down the
+// right, against a colophon whisper centred on the shell below it.
+//
+// The fix is to stop treating the hero and the lists as one frame. The hero is a
+// COMPOSED OBJECT — four corners, the full width, a display headline set in it —
+// and the lists are a READING COLUMN. That is the geometry every post on this
+// site already uses: furniture at the window edge (the masthead name, the rail)
+// and the column centred. The homepage lists were left-flush with the hero only
+// because both happened to inherit `--shell`, which was a coincidence of tokens
+// and not a designed relationship. Centred, they finally agree with the
+// colophon, which has been centred on the page all along.
+//
+// 56rem = the 52rem row + the 2rem inline padding on each side.
 .writing-section {
-  max-width: var(--shell);
+  max-width: 56rem;
   margin-inline: auto;
   padding-inline: clamp(1.25rem, 5vw, 2rem);
   // The fold has to cost a screen (2026-08-20). This was 40px, which — with the
@@ -1785,7 +1801,7 @@ html[data-hero-entrance="play"] .hero-screen .rise {
 // post row with no description), so the two lists read as registers of one
 // instrument rather than two sections. The kicker is what separates them.
 .notes-section {
-  max-width: var(--shell);
+  max-width: 56rem; // the writing section's column — see the note there
   margin-inline: auto;
   padding-inline: clamp(1.25rem, 5vw, 2rem);
   padding-top: clamp(3rem, 2.4rem + 3vw, 5rem); // more than a row gap, less than a new screen
@@ -2217,6 +2233,58 @@ body:has(.hero-screen) { overflow-x: hidden; }
     }
   }
 }
+
+// ---- The homepage's second scale event (2026-08-20) -------------------------
+// Ameya's read on the built page: the hero is dynamic and "the bottom is
+// uniform". Measured, that is exactly right and the gap is not close — the hero
+// runs 11.7px labels against a 57.8px headline, a 4.95x type range, while the
+// bottom of the page runs 13.8 / 17 / 17 / 14.9: a range of 1.23x. Four sizes
+// that are effectively one size. The title and the summary it introduces were
+// literally the same size, so the only rank the row carried was weight.
+//
+// This is the SAME failure Layer 1b diagnosed on post pages, one level down, and
+// the site already knows the remedy. There the finding was that a flat scale was
+// borrowed from Emil without its support structure — his column alternates prose
+// with bordered demo cards that carry all the page's punctuation, ours does not —
+// and the answer was one sanctioned jump (the post title, 17 -> 27.2px) with
+// severity underneath it. "One event, then severity, rather than no events."
+//
+// The flat-scale rule reserved the homepage's only exception for the hero. That
+// rule predates two things: the second list, and the seam that now takes the
+// hero to zero opacity as it leaves. Once the hero is gone the bottom of the
+// page has NO contrast event at all — which is precisely the screen Ameya is
+// describing. So the homepage gets its second exception, on the same grounds the
+// post page got its first.
+//
+// WHY THE TITLE. It is the object that most deserves it: on the homepage a
+// listing title IS a post title, and on its own page that title is 1.6rem. 1.2rem
+// keeps the ranking honest — the post's own title stays the largest instance of
+// itself — and it is the ceiling the measure allows: the longest title on the
+// site occupies 32.1rem of the 40rem column at 1rem, so 1.25rem would wrap it and
+// 1.2rem leaves ~1.3rem of slack. `text-wrap: balance` is there for the first
+// title that outgrows that, so a wrap breaks evenly instead of leaving one word
+// stranded — the same rule the hero's lines carry.
+#quarto-content main.content #listing-writing .quarto-post h3.listing-title {
+  font-size: 1.2rem;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+// The description needs a touch more air under a bigger title — 4px bound a
+// 17px title to its summary, and reads tight under a 20.4px one.
+#quarto-content main.content #listing-writing .listing-description {
+  margin-top: 0.412rem; // 7px
+}
+
+// NOTES STAYS FLAT, and that is the point rather than an omission. The two lists
+// have been typographically identical since the notes strip was built — same row,
+// same title, same date — and the kicker was the only thing telling a reader they
+// are different registers. Writing is the argument and takes the event; notes are
+// comment-sized (paper reactions, small results, dead ends) and keep the flat
+// scale. The distinction IS the design: the lists now read as two registers of
+// one instrument because they are set as two registers, not because a label says
+// so.
 
 // ---- /instruments/ ----------------------------------------------------------
 // The homepage's row, with three deliberate differences, each one a consequence
