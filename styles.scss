@@ -1664,10 +1664,26 @@ html[data-hero-entrance="play"] .hero-screen .rise {
 // The heartbeat (review finding 04): one resting cursor after the experiment
 // question — the single autonomous element the whimsy fence rules permit per
 // screen. It idles like an instrument, it does not perform: 1.1s stepped, no
-// fade. Deliberately GRAY, not accent — the Layer 1b amendment rules that a
-// state persisting while the reader does nothing cannot be paid for in
-// vermillion. Static at half-ink under reduced motion (still present: it is
-// information — "this line is live" — not decoration).
+// fade.
+//
+// IT TAKES THE ACCENT as of 2026-08-20, having been "deliberately GRAY, not
+// accent" since Layer 1b on the rule that a state persisting while the reader
+// does nothing cannot be paid for in colour. The exemption here is narrower
+// than the rail fill's and does not need the same argument: this element ships
+// `hidden` and is revealed ONLY when the live stamp beside it actually lands,
+// so it is not a decoration that happens to be true — it cannot appear at all
+// unless there is something live to report. Its whole claim is "this line is
+// live", which is exactly the kind of readout colour is for, and at 0.45em it
+// spends none of the severity the hero's monochrome buys.
+//
+// It is also QUIETER than what it replaces: --accent is 3.26:1 on stone where
+// --gray-1000 was 5.14:1. The brightest thing on the first screen is still the
+// headline, in ink.
+//
+// The headline itself was considered for this colour and refused. At
+// --accent-ink it would measure 4.60:1 against the 5.14:1 of the 11.7px kicker
+// directly above it — the largest object on the site reading fainter than its
+// own label, which inverts the tier system the page is built on.
 //
 // AMENDED 2026-08-04: the cursor now ships `hidden` and is revealed only when
 // the live stamp beside it actually lands. Its entire claim is "this line is
@@ -1680,7 +1696,7 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   height: 1em;
   vertical-align: -0.12em;
   margin-left: 0.45em;
-  background: var(--gray-1000);
+  background: var(--accent);
   animation: hero-blink 1.1s steps(1) infinite;
 }
 
@@ -1689,9 +1705,17 @@ html[data-hero-entrance="play"] .hero-screen .rise {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  // Full strength, not the half-ink this used to carry — and that is a bug fix
+  // riding along, not a side effect. `opacity: 0.5` composited --gray-1000 down
+  // to 2.03:1 against the page, under the 3:1 bar a non-text mark needs, so the
+  // one state where the cursor cannot move was also the one where it was
+  // hardest to see. The comment above it claimed the opposite: "still present:
+  // it is information, not decoration." At full opacity the accent sits at
+  // 3.26:1 and clears the bar, and since it no longer blinks it needs no
+  // softening to read as resting — it simply is.
   .hero-cursor {
     animation: none;
-    opacity: 0.5;
+    opacity: 1;
   }
 }
 
