@@ -12,7 +12,7 @@ The rules being followed are in `design/figures.mplstyle` and `design/direction.
     figures read as a set; height is free to follow the content.
   * NO IN-FIGURE TITLES. The caption is the title. A bold headline inside the PNG
     competes with the h2 above it and duplicates the figcaption underneath.
-  * ONE ACCENT. Vermillion #d55e00 means "this is the finding" and appears at most
+  * ONE ACCENT. Reddish purple #bd6593 means "this is the finding" and appears at most
     once per figure. Everything else is the site's warm gray ramp. The previous
     set used four different highlight colours across six figures.
   * COLORMAPS BY MEANING. Signed quantities get a diverging map pinned to zero;
@@ -48,8 +48,8 @@ BORDER = "#aca99f"     # --gray-800
 RULE = "#d8d5cc"       # --gray-400
 SURFACE = "#e8e6df"    # --gray-200
 PAGE = "#eeece6"       # --gray-100
-ACCENT = "#d55e00"     # marks
-ACCENT_INK = "#b04d00" # accent text (5.28:1)
+ACCENT = "#bd6593"     # marks (3.26:1 on stone)
+ACCENT_INK = "#b43c7a" # accent text (4.60:1)
 
 WIDTH = 8.0            # inches; 8.0 * 160dpi = 1280px. Never changes.
 

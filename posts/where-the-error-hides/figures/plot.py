@@ -12,7 +12,7 @@ The rules are in `design/figures.mplstyle` and `design/direction.md`:
     for this column — so it downscaled at 0.43x against the other posts' 0.66x
     and its labels rendered visibly smaller than theirs on the same page.
   * NO IN-FIGURE TITLES. The caption is the title.
-  * ONE ACCENT. Vermillion #d55e00 means "this is the finding."
+  * ONE ACCENT. Reddish purple #bd6593 means "this is the finding."
   * COLORMAPS BY MEANING.
 
 WHAT CHANGED FROM THE MANUSCRIPT FIGURES, AND WHY.
@@ -78,8 +78,8 @@ TERTIARY = "#66625a"   # --gray-1000
 BORDER = "#aca99f"     # --gray-800
 RULE = "#d8d5cc"       # --gray-400
 PAGE = "#eeece6"       # --gray-100
-ACCENT = "#d55e00"     # marks
-ACCENT_INK = "#b04d00" # accent text (5.28:1)
+ACCENT = "#bd6593"     # marks (3.26:1 on stone)
+ACCENT_INK = "#b43c7a" # accent text (4.60:1)
 
 WIDTH = 8.0            # inches; 8.0 * 160dpi = 1280px. Never changes.
 
@@ -91,8 +91,12 @@ WIDTH = 8.0            # inches; 8.0 * 160dpi = 1280px. Never changes.
 # the one figure on the page that carries a colormap still belongs to the page:
 # page white through the accent to a deep burnt brown, lightness monotonic so it
 # survives grayscale printing and low-vision viewing.
+# Rebuilt on the accent's hue when the accent moved (2026-08-20). Lightness
+# falls monotonically from the page through the accent to near-black, so the
+# ramp still reads as one sequence in grayscale — the property that makes a
+# sequential colormap honest.
 WARM = LinearSegmentedColormap.from_list(
-    "site_warm", [PAGE, "#f6e3d0", "#eab583", "#d55e00", "#8f3a00", "#4a1d00"])
+    "site_plum", [PAGE, "#f4e2ec", "#ddaec6", "#bd6593", "#8e3762", "#4e1934"])
 
 # Anything drawn ON the colormap has to survive both ends of that ramp, and one
 # treatment does it: INK with a page-coloured stroke around it. Over the light

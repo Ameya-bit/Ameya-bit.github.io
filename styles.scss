@@ -151,20 +151,44 @@ $grid-default-toc-mid-body-column-max: 40.706rem; // default-body − 50px
   // On stone the tertiary step is #66625a: 5.14:1.
 
   // ---- The accent -----------------------------------------------------------
-  // Not a new decision so much as a discovered one. Every figure on this site
-  // already reaches for the same colour when it needs to say "this is the
-  // finding": the copying-score bar, the annotation arrows, the S-inhibition
-  // boxes. That is Okabe-Ito vermillion, and it is the natural accent for a page
-  // whose grays are warm. Two steps because one cannot do both jobs: #d55e00 is
-  // 3.27:1 on stone (fine for marks, rules and 1px ticks — the 3:1 non-text
-  // bar — and for display type, but not for small text), #b04d00 is 4.55:1 and
-  // text-safe, just.
+  // REDDISH PURPLE, from 2026-08-20. It replaces Okabe-Ito vermillion
+  // (#d55e00 / #b04d00), which was not chosen so much as discovered: every
+  // figure already reached for it to say "this is the finding", so a hovered
+  // link and a highlighted bar were literally one colour. That argument is
+  // preserved rather than abandoned — the figures moved with the token, in the
+  // same commit, and the accent is STILL the colour the plots use. What changed
+  // is which Okabe-Ito colour holds the job.
   //
-  // Spending rule: the accent appears ONLY on interaction — link hover, figure
-  // hover, focus, the active TOC tick. At rest the page stays monochrome, so the
+  // Why this purple and not a dark one. A genuinely dark purple — aubergine
+  // #5b2a86, grape #4a2158 — measures 8-11:1 on stone, which puts it between
+  // secondary text (6.4:1) and ink (13.8:1). It stops being a response and
+  // becomes a slightly bluer ink: against the ink it replaces, grape is 1.28:1,
+  // a hover the eye cannot find. The accent's lightness band is fixed by the
+  // job; only the hue was ever free.
+  //
+  // Two steps because one cannot do both. #bd6593 is 3.26:1 on stone — fine for
+  // marks, rules and 1px ticks (the 3:1 non-text bar) and for display type, not
+  // for small text. #b43c7a is 4.60:1 and text-safe, with the same slim margin
+  // vermillion had: DO NOT LIGHTEN EITHER.
+  //
+  // It is a darkened Okabe-Ito reddish purple (#cc79a7 raw, which is only
+  // 2.59:1 on stone and fails as a mark). Because the accent now occupies that
+  // hue, #cc79a7 came OUT of the figure prop_cycle and vermillion took its
+  // slot — see design/figures.mplstyle. The palette is still Okabe-Ito
+  // throughout; two of its members swapped roles.
+  //
+  // One honest cost: under simulated protanopia the hover measures 2.31:1
+  // against the ink where vermillion managed 2.43:1. Marginally worse for
+  // red-blind readers, marginally better under deuteranopia's 3.37:1. Neither
+  // hue is the best available on that axis — indigo and olive both clear 3.0:1
+  // for both — and the accent is never the sole carrier of meaning, so this is
+  // recorded rather than treated as blocking.
+  //
+  // Spending rule, unchanged: the accent appears ONLY on interaction — link
+  // hover, figure hover, focus. At rest the page stays monochrome, so the
   // severity is intact and colour reads as a response rather than decoration.
-  --accent: #d55e00;
-  --accent-ink: #b04d00;
+  --accent: #bd6593;
+  --accent-ink: #b43c7a;
 
   --hover-fill: #e6e3dc;
   --measure-pad: 1.412rem; // 24px at calibration

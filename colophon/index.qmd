@@ -60,8 +60,8 @@ Prose
   <div class="on" style="--c:#66625a" data-step="1000"></div>
   <div class="on" style="--c:#57544c" data-step="1100"></div>
   <div class="on" style="--c:#21201c" data-step="1200"></div>
-  <div class="on" style="--c:#d55e00" data-step="acc"></div>
-  <div class="on" style="--c:#b04d00" data-step="ink"></div>
+  <div class="on" style="--c:#bd6593" data-step="acc"></div>
+  <div class="on" style="--c:#b43c7a" data-step="ink"></div>
 </div>
 ```
 
@@ -74,7 +74,7 @@ Ramp
     near-white page had stopped reading as a choice.*
 
 Accent
-:   `#d55e00` at 3.27:1 for marks and rules, `#b04d00` at 4.55:1 for text.
+:   `#bd6593` at 3.26:1 for marks and rules, `#b43c7a` at 4.60:1 for text.
     *One colour cannot do both jobs: the lighter step clears the 3:1 bar for
     non-text and fails the 4.5:1 bar for small type, so the darker step exists
     only to carry words.*

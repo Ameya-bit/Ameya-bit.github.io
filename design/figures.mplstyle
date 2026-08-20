@@ -114,10 +114,10 @@ legend.frameon:   False
 # Written when the induction-head post already used this set and the IOI post
 # was still on matplotlib's tab10 defaults; as of 2026-08-06 all three posts are
 # regenerated through this file. Standardising on Okabe-Ito makes them one body
-# of work, and #d55e00 — the vermillion that marks the finding in the copying-score
+# of work, and #bd6593 — the reddish purple that marks the finding in the copying-score
 # and DLA charts — is now the site's accent colour too, so a highlighted bar and
 # a hovered link are literally the same colour.
-axes.prop_cycle: cycler('color', ['0072b2', 'd55e00', '009e73', 'cc79a7', 'e69f00', '56b4e9', 'f0e442', '000000'])
+axes.prop_cycle: cycler('color', ['0072b2', 'bd6593', '009e73', 'd55e00', 'e69f00', '56b4e9', 'f0e442', '000000'])
 
 # ---- Colormaps: the part that signals fluency --------------------------------
 # NOT settable here, because it depends on what the data means. State it plainly
