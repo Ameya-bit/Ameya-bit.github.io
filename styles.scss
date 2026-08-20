@@ -1763,7 +1763,20 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   max-width: var(--shell);
   margin-inline: auto;
   padding-inline: clamp(1.25rem, 5vw, 2rem);
-  padding-top: 2.353rem; // 40px — the list's own air now that the cue lives in the hero frame
+  // The fold has to cost a screen (2026-08-20). This was 40px, which — with the
+  // hero frame's own 26px bottom inset — put 66px of clear air between a
+  // full-viewport hero and the next thing on the site. Measured against the
+  // rhythm Layer 1b built, that is LESS than the 72px an h2 takes above itself:
+  // the change of screen was spaced tighter than a change of section inside one
+  // post, and tighter than the 84px between the writing list and the notes list,
+  // which is only a change of register within one instrument. The hierarchy was
+  // upside down at exactly one joint, and it is the joint the reader crosses
+  // first.
+  //
+  // ≈113px at the calibration root — just under the post header's 116px, the
+  // largest break the site uses. The ladder now reads screen (113) > register
+  // (84) > section (72), in that order, which is the order it always claimed.
+  padding-top: clamp(3.25rem, 2rem + 5.5vw, 8rem);
   padding-bottom: 0; // the notes section below now carries the page-end air
 }
 
@@ -1793,6 +1806,7 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   color: var(--gray-1000);
   margin: 0 0 0.706rem; // 12px — binds to the rows below, clears the hover pill's bleed
 }
+
 
 // Ledger anchors land the section a breath below the window edge.
 .writing-section,
@@ -2046,16 +2060,49 @@ body:has(.hero-screen) { overflow-x: hidden; }
 // ---- Writing list: stacked title + description, instant hover pill ---------
 // Nested under the content id so these outrank the prose a/h3/p rules above.
 #quarto-content main.content {
+  // The list sits at the geometry of the thing it links to: the article measure
+  // plus the filing column (2026-08-20). Before this the listing stretched the
+  // full 1160px shell while `.body` capped itself at 40rem, so the arithmetic
+  // ran 1092 content − 136 metadata − 34 gap = 922px of column holding 680px of
+  // text: 276px of nothing through the middle of every row, with the hover pill
+  // lighting all of it. 52rem = 40rem of text + the 2rem gap + the 10rem filing
+  // column, so the gap is the only space left between a description and its date.
+  //
+  // Declared HERE, on the listing container, and deliberately not in
+  // `@mixin listing-row`: /instruments/ and /resume/ share that mixin, and their
+  // full-width hairline rules depend on the stretched grid. Left-aligned inside
+  // the section, so the lists keep their left edge flush with the hero above.
   div.quarto-listing {
     margin-top: 0;
+    max-width: 52rem;
   }
 
+  // Rows used to abut — `margin: 0 -12px; padding: 12px` and nothing between
+  // them — which left 24px from one row's last description line to the next
+  // row's title, against a 43px paragraph gap. Two separate posts sat closer
+  // together than two paragraphs of one post. 24px of gap puts the total at
+  // 48px, just past the paragraph gap, and the pill keeps its 12px bleed.
+  //
+  // Air, not hairlines: /instruments/ gets rules precisely BECAUSE it has no
+  // hover pill (an instrument row points at two destinations, so a full-row pill
+  // would promise a single one). A listing row is one link, the pill is honest,
+  // and a rule plus a pill is two separators doing one job.
   .list.quarto-listing-default {
     margin-top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem; // 24px
   }
 
   .quarto-post {
     @include listing-row;
+
+    // 10rem, not the mixin's 8rem: the filing line is one line here now and
+    // needs room for "Jul 22, 2026 · 13 min". Overridden at the call site rather
+    // than in the mixin because /instruments/ shares that mixin and has no
+    // reason to move its column — same pattern as every other deliberate
+    // difference between these two rows.
+    grid-template-columns: 1fr 10rem;
 
     // The pill is the whole row's affordance, and it is honest here because on
     // a listing the whole row IS one link. /instruments/ deliberately has no
@@ -2071,18 +2118,41 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // The listing body holds the reading measure even though the shell it sits
     // in is wide. Unbounded, a description ran the full ~1000px column — 95+
     // characters per line on the same site that argued its way to ~75 for the
-    // posts. 40rem is the hero lede's measure; the hover pill still spans the
-    // full row, so the cap costs the interaction nothing.
+    // posts. 40rem is the hero lede's measure.
+    //
+    // The cap is now belt to the container's suspenders: `div.quarto-listing`
+    // is 52rem, so the 1fr column already resolves to exactly 40rem and this
+    // no longer strands anything. Kept because it is what GUARANTEES the
+    // measure — the container width is a layout number and could move.
     .body {
       grid-column: 1;
       max-width: 40rem;
     }
 
+    // One filing line, not two (2026-08-20). Quarto emits `.listing-date` and
+    // `.listing-reading-time` as sibling <div>s, so they stacked by
+    // CONSTRUCTION — block-level children — not for want of room. A flex row
+    // and a middot give "Aug 4, 2026 · 7 min", which is the same middot-chained
+    // filing grammar the post header's date + categories row uses.
+    //
+    // The column widened 8rem → 10rem to hold the longest string on the site
+    // ("Jul 22, 2026 · 13 min") on one line; `white-space: nowrap` makes that a
+    // guarantee rather than a measurement that a future date could break.
     .metadata {
       @include listing-meta;
+      white-space: nowrap;
 
       a {
         color: var(--gray-1000);
+        display: flex;
+        justify-content: flex-end;
+        align-items: baseline;
+        gap: 0.5rem;
+      }
+
+      .listing-reading-time::before {
+        content: "·";
+        margin-right: 0.5rem;
       }
     }
 
@@ -2091,9 +2161,20 @@ body:has(.hero-screen) { overflow-x: hidden; }
       color: var(--gray-1200);
     }
 
+    // 600, up from 500 (2026-08-20). The title was weight 500 and one line; the
+    // description is weight 400, the SAME SIZE, and three lines. Mass beats
+    // weight, so the description won and the row read as a gray paragraph with
+    // a heading-ish first line — the exact failure Layer 1's own rule names:
+    // emphasis is a contrast event, not just a weight event. The listing had
+    // the weight event and nothing behind it.
+    //
+    // 600 costs nothing in the flat scale because nothing changes size, and the
+    // argument is exact: on the homepage a listing title IS a post title, and
+    // 600 is the weight the site already reserves for post titles and h1. Same
+    // object, same weight.
     h3.listing-title {
       font-size: 1rem;
-      font-weight: 500;
+      font-weight: 600;
       line-height: 1.65;
       letter-spacing: 0;
       color: var(--gray-1200);
@@ -2104,6 +2185,7 @@ body:has(.hero-screen) { overflow-x: hidden; }
       font-size: 1rem;
       line-height: 1.65;
       color: var(--gray-1100);
+      margin-top: 0.235rem; // 4px — the bind /instruments/ uses on its claim
 
       p {
         color: var(--gray-1100);
