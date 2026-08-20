@@ -34,9 +34,32 @@
 
     var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
     var raf = 0;
+
+    // The span is the hero's OWN height, not 0.55 of a viewport (2026-08-20).
+    // The old figure finished the fade after 55% of a viewport of scrolling
+    // while .hero-screen kept its full 100svh of layout — so at the moment the
+    // dim completed, the top ~55% of the window was a hero that was invisible
+    // and still holding its shape, above a list that started roughly
+    // three-fifths of the way down. That empty band was the "the bottom of the
+    // page looks bland" screenshot: the list was fine, the screen above it was
+    // a ghost.
+    //
+    // Measuring the element makes the dim mean what it always claimed to mean —
+    // how much of the hero is still on screen — so opacity reaches zero exactly
+    // as its last pixel leaves. Still state rather than animation, still exact
+    // when the reader scrubs back, still opacity and transform only.
+    //
+    // Measured on resize rather than per frame: a layout read inside the rAF
+    // would force a reflow on every scroll tick, and the height only changes
+    // when the viewport does. `transform` does not affect offsetHeight, so the
+    // element's own translate cannot feed back into its span.
+    var span = 0;
+    function measure() {
+      span = screen.offsetHeight;
+    }
+
     function paint() {
       raf = 0;
-      var span = window.innerHeight * 0.55;
       var t = span > 0 ? Math.min(1, Math.max(0, window.scrollY / span)) : 0;
       screen.style.opacity = t === 0 ? "" : String(+(1 - t).toFixed(3));
       screen.style.transform = reduced || t === 0 ? "" : "translateY(" + (-24 * t).toFixed(1) + "px)";
@@ -46,8 +69,10 @@
       if (!raf) raf = requestAnimationFrame(paint);
     }, { passive: true });
     window.addEventListener("resize", function () {
+      measure();
       if (!raf) raf = requestAnimationFrame(paint);
     }, { passive: true });
+    measure();
     paint();
   })();
 </script>
