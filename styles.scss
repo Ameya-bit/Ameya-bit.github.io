@@ -2214,6 +2214,52 @@ body:has(.hero-screen) { overflow-x: hidden; }
       color: var(--gray-1200);
     }
 
+    // ---- The kind chip (2026-08-20) ----------------------------------------
+    // A reader landing cold cannot tell that the neutron-star piece is a
+    // manuscript and the IOI piece is a comparison of three methods. The titles
+    // answer "what is this about" and nothing on the page answers "what KIND of
+    // thing is this" — which is the first question anyone deciding whether to
+    // read actually asks. transformer-circuits.pub, the closest neighbour this
+    // site has in genre, marks every entry `paper` / `note` / `github` for the
+    // same reason.
+    //
+    // NO NEW MATERIAL. This is the filing voice the site already speaks in four
+    // places — the hero's status line, the hero's links row, /instruments/'s
+    // repository-and-post line, the list kickers: uppercase, tracked, tertiary,
+    // in the prose face. It is set at --text-filing, the tier's FLOOR, for the
+    // reason the floor exists: this is apparatus you refer to, not apparatus you
+    // read. One glance, then past it.
+    //
+    // NO PILL, NO FILL, NO BORDER. Every reference draws these as outlined
+    // capsules and that is exactly what this page cannot have — a rounded
+    // bordered object would be the only one on the homepage, and the post header
+    // already refused pills for its categories on the same grounds. Rank comes
+    // from case and colour, which costs nothing the page does not already own.
+    //
+    // The chip sits INSIDE the title's anchor (tools/site/kind-chips.py moves it
+    // there at build time), so it shares the row's single link target rather than
+    // becoming a second, smaller click surface beside it. It therefore has to
+    // opt out of the anchor's ink explicitly — hence the colour here.
+    //
+    // `aria-hidden` is deliberately NOT set: "Paper" genuinely qualifies the
+    // title for a screen reader too, and it reads as part of the same phrase.
+    .listing-kind-chip {
+      font-size: var(--text-filing);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-1000);
+      margin-right: 0.85ch; // the numerals' offset, reused
+      white-space: nowrap;
+    }
+
+    // The chip follows the title into the accent on hover, because the whole row
+    // is one link and a chip that stayed gray would read as not part of it.
+    &:hover .listing-kind-chip,
+    &:focus-within .listing-kind-chip {
+      color: var(--accent-ink);
+    }
+
     // 600, up from 500 (2026-08-20). The title was weight 500 and one line; the
     // description was weight 400, the SAME SIZE, and three lines. Mass beats
     // weight, so the description won and the row read as a gray paragraph with

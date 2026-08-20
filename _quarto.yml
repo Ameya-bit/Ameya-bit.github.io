@@ -23,6 +23,11 @@ project:
     # step re-proves the set is unused on every render and fails the build
     # rather than serving a page a missing glyph.
     - tools/site/drop-icons.py
+    # The homepage listing's `kind` field: Quarto renders it into the far-right
+    # filing column, which is ~40 characters from the title it qualifies. This
+    # moves it to the front of the title, where it is read as part of the same
+    # phrase. Build-time rather than in the browser, so JS-off gets the same page.
+    - tools/site/kind-chips.py
   render:
     - "**/*.qmd"
     - "!design/"

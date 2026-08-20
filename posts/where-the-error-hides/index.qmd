@@ -4,6 +4,7 @@ description: "A Monte Carlo scattering atmosphere puts a number on a standard mo
 date: 2026-08-04
 categories: [computational physics, neutron stars]
 image: figures/fig5_phase_diagram.png
+kind: Paper
 reading-time: true
 ---
 

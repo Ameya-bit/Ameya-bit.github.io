@@ -5,6 +5,7 @@ date: 2026-07-22
 date-modified: 2026-08-03
 categories: [mechanistic interpretability, transformers]
 image: figures/fig2_resid_patching.png
+kind: Methods
 reading-time: true
 ---
 
