@@ -199,13 +199,17 @@ $grid-default-toc-mid-body-column-max: 40.706rem; // default-body − 50px
   // what the spending rule permits." That is true of a lens cell and equally
   // true of a paragraph, but text selection was still --gray-500.
   //
-  // Held EXTREMELY light on purpose: the accent mixed 12% into the paper. The
-  // old gray sat at 1.36:1 against the page, this at 1.13:1 — about a third of
-  // that strength, a wash rather than a highlighter. Ink on it is 12.19:1, so
-  // selected prose loses nothing. Derived as mix(--gray-100, --accent, 0.12);
-  // to dial it, re-mix rather than eyeballing a hex, and keep it under 1.36 or
-  // it stops being the quieter thing it was changed to be.
-  --selection: #e8dcdc;
+  // Strength is measured as the DELTA from the page, not the ratio: the old
+  // gray sat at 1.36:1 against #eeece6, so it carried 0.360 of separation.
+  // This is mix(--gray-100, --accent, 0.20) — 1.24:1, a delta of 0.236, which
+  // is 66% of the old, i.e. the two-thirds Ameya asked for. Ink on it stays
+  // 11.16:1, so selected prose loses nothing.
+  //
+  // Dial it by RE-MIXING at a new percentage rather than eyeballing a hex, and
+  // read the result as a delta: 12% gave 0.132 (a third, too faint to find),
+  // 20% gives 0.236, and 1.36 is the ceiling — past it this stops being the
+  // quieter thing it was changed to be.
+  --selection: #e4d1d5;
   --measure-pad: 1.412rem; // 24px at calibration
   --shell: 68.235rem; // 1160px at calibration — homepage-only wide layout
 
@@ -2905,9 +2909,18 @@ body:has(.hero-screen) { overflow-x: hidden; }
       border-radius: 4px;
     }
 
-    // Rank by weight and ink, not colour — the hover state's active label.
+    // The active label takes the accent (2026-08-20), where it used to rank by
+    // ink alone. Note WHERE this colour can actually be seen: the labels are
+    // opacity 0 until the rail is hovered or focused, so the active label is
+    // accent-coloured only while the reader is asking the rail a question. That
+    // is the spending rule satisfied exactly — this half of the change needs no
+    // exemption at all, unlike the fill above it.
+    //
+    // The weight stays. Colour alone would carry the state for most readers and
+    // not for a protanope, on the one hue where this palette measures weakest;
+    // 500 against 400 is the redundant channel that makes it safe.
     &.active {
-      color: var(--gray-1200);
+      color: var(--accent-ink);
       font-weight: 500;
     }
   }
@@ -2948,9 +2961,36 @@ body:has(.hero-screen) { overflow-x: hidden; }
 
     // The bar. 2px now — at half-viewport lengths a 1px hairline read as a
     // rule, not a bar; 2px is the least width that reads as an object with a
-    // fill inside it. The gradient's hard stop is the fill: ink above the
+    // fill inside it. The gradient's hard stop is the fill: read above the
     // reader's position, gray below, no transition (the fill is state, like
     // a scrollbar thumb, not animation).
+    //
+    // THE FILL TAKES THE ACCENT (2026-08-20), which reverses the 2026-08-03
+    // amendment that pulled colour off this rail. That amendment was about the
+    // ACTIVE TICK — a state that sits unchanged in peripheral vision for a
+    // whole read — and its rule was "if a state persists while the reader is
+    // doing nothing, it cannot be paid for in accent." A fill meter is the one
+    // object on the page that rule does not obviously cover: it is not a state
+    // that persists, it is a readout that moves with every scroll, and the rail
+    // is described in its own header as an instrument. Recorded as a reversal
+    // rather than a loophole, because it IS colour in the margin for the length
+    // of a read, which is exactly what was objected to before.
+    //
+    // --accent-ink, NOT --accent, and the reason is measured rather than
+    // stylistic. The bar's entire job is that you can see where the fill stops.
+    // Ink against --gray-800 gave that boundary 6.93:1. --accent (#bd6593) gives
+    // 1.64:1 — the bar would read as one flat column and the instrument would
+    // stop instrumenting. --accent-ink (#b43c7a) gives 2.31:1, which is under
+    // the 3:1 non-text bar on luminance alone but carries a large hue shift
+    // across the stop (warm gray to purple), and hue is exactly what pure
+    // luminance contrast underestimates at a hard edge.
+    //
+    // The unfilled remainder stays --gray-800 deliberately. Lightening it to
+    // --gray-500 would lift the boundary to 3.38:1, but the whole rail is
+    // unfilled at the top of an article, so that trade buys a crisper stop at
+    // the cost of the instrument being faint exactly when the reader first
+    // meets it — 1.36:1 against the page instead of 1.99:1. Shape says what the
+    // document is, and shape has to be legible before any of it is read.
     &::after {
       content: "";
       position: absolute;
@@ -2960,7 +3000,7 @@ body:has(.hero-screen) { overflow-x: hidden; }
       height: 100%;
       background: linear-gradient(
         to bottom,
-        var(--gray-1200) 0 var(--mark-fill, 0%),
+        var(--accent-ink) 0 var(--mark-fill, 0%),
         var(--gray-800) var(--mark-fill, 0%) 100%
       );
     }
