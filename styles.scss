@@ -2177,8 +2177,22 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // The column widened 8rem → 10rem to hold the longest string on the site
     // ("Jul 22, 2026 · 13 min") on one line; `white-space: nowrap` makes that a
     // guarantee rather than a measurement that a future date could break.
+    // The date takes the filing FLOOR (--text-filing, 12.75px), not the
+    // apparatus size the mixin hands it. The tier's own distinction settles
+    // this: captions and the rail are apparatus you READ, a date is apparatus
+    // you REFER TO — nobody reads a date, they check it. That is verbatim the
+    // reasoning the post header used on 2026-08-03 when its filing row dropped
+    // a step, and a listing date is the same object doing the same job. It also
+    // opens a third ink rung in the row: ink title, secondary description,
+    // tertiary date, which is the ramp being used the way it was built.
+    //
+    // Left in place at the call site rather than in `@mixin listing-meta`:
+    // /instruments/ shares that mixin and its language + year row is arguably
+    // the same filing object, but moving it is a separate decision about a
+    // separate page.
     .metadata {
       @include listing-meta;
+      font-size: var(--text-filing);
       white-space: nowrap;
 
       a {
@@ -2201,7 +2215,7 @@ body:has(.hero-screen) { overflow-x: hidden; }
     }
 
     // 600, up from 500 (2026-08-20). The title was weight 500 and one line; the
-    // description is weight 400, the SAME SIZE, and three lines. Mass beats
+    // description was weight 400, the SAME SIZE, and three lines. Mass beats
     // weight, so the description won and the row read as a gray paragraph with
     // a heading-ish first line — the exact failure Layer 1's own rule names:
     // emphasis is a contrast event, not just a weight event. The listing had
@@ -2210,7 +2224,14 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // 600 costs nothing in the flat scale because nothing changes size, and the
     // argument is exact: on the homepage a listing title IS a post title, and
     // 600 is the weight the site already reserves for post titles and h1. Same
-    // object, same weight.
+    // object, same weight. It is also the ladder's top rung — 700 exists in the
+    // Nunito axis but nowhere in this system, and one row is not a reason to
+    // open a new rung.
+    //
+    // The contrast event that 600 needed behind it is now the description
+    // RECEDING rather than the title growing — see the note on
+    // .listing-description below. The title holds the flat scale; everything
+    // under it steps down a tier.
     h3.listing-title {
       font-size: 1rem;
       font-weight: 600;
@@ -2220,9 +2241,39 @@ body:has(.hero-screen) { overflow-x: hidden; }
       margin: 0;
     }
 
+    // RANK BY RECESSION, NOT BY SCALE (2026-08-20, Ameya's call, and it is the
+    // better answer). The bottom of the page was uniform — title and summary set
+    // at the identical 17px, so the only rank in the row was weight, and a
+    // one-line title at 500 lost to a three-line description at 400. The first
+    // fix pushed the TITLE up to 1.2rem, which worked but cost the homepage a
+    // second exception to the flat scale and put the title within 1.3rem of
+    // wrapping its measure.
+    //
+    // Moving the description DOWN instead buys the same separation out of tiers
+    // the site already owns: 17/14.9 is a 1.14 size step where 20.4/17 was 1.20,
+    // and the ink step (13.8:1 -> 6.4:1) plus 200 weight units carry the rest.
+    // The flat prose scale survives intact, the hero stays the homepage's one
+    // exception, no title can wrap, and the row gets shorter — which is its own
+    // argument on a page whose whole job is to list things.
+    //
+    // ⚠ THIS PUTS ARGUMENT-BEARING TEXT IN THE APPARATUS TIER, which Layer 1b
+    // forbids in as many words: "nothing that carries argument may use this
+    // tier". The exemption is narrow and deliberate. That rule was written
+    // against FIGURE CAPTIONS — a caption sits beside the thing it explains, and
+    // the failure is it competing with the prose it serves. A listing
+    // description sits under a title on an index and its entire job is to be
+    // SCANNED: it is how a reader decides whether to open the post, not where
+    // the post is made. That is the same distinction the filing line already
+    // draws inside the tier — apparatus you read against apparatus you refer to.
+    // The claim itself still lives at full size, on its own page.
+    //
+    // Held at --gray-1100, not --gray-1000: the size step and the ink step are
+    // enough, and dropping both to the tertiary rung would demote on two axes at
+    // once for one job. One axis at a time is the lesson the mono experiment
+    // left behind. If it still reads too loud, --gray-1000 is the next notch.
     .listing-description {
-      font-size: 1rem;
-      line-height: 1.65;
+      font-size: var(--text-apparatus);
+      line-height: 1.6; // the apparatus tier's leading, not the prose 1.65
       color: var(--gray-1100);
       margin-top: 0.235rem; // 4px — the bind /instruments/ uses on its claim
 
@@ -2233,58 +2284,6 @@ body:has(.hero-screen) { overflow-x: hidden; }
     }
   }
 }
-
-// ---- The homepage's second scale event (2026-08-20) -------------------------
-// Ameya's read on the built page: the hero is dynamic and "the bottom is
-// uniform". Measured, that is exactly right and the gap is not close — the hero
-// runs 11.7px labels against a 57.8px headline, a 4.95x type range, while the
-// bottom of the page runs 13.8 / 17 / 17 / 14.9: a range of 1.23x. Four sizes
-// that are effectively one size. The title and the summary it introduces were
-// literally the same size, so the only rank the row carried was weight.
-//
-// This is the SAME failure Layer 1b diagnosed on post pages, one level down, and
-// the site already knows the remedy. There the finding was that a flat scale was
-// borrowed from Emil without its support structure — his column alternates prose
-// with bordered demo cards that carry all the page's punctuation, ours does not —
-// and the answer was one sanctioned jump (the post title, 17 -> 27.2px) with
-// severity underneath it. "One event, then severity, rather than no events."
-//
-// The flat-scale rule reserved the homepage's only exception for the hero. That
-// rule predates two things: the second list, and the seam that now takes the
-// hero to zero opacity as it leaves. Once the hero is gone the bottom of the
-// page has NO contrast event at all — which is precisely the screen Ameya is
-// describing. So the homepage gets its second exception, on the same grounds the
-// post page got its first.
-//
-// WHY THE TITLE. It is the object that most deserves it: on the homepage a
-// listing title IS a post title, and on its own page that title is 1.6rem. 1.2rem
-// keeps the ranking honest — the post's own title stays the largest instance of
-// itself — and it is the ceiling the measure allows: the longest title on the
-// site occupies 32.1rem of the 40rem column at 1rem, so 1.25rem would wrap it and
-// 1.2rem leaves ~1.3rem of slack. `text-wrap: balance` is there for the first
-// title that outgrows that, so a wrap breaks evenly instead of leaving one word
-// stranded — the same rule the hero's lines carry.
-#quarto-content main.content #listing-writing .quarto-post h3.listing-title {
-  font-size: 1.2rem;
-  line-height: 1.4;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
-}
-
-// The description needs a touch more air under a bigger title — 4px bound a
-// 17px title to its summary, and reads tight under a 20.4px one.
-#quarto-content main.content #listing-writing .listing-description {
-  margin-top: 0.412rem; // 7px
-}
-
-// NOTES STAYS FLAT, and that is the point rather than an omission. The two lists
-// have been typographically identical since the notes strip was built — same row,
-// same title, same date — and the kicker was the only thing telling a reader they
-// are different registers. Writing is the argument and takes the event; notes are
-// comment-sized (paper reactions, small results, dead ends) and keep the flat
-// scale. The distinction IS the design: the lists now read as two registers of
-// one instrument because they are set as two registers, not because a label says
-// so.
 
 // ---- /instruments/ ----------------------------------------------------------
 // The homepage's row, with three deliberate differences, each one a consequence
