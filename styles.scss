@@ -221,7 +221,16 @@ $grid-default-toc-mid-body-column-max: 40.706rem; // default-body − 50px
   --text-filing: 0.75rem; // 12.75px — the filing line only, one step under the
                           // apparatus tier. Referred to, not read. #66625a on
                           // #eeece6 is 5.14:1, so the step down costs nothing in
-                          // contrast. This is the floor; nothing else goes here.
+                          // contrast. This is the FLOOR — there is nothing below
+                          // it and nothing may be added below it. Said "nothing
+                          // else goes here" when the post filing line was its
+                          // only user; the homepage listing's date joined it on
+                          // 2026-08-20 (a listing date is the same object doing
+                          // the same job) and so did the listing description,
+                          // which is the one genuine stretch — see the note at
+                          // .listing-description for why a summary on an index
+                          // is referred to rather than read, and for the measure
+                          // cap that makes the size survivable.
 }
 
 html {
@@ -2235,20 +2244,18 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // reason the floor exists: this is apparatus you refer to, not apparatus you
     // read. One glance, then past it.
     //
-    // THE PILL, after building it both ways (2026-08-20). The first version was
-    // bare — case and colour only — on the argument that a rounded bordered
-    // object would be the only one on the homepage and the post header had
-    // already refused pills for its categories. Ameya saw both and took the
-    // pill, and the objection turns out to have been overstated: INLINE CODE IS
-    // ALREADY THIS CONSTRUCTION — 1px --gray-400, radius 6px — so the capsule
-    // borrows a shape the system owns rather than inventing one. The post
-    // header's refusal also stands undisturbed, because its reason was local: a
-    // filing row of five categories in pills is a row of buttons, where one chip
-    // in front of a title is a label on an object.
+    // NO PILL — built both ways and settled on the page (2026-08-20). The
+    // capsule was defensible on materials (inline code is already a 1px
+    // --gray-400 rounded object, so it borrowed a shape the system owns) and it
+    // still lost, because materials were not what was wrong with it. Three
+    // outlined capsules stacked down the left edge of a list read as three
+    // buttons on a page that has no buttons, and they add a drawn object to
+    // every row of a list whose whole argument is that it is not decorated.
+    // Bloat is a count, not a colour.
     //
-    // What the border buys is containment. Bare, the chip and the title were one
-    // continuous run of words in two cases, and the eye had to use the size
-    // change alone to find where the label stopped and the title began.
+    // Bare, the chip is case and colour only, and the containment the border was
+    // buying comes from the SIZE and CASE gap instead: 11.7px uppercase tracked
+    // against a 17px 700 title is not a run-on, it is a label and a headline.
     //
     // The chip sits INSIDE the title's anchor (tools/site/kind-chips.py moves it
     // there at build time), so it shares the row's single link target rather than
@@ -2262,31 +2269,20 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // kicker — a label naming what it sits beside. The tier gains a second user
     // rather than the scale gaining a rung.
     .listing-kind-chip {
-      display: inline-block;
       font-size: var(--text-label);
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--gray-1000);
-      border: 1px solid var(--gray-400);
-      border-radius: 999px;
-      padding: 0.12rem 0.5rem;
-      margin-right: 0.7rem;
-      // Nudged off the baseline so the capsule centres on the title's x-height
-      // instead of hanging below it — the chip is shorter than the line it sits
-      // in, so baseline alignment reads as a drop.
-      vertical-align: 0.12em;
+      margin-right: 0.85ch; // the ledger numerals' offset, reused
       white-space: nowrap;
     }
 
     // The chip follows the title into the accent on hover, because the whole row
-    // is one link and a chip that stayed gray would read as not part of it. The
-    // border goes with it, which is the same pairing every link on the site
-    // makes — accent-ink on the text, accent on the rule under it.
+    // is one link and a chip that stayed gray would read as not part of it.
     &:hover .listing-kind-chip,
     &:focus-within .listing-kind-chip {
       color: var(--accent-ink);
-      border-color: var(--accent);
     }
 
     // 600, up from 500 (2026-08-20). The title was weight 500 and one line; the
@@ -2351,10 +2347,23 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // enough, and dropping both to the tertiary rung would demote on two axes at
     // once for one job. One axis at a time is the lesson the mono experiment
     // left behind. If it still reads too loud, --gray-1000 is the next notch.
+    // 31rem, NOT the body's 40rem, and the cap is the reason this size step is
+    // safe (2026-08-20). The 40rem measure was argued for 17px prose, where it
+    // holds ~75 characters. A description does not inherit that guarantee by
+    // sitting inside it — it inherits the WIDTH and sets its own line length,
+    // and at 14.88px in the same column it was already running ~86 characters,
+    // past the discipline the cap exists to enforce. At 12.75px it would run
+    // ~100, which is worse than the 95+ the cap was written to fix in the first
+    // place. Capping the description at 31rem puts it back at ~78.
+    //
+    // The title still runs the full 40rem, so the two have different right
+    // edges. That is the intended reading, not a mistake: a headline wider than
+    // its standfirst is the oldest arrangement in the trade.
     .listing-description {
-      font-size: var(--text-apparatus);
+      font-size: var(--text-filing);
       line-height: 1.6; // the apparatus tier's leading, not the prose 1.65
       color: var(--gray-1100);
+      max-width: 31rem; // ~78 characters at 12.75px
       margin-top: 0.235rem; // 4px — the bind /instruments/ uses on its claim
 
       p {
