@@ -4,7 +4,6 @@ description: "A copying head with the OV half of a bracket-completion mechanism,
 date: 2026-07-10
 categories: [mechanistic interpretability, transformers]
 image: figures/fig2_spike_copying_score.png
-kind: Analysis
 reading-time: true
 ---
 

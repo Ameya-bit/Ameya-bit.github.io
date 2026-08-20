@@ -202,12 +202,10 @@ $grid-default-toc-mid-body-column-max: 40.706rem; // default-body − 50px
   // reading as a different font.
   --font-apparatus: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --text-apparatus-mono: 0.8125rem; // 13.8px — the numerals only
-  --text-label: 0.6875rem; // 11.7px, uppercase, tracked — labels: the hero
-                           // kicker and, since 2026-08-20, the listing's kind
-                           // chip. Said "kickers only" when it had one user; a
-                           // chip is the same kind of object, a label naming
-                           // what it sits beside, so the tier gained a second
-                           // user rather than the scale gaining a rung.
+  --text-label: 0.6875rem; // 11.7px, uppercase, tracked — kickers only. Briefly
+                           // carried the listing's kind chip (2026-08-20, out
+                           // the same day); if a label object ever returns, this
+                           // is its size and it needs no new rung.
 
   // The apparatus tier. Prose stays flat at 16px — that part of the Emil
   // reverse-engineering was right (his post h1 carries no font-size class at
@@ -2228,70 +2226,6 @@ body:has(.hero-screen) { overflow-x: hidden; }
       color: var(--gray-1200);
     }
 
-    // ---- The kind chip (2026-08-20) ----------------------------------------
-    // A reader landing cold cannot tell that the neutron-star piece is a
-    // manuscript and the IOI piece is a comparison of three methods. The titles
-    // answer "what is this about" and nothing on the page answers "what KIND of
-    // thing is this" — which is the first question anyone deciding whether to
-    // read actually asks. transformer-circuits.pub, the closest neighbour this
-    // site has in genre, marks every entry `paper` / `note` / `github` for the
-    // same reason.
-    //
-    // NO NEW MATERIAL. This is the filing voice the site already speaks in four
-    // places — the hero's status line, the hero's links row, /instruments/'s
-    // repository-and-post line, the list kickers: uppercase, tracked, tertiary,
-    // in the prose face. It is set at --text-filing, the tier's FLOOR, for the
-    // reason the floor exists: this is apparatus you refer to, not apparatus you
-    // read. One glance, then past it.
-    //
-    // NO PILL — built both ways and settled on the page (2026-08-20). The
-    // capsule was defensible on materials (inline code is already a 1px
-    // --gray-400 rounded object, so it borrowed a shape the system owns) and it
-    // still lost, because materials were not what was wrong with it. Three
-    // outlined capsules stacked down the left edge of a list read as three
-    // buttons on a page that has no buttons, and they add a drawn object to
-    // every row of a list whose whole argument is that it is not decorated.
-    // Bloat is a count, not a colour.
-    //
-    // Bare, the chip is case and colour only, and the containment the border was
-    // buying comes from the SIZE and CASE gap instead: 11.7px uppercase tracked
-    // against a 17px 700 title is not a run-on, it is a label and a headline.
-    //
-    // The chip sits INSIDE the title's anchor (tools/site/kind-chips.py moves it
-    // there at build time), so it shares the row's single link target rather than
-    // becoming a second, smaller click surface beside it. It therefore has to
-    // opt out of the anchor's ink explicitly — hence the colour here.
-    //
-    // `aria-hidden` is deliberately NOT set: "Paper" genuinely qualifies the
-    // title for a screen reader too, and it reads as part of the same phrase.
-    // --text-label, not a new size: 11.7px uppercase-and-tracked is the token
-    // the kickers already use, and a chip is the same kind of object as a
-    // kicker — a label naming what it sits beside. The tier gains a second user
-    // rather than the scale gaining a rung.
-    .listing-kind-chip {
-      font-size: var(--text-label);
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--gray-1000);
-      margin-right: 0.85ch; // the ledger numerals' offset, reused
-      white-space: nowrap;
-    }
-
-    // The chip follows the title into the accent on hover, because the whole row
-    // is one link and a chip that stayed gray would read as not part of it.
-    &:hover .listing-kind-chip,
-    &:focus-within .listing-kind-chip {
-      color: var(--accent-ink);
-    }
-
-    // 600, up from 500 (2026-08-20). The title was weight 500 and one line; the
-    // description was weight 400, the SAME SIZE, and three lines. Mass beats
-    // weight, so the description won and the row read as a gray paragraph with
-    // a heading-ish first line — the exact failure Layer 1's own rule names:
-    // emphasis is a contrast event, not just a weight event. The listing had
-    // the weight event and nothing behind it.
-    //
     // 700 as of 2026-08-20, up from the 600 this pass first shipped. The
     // argument for stopping at 600 was that a listing title IS a post title and
     // 600 is the weight post titles carry — true, but it ignores that they do
@@ -2359,15 +2293,30 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // The title still runs the full 40rem, so the two have different right
     // edges. That is the intended reading, not a mistake: a headline wider than
     // its standfirst is the oldest arrangement in the trade.
+    // --gray-1000, the tertiary rung (2026-08-20). The step down from --gray-1100
+    // was held back for a while on the "one axis at a time" principle, since the
+    // size had already dropped two notches — but that principle guards against
+    // demoting something too far, and the size step turned out to be the thing
+    // this row wanted more of, not less. At 5.14:1 the description is still
+    // comfortably text-safe on stone; what it stops doing is competing.
+    //
+    // ⚠ The description and the date are now typographically IDENTICAL — same
+    // size, same colour, same weight — and only the column they sit in tells
+    // them apart. That is legible because the grid separates them absolutely,
+    // and it is arguably correct (both are filing facts about the post rather
+    // than the post's argument). But it means the row has three ink rungs, not
+    // four, and there is nothing left below this one: --text-filing is the
+    // floor and --gray-1000 is the last text-safe step on the ramp. Any further
+    // recession has to come from the title going up, not the summary going down.
     .listing-description {
       font-size: var(--text-filing);
       line-height: 1.6; // the apparatus tier's leading, not the prose 1.65
-      color: var(--gray-1100);
+      color: var(--gray-1000);
       max-width: 31rem; // ~78 characters at 12.75px
       margin-top: 0.235rem; // 4px — the bind /instruments/ uses on its claim
 
       p {
-        color: var(--gray-1100);
+        color: var(--gray-1000);
         margin: 0;
       }
     }
