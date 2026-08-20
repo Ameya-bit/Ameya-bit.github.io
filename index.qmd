@@ -110,10 +110,16 @@ listing:
              homepage to count. It therefore carries no `data-counts` and the
              script skips it by construction rather than by accident. The rows on
              that page are the source of truth — add one there, change the 05
-             here. -->
+             here.
+
+             `data-counts` sits on the NUMERAL, not on the anchor (2026-08-20).
+             The section kickers below now carry the same count in the same
+             numeral, so the attribute moved onto the element that actually holds
+             the digits and one selector feeds both. The instruments row still
+             opts out by simply not carrying it. -->
         <nav class="hero-ledger" aria-label="Site contents"><span class="rise-mask"><span class="rise" style="--beat: 500ms">
-          <a href="#writing-section" data-counts="writing">Writing<span class="ledger-n">03</span></a>
-          <a href="#notes-section" data-counts="notes">Notes<span class="ledger-n">03</span></a>
+          <a href="#writing-section">Writing<span class="ledger-n" data-counts="writing">03</span></a>
+          <a href="#notes-section">Notes<span class="ledger-n" data-counts="notes">03</span></a>
           <a href="instruments/">Instruments<span class="ledger-n">05</span></a>
         </span></span></nav>
       </div>
@@ -136,7 +142,7 @@ listing:
      Ameya's catch): the label used to live only in the hero's cue, which the
      seam dims on scroll — so by the time the reader reached the list, its
      name had faded out. Labels belong to the content they label. -->
-<p class="list-kicker" role="heading" aria-level="2">Writing</p>
+<p class="list-kicker" role="heading" aria-level="2">Writing<span class="kicker-n" data-counts="writing">03</span></p>
 ```
 
 ::: {#writing}
@@ -147,7 +153,7 @@ listing:
 ::: {#notes-section .notes-section}
 
 ```{=html}
-<p class="list-kicker" role="heading" aria-level="2">Notes</p>
+<p class="list-kicker" role="heading" aria-level="2">Notes<span class="kicker-n" data-counts="notes">03</span></p>
 ```
 
 ::: {#notes}
@@ -165,16 +171,20 @@ listing:
 ```
 
 ```{=html}
-<!-- The ledger's honest-count guarantee: re-read each collection's size from
-     the listings this same page just rendered. No fetch, no state — if JS is
-     off, the publish-time numbers in the markup stand (and were true when
-     written). padStart keeps the two-digit filing format the numerals share
-     with the posts' section counters. -->
+<!-- The honest-count guarantee: re-read each collection's size from the
+     listings this same page just rendered. No fetch, no state — if JS is off,
+     the publish-time numbers in the markup stand (and were true when written).
+     padStart keeps the two-digit filing format the numerals share with the
+     posts' section counters.
+
+     One pass over every `[data-counts]` on the page (2026-08-20), which is now
+     four elements rather than two: the hero ledger's rows and the two section
+     kickers. Feeding both from the same query is the point — the ledger and the
+     kicker publish the same number, so they must not be able to disagree. -->
 <script>
-  document.querySelectorAll(".hero-ledger a[data-counts]").forEach(function (a) {
-    var n = document.querySelectorAll("#listing-" + a.getAttribute("data-counts") + " .quarto-post").length;
-    var el = a.querySelector(".ledger-n");
-    if (el && n) el.textContent = String(n).padStart(2, "0");
+  document.querySelectorAll("[data-counts]").forEach(function (el) {
+    var n = document.querySelectorAll("#listing-" + el.getAttribute("data-counts") + " .quarto-post").length;
+    if (n) el.textContent = String(n).padStart(2, "0");
   });
 </script>
 ```

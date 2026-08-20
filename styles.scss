@@ -1807,6 +1807,29 @@ html[data-hero-entrance="play"] .hero-screen .rise {
   margin: 0 0 0.706rem; // 12px — binds to the rows below, clears the hover pill's bleed
 }
 
+// The kicker carries its count (2026-08-20), in the ledger's numeral. The hero
+// ledger's row and this kicker are THE SAME OBJECT seen at two ends of the page
+// — one is the link, one is the destination — so they should read as one thing,
+// which is the trick the site already runs between the gutter numerals and the
+// rail. It also separates the two lists by IDENTITY rather than by a rule: a
+// hairline under a kicker would argue the kicker and its own list are different
+// things, which is exactly why the post header dropped its rule on 2026-08-03.
+//
+// This closes the question direction.md leaves open on 2026-08-05 — whether the
+// ledger's counts and the site's section numerals are one system. They are, and
+// the single `[data-counts]` pass at the foot of index.qmd now writes both from
+// the same query, so the two numerals can never disagree.
+//
+// Tracking is zeroed: the kicker's 0.06em is there to open up uppercase WORDS,
+// and it was pushing the two digits apart into something that read as a stray
+// pair rather than a number.
+#quarto-content main.content .kicker-n {
+  font-family: var(--font-apparatus);
+  font-weight: 400;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.85ch; // the ledger's offset, verbatim
+}
 
 // Ledger anchors land the section a breath below the window edge.
 .writing-section,
