@@ -202,7 +202,12 @@ $grid-default-toc-mid-body-column-max: 40.706rem; // default-body − 50px
   // reading as a different font.
   --font-apparatus: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --text-apparatus-mono: 0.8125rem; // 13.8px — the numerals only
-  --text-label: 0.6875rem; // 11.7px, uppercase, tracked — kickers only
+  --text-label: 0.6875rem; // 11.7px, uppercase, tracked — labels: the hero
+                           // kicker and, since 2026-08-20, the listing's kind
+                           // chip. Said "kickers only" when it had one user; a
+                           // chip is the same kind of object, a label naming
+                           // what it sits beside, so the tier gained a second
+                           // user rather than the scale gaining a rung.
 
   // The apparatus tier. Prose stays flat at 16px — that part of the Emil
   // reverse-engineering was right (his post h1 carries no font-size class at
@@ -2230,11 +2235,20 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // reason the floor exists: this is apparatus you refer to, not apparatus you
     // read. One glance, then past it.
     //
-    // NO PILL, NO FILL, NO BORDER. Every reference draws these as outlined
-    // capsules and that is exactly what this page cannot have — a rounded
-    // bordered object would be the only one on the homepage, and the post header
-    // already refused pills for its categories on the same grounds. Rank comes
-    // from case and colour, which costs nothing the page does not already own.
+    // THE PILL, after building it both ways (2026-08-20). The first version was
+    // bare — case and colour only — on the argument that a rounded bordered
+    // object would be the only one on the homepage and the post header had
+    // already refused pills for its categories. Ameya saw both and took the
+    // pill, and the objection turns out to have been overstated: INLINE CODE IS
+    // ALREADY THIS CONSTRUCTION — 1px --gray-400, radius 6px — so the capsule
+    // borrows a shape the system owns rather than inventing one. The post
+    // header's refusal also stands undisturbed, because its reason was local: a
+    // filing row of five categories in pills is a row of buttons, where one chip
+    // in front of a title is a label on an object.
+    //
+    // What the border buys is containment. Bare, the chip and the title were one
+    // continuous run of words in two cases, and the eye had to use the size
+    // change alone to find where the label stopped and the title began.
     //
     // The chip sits INSIDE the title's anchor (tools/site/kind-chips.py moves it
     // there at build time), so it shares the row's single link target rather than
@@ -2243,21 +2257,36 @@ body:has(.hero-screen) { overflow-x: hidden; }
     //
     // `aria-hidden` is deliberately NOT set: "Paper" genuinely qualifies the
     // title for a screen reader too, and it reads as part of the same phrase.
+    // --text-label, not a new size: 11.7px uppercase-and-tracked is the token
+    // the kickers already use, and a chip is the same kind of object as a
+    // kicker — a label naming what it sits beside. The tier gains a second user
+    // rather than the scale gaining a rung.
     .listing-kind-chip {
-      font-size: var(--text-filing);
-      font-weight: 500;
-      letter-spacing: 0.08em;
+      display: inline-block;
+      font-size: var(--text-label);
+      font-weight: 600;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--gray-1000);
-      margin-right: 0.85ch; // the numerals' offset, reused
+      border: 1px solid var(--gray-400);
+      border-radius: 999px;
+      padding: 0.12rem 0.5rem;
+      margin-right: 0.7rem;
+      // Nudged off the baseline so the capsule centres on the title's x-height
+      // instead of hanging below it — the chip is shorter than the line it sits
+      // in, so baseline alignment reads as a drop.
+      vertical-align: 0.12em;
       white-space: nowrap;
     }
 
     // The chip follows the title into the accent on hover, because the whole row
-    // is one link and a chip that stayed gray would read as not part of it.
+    // is one link and a chip that stayed gray would read as not part of it. The
+    // border goes with it, which is the same pairing every link on the site
+    // makes — accent-ink on the text, accent on the rule under it.
     &:hover .listing-kind-chip,
     &:focus-within .listing-kind-chip {
       color: var(--accent-ink);
+      border-color: var(--accent);
     }
 
     // 600, up from 500 (2026-08-20). The title was weight 500 and one line; the
@@ -2267,12 +2296,17 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // emphasis is a contrast event, not just a weight event. The listing had
     // the weight event and nothing behind it.
     //
-    // 600 costs nothing in the flat scale because nothing changes size, and the
-    // argument is exact: on the homepage a listing title IS a post title, and
-    // 600 is the weight the site already reserves for post titles and h1. Same
-    // object, same weight. It is also the ladder's top rung — 700 exists in the
-    // Nunito axis but nowhere in this system, and one row is not a reason to
-    // open a new rung.
+    // 700 as of 2026-08-20, up from the 600 this pass first shipped. The
+    // argument for stopping at 600 was that a listing title IS a post title and
+    // 600 is the weight post titles carry — true, but it ignores that they do
+    // not carry it at the same SIZE. A post title is 600 at 1.6rem, where the
+    // face is large enough that 600 already reads heavy; the same weight at 1rem
+    // does not, because stroke contrast scales with the type and the flat scale
+    // denies this title the size that would carry it. Smaller type needs more
+    // weight to hold the same presence, so the row that cannot grow takes the
+    // rung above instead. Nunito ships 400..700 and the site already loads the
+    // full axis, so this costs no bytes — only a rung, and it buys the one
+    // contrast event on a screen that had none.
     //
     // The contrast event that 600 needed behind it is now the description
     // RECEDING rather than the title growing — see the note on
@@ -2280,7 +2314,7 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // under it steps down a tier.
     h3.listing-title {
       font-size: 1rem;
-      font-weight: 600;
+      font-weight: 700;
       line-height: 1.65;
       letter-spacing: 0;
       color: var(--gray-1200);
