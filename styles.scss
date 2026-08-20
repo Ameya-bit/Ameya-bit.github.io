@@ -191,6 +191,21 @@ $grid-default-toc-mid-body-column-max: 40.706rem; // default-body − 50px
   --accent-ink: #b43c7a;
 
   --hover-fill: #e6e3dc;
+
+  // Text selection, moved onto the accent 2026-08-20. The stylesheet had
+  // already written the argument for this and then not applied it: the note on
+  // the IOI lens's selected cell says "selection is the accent's job — it
+  // exists only while the reader is pointing at something, which is exactly
+  // what the spending rule permits." That is true of a lens cell and equally
+  // true of a paragraph, but text selection was still --gray-500.
+  //
+  // Held EXTREMELY light on purpose: the accent mixed 12% into the paper. The
+  // old gray sat at 1.36:1 against the page, this at 1.13:1 — about a third of
+  // that strength, a wash rather than a highlighter. Ink on it is 12.19:1, so
+  // selected prose loses nothing. Derived as mix(--gray-100, --accent, 0.12);
+  // to dial it, re-mix rather than eyeballing a hex, and keep it under 1.36 or
+  // it stops being the quieter thing it was changed to be.
+  --selection: #e8dcdc;
   --measure-pad: 1.412rem; // 24px at calibration
   --shell: 68.235rem; // 1160px at calibration — homepage-only wide layout
 
@@ -270,7 +285,7 @@ body {
 }
 
 ::selection {
-  background: var(--gray-500);
+  background: var(--selection);
 }
 
 // Focus is an interaction, so it takes the accent along with every other
@@ -1923,6 +1938,39 @@ main.content > :last-child {
   }
 }
 
+// ---- Press feedback (2026-08-20) -------------------------------------------
+// The motion spec has said "press feedback = scale(0.97) on :active" since Layer
+// 1 and nothing on this site had ever implemented it — a grep for `:active`
+// returned zero rules. Press was the only interaction with no response at all,
+// on a site where hover, focus and selection all answer.
+//
+// THE SPEC'S ONE NUMBER DOES NOT SURVIVE CONTACT WITH DIFFERENT-SIZED OBJECTS.
+// 3% of a 90px links entry is under 3px and reads as a push; 3% of an 850px
+// listing row is 13px of travel on each edge and reads as a wobble. So the rule
+// the number was standing in for gets applied instead: PRESS DEEPENS WHATEVER
+// THE OBJECT ALREADY USES TO ANSWER. Compact text targets answer with the text
+// itself, so they scale. The listing row answers with a fill, so its press is a
+// deeper fill — that one lives with the row, up in the listing block.
+//
+// NOT GATED BEHIND prefers-reduced-motion, which is a considered exception to
+// the "everything gated" rule rather than an oversight. There is no transition
+// here: the scale is instantaneous, so it is a STATE, in the same category as
+// the hover fill, not an animation. Gating it would delete the press response
+// for exactly the readers least likely to be using a pointer precisely, which
+// trades an accessibility gain for an accessibility loss. `transform-origin` is
+// centred by default, so nothing drifts.
+//
+// Transform only, so no press can reflow anything around it.
+#quarto-content main.content {
+  .hero-links a,
+  .hero-ledger a,
+  .instrument-links a {
+    &:active {
+      transform: scale(0.97);
+    }
+  }
+}
+
 // ---- Résumé page (/resume/) -------------------------------------------------
 // The body is GENERATED — tools/resume/build.py renders resume.toml into this
 // grammar (and the same source fills the LaTeX template for the PDF). The
@@ -2182,8 +2230,39 @@ body:has(.hero-screen) { overflow-x: hidden; }
     // The pill is the whole row's affordance, and it is honest here because on
     // a listing the whole row IS one link. /instruments/ deliberately has no
     // pill — see the note there.
-    &:hover {
+    //
+    // :focus-within joins :hover so a keyboard reader gets the same row, not a
+    // ring around a row that stays inert.
+    &:hover,
+    &:focus-within {
       background: var(--hover-fill);
+    }
+
+    // AND THE TITLE TAKES THE ACCENT (2026-08-20). Until now this was the only
+    // hover on the entire site that did not spend it — every other link goes
+    // --accent-ink with an --accent underline, while the most-used interaction
+    // on the homepage went gray and stopped there. The row is one link; its
+    // title is that link's name; so the name is what colours. The description
+    // and the date do not follow, because they are filing rather than the
+    // link — the same division the row is already set to.
+    //
+    // No underline to go with it: the row already answers with a fill, and a
+    // fill plus a rule plus a colour is three responses to one pointer.
+    &:hover h3.listing-title,
+    &:focus-within h3.listing-title,
+    &:hover h3.listing-title a,
+    &:focus-within h3.listing-title a {
+      color: var(--accent-ink);
+    }
+
+    // Press feedback as a DEEPER FILL, not the motion spec's scale(0.97) — see
+    // the press block near the foot of this file for why the spec's one number
+    // does not survive contact with objects of different sizes. An 850px row
+    // scaled 3% moves its own edges 13px, which reads as a wobble; the row's
+    // affordance is a fill, so its press is more of the same fill. --gray-400 is
+    // the ramp's next step down from --hover-fill, so this costs no new value.
+    &:active {
+      background: var(--gray-400);
     }
 
     .thumbnail {
