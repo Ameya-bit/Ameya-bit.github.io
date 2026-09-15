@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""The résumé adapter: one source, two renderers.
+"""The résumé adapter: one source, two variants, two renderers.
 
     tools/resume/resume.toml            the content, and nothing else
         ├── resume/_body.md             the page's body (site language; committed)
-        └── build/Resume.tex ──latexmk──► assets/Ameya_Panchal_Resume.pdf
+        └── build/Resume-<variant>.tex ──latexmk──► assets/<variant's pdf>
+
+A variant ([variants.<name>] in the TOML) is a selection over the one source:
+its sections in its order, the entries and skills rows tagged for it, and any
+per-variant override tables applied. The page renders the variant the TOML
+names as `page`; --pdf builds every variant's PDF, and the page links them all.
 
 Default run (no flags) regenerates resume/_body.md only. It is wired as the
 project's Quarto pre-render hook, so the page can never drift from the source.
 
     python3 tools/resume/build.py --pdf
 
-additionally fills template.tex's content region, runs latexmk, and copies the
-PDF into assets/. Run it whenever the content changes; the PDF is a build
-artifact, never edited by hand.
+additionally fills template.tex's content region, runs latexmk once per
+variant, and copies the PDFs into assets/. Run it whenever the content
+changes; the PDFs are build artifacts, never edited by hand.
 
 Same split as the figures' compute.py/plot.py: content computed once,
 presentation per surface. The PDF is the SUBSET renderer (contact items with
@@ -36,18 +41,53 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 BODY_MD = ROOT / "resume" / "_body.md"
-PDF_OUT = ROOT / "assets" / "Ameya_Panchal_Resume.pdf"
+ASSETS = ROOT / "assets"
+
+
+# ---- variants ---------------------------------------------------------------
+
+def select(data: dict, variant: str) -> dict:
+    """The source as one variant sees it: a new dict, the source untouched.
+
+    Sections come in the variant's order (and only those it lists); an entry
+    or skills row belongs to every variant unless its `variants` list says
+    otherwise; a per-variant override table on an item replaces the item's
+    own keys for that variant only.
+    """
+    names = tuple(data["variants"])
+
+    def belongs(item: dict) -> bool:
+        return variant in item.get("variants", names)
+
+    def view(item: dict) -> dict:
+        merged = {**item, **item.get(variant, {})}
+        return {k: v for k, v in merged.items() if k != "variants" and k not in names}
+
+    by_title = {s["title"]: s for s in data["sections"]}
+    sections = [
+        {
+            "title": title,
+            "entries": [view(e) for e in by_title[title].get("entries", []) if belongs(e)],
+            "skills": [view(s) for s in by_title[title].get("skills", []) if belongs(s)],
+        }
+        for title in data["variants"][variant]["sections"]
+    ]
+    return {**data, "sections": sections}
 
 
 # ---- text conversions -------------------------------------------------------
 
 def tex_text(s: str) -> str:
     """Plain content string -> the template's TeX conventions."""
-    for a, b in (("&", r"\&"), ("%", r"\%"), ("#", r"\#"), ("$", r"\$")):
+    for a, b in (("&", r"\&"), ("%", r"\%"), ("#", r"\#"), ("$", r"\$"),
+                 ("~", r"\textasciitilde{}")):
         s = s.replace(a, b)
     # χ², with or without a trailing " = <number>", becomes one math span so
     # the equals sign keeps math spacing (matches the hand-written original).
     s = re.sub(r"χ²( = [\d.]+)?", lambda m: r"$\chi^2" + (m.group(1) or "") + "$", s)
+    # Same treatment for ρ (a correlation), the résumé's other Greek letter.
+    s = re.sub(r"ρ( = [\d.]+)?", lambda m: r"$\rho" + (m.group(1) or "") + "$", s)
+    s = s.replace("−", "$-$").replace("×", r"$\times$")   # U+2212, U+00D7
     s = s.replace(" · ", r"\sep ")
     s = s.replace("—", "---").replace("–", "--")
     # Interword (not sentence-ending) spaces after abbreviations the résumé uses.
@@ -108,10 +148,11 @@ def gen_tex(data: dict) -> str:
             out.append("\\entry")
             out.append(f"  {{{head}}}{{{tex_text(e.get('location', ''))}}}")
             out.append(f"  {{{tex_text(e['detail'])}}}{{{tex_text(e['dates'])}}}")
-            out.append("\\begin{points}")
-            for b in e.get("bullets", []):
-                out.append("  \\item " + tex_text(b))
-            out.append("\\end{points}")
+            if e.get("bullets"):   # an empty itemize is a TeX error
+                out.append("\\begin{points}")
+                for b in e["bullets"]:
+                    out.append("  \\item " + tex_text(b))
+                out.append("\\end{points}")
 
         if sec.get("skills"):
             out.append("")
@@ -127,13 +168,21 @@ def gen_tex(data: dict) -> str:
 # ---- the page body (superset renderer) --------------------------------------
 
 def gen_web(data: dict) -> str:
+    # The page shows one variant; the filing line offers every variant's PDF,
+    # the page's own first.
+    page = data["page"]
+    order = [page] + [v for v in data["variants"] if v != page]
+    links = " · ".join(
+        f'<a href="../assets/{data["variants"][v]["pdf"]}">{web_text(data["variants"][v]["label"])}</a>'
+        for v in order
+    )
     out = [
         "<!-- GENERATED by tools/resume/build.py from resume.toml — do not edit."
         " Regenerates on every quarto render (pre-render hook). -->",
         "",
         "```{=html}",
         f'<p class="cv-filing">Updated {web_text(data["updated"])}'
-        ' · <a href="../assets/Ameya_Panchal_Resume.pdf">Download the PDF</a></p>',
+        f" · Download as PDF: {links}</p>",
         "```",
     ]
 
@@ -178,37 +227,42 @@ def gen_web(data: dict) -> str:
 
 # ---- drivers ----------------------------------------------------------------
 
-def build_pdf(data: dict) -> None:
+def build_pdf(data: dict, variant: str) -> None:
     build_dir = HERE / "build"
     build_dir.mkdir(exist_ok=True)
-    (build_dir / "Resume.tex").write_text(gen_tex(data))
+    stem = f"Resume-{variant}"
+    (build_dir / f"{stem}.tex").write_text(gen_tex(data))
     proc = subprocess.run(
-        ["latexmk", "-pdf", "-interaction=nonstopmode", "Resume.tex"],
+        ["latexmk", "-pdf", "-interaction=nonstopmode", f"{stem}.tex"],
         cwd=build_dir, capture_output=True, text=True,
     )
     if proc.returncode != 0:
         sys.stderr.write(proc.stdout[-3000:] + "\n" + proc.stderr[-1000:] + "\n")
-        sys.exit("latexmk failed — see log above")
-    shutil.copy(build_dir / "Resume.pdf", PDF_OUT)
-    print(f"PDF: {PDF_OUT.relative_to(ROOT)}")
+        sys.exit(f"latexmk failed on {variant} — see log above")
+    out = ASSETS / data["variants"][variant]["pdf"]
+    shutil.copy(build_dir / f"{stem}.pdf", out)
+    print(f"PDF ({variant}): {out.relative_to(ROOT)}")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--pdf", action="store_true",
-                    help="also build the PDF via latexmk and copy it into assets/")
+                    help="also build every variant's PDF via latexmk into assets/")
     args = ap.parse_args()
 
-    data = tomllib.loads((HERE / "resume.toml").read_text())
+    source = tomllib.loads((HERE / "resume.toml").read_text())
+    if source["page"] not in source["variants"]:
+        sys.exit(f"resume.toml: page = {source['page']!r} names no variant")
 
     BODY_MD.parent.mkdir(exist_ok=True)
-    body = gen_web(data)
+    body = gen_web(select(source, source["page"]))
     if not BODY_MD.exists() or BODY_MD.read_text() != body:
         BODY_MD.write_text(body)
         print(f"page body: {BODY_MD.relative_to(ROOT)} (updated)")
 
     if args.pdf:
-        build_pdf(data)
+        for variant in source["variants"]:
+            build_pdf(select(source, variant), variant)
 
 
 if __name__ == "__main__":

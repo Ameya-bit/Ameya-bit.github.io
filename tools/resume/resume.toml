@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
 # The résumé's single source of truth. Everything else is generated:
-#   resume/_body.md (the site page's body) and the PDF (via template.tex).
+#   resume/_body.md (the site page's body) and the PDFs (via template.tex).
 # Edit THIS file, then:  python3 tools/resume/build.py --pdf
 # (The page body alone regenerates on every quarto render — pre-render hook.)
 #
@@ -9,7 +9,7 @@
 #   — and –               -> --- and -- in the PDF, themselves on the page
 #   *emphasis*            -> \emph{} in the PDF, <em> on the page
 #   χ² (optional " = n")  -> math mode in the PDF, unicode on the page
-#   & % #                 -> escaped for TeX automatically
+#   & % # ~               -> escaped for TeX automatically
 #
 # Per-item switches:
 #   web = false   on a contact item: PDF-only (the phone number stays off the
@@ -17,13 +17,32 @@
 #   url           makes the entry heading a link on both surfaces
 #   link_label    names that link's destination in the PDF, which has no hover
 #   web_url       overrides url on the page (e.g. site-relative post links)
+#
+# Variants — one source, two résumés:
+#   [variants.<name>]         a variant: its PDF filename, its link label on
+#                             the page, and its sections in order (a section
+#                             left out of the list is left out of the variant)
+#   page = "<name>"           which variant the site page renders
+#   variants = ["research"]   on an entry or skills row: belongs to those
+#                             variants only (default: all of them)
+#   [sections.entries.<name>] a per-variant override table on the entry it
+#                             follows: its keys replace the entry's own for
+#                             that variant (e.g. a different bullet list)
 # ---------------------------------------------------------------------------
 
-updated = "August 2026"
+updated = "September 2026"
 name = "Ameya Panchal"
+page = "research"
 
-[[contact]]
-text = "State College, PA"
+[variants.research]
+pdf = "Ameya_Panchal_Resume.pdf"
+label = "research"
+sections = ["Education", "Research", "Experience", "Projects", "Skills"]
+
+[variants.engineer]
+pdf = "Ameya_Panchal_Resume_Engineering.pdf"
+label = "engineering"
+sections = ["Education", "Experience", "Projects", "Research", "Skills"]
 
 [[contact]]
 text = "(781) 870-7474"
@@ -52,15 +71,40 @@ title = "Education"
   [[sections.entries]]
   heading = "The Pennsylvania State University"
   location = "University Park, PA"
-  detail = "B.S. Computer Science, Minor in Physics, AI · Schreyer Honors College"
+  detail = "B.S. Computer Science, Minors in Physics and AI · Schreyer Honors College · GPA 3.71 / 4.00"
   dates = "Expected May 2028"
-  bullets = [
-    "GPA: 3.71 / 4.00",
-  ]
 
 
 [[sections]]
 title = "Research"
+
+  [[sections.entries]]
+  heading = "Do Residual-Stream Probes Survive Degrading Chain-of-Thought Legibility?"
+  detail = "SPAR · mentored by Marios Tsatsos, with two fellow mentees · PyTorch"
+  dates = "Sep 2026 – Present"
+  bullets = [
+    "Comparing three published readability scores for a model's written reasoning on one set of traces, to find whether they agree",
+    "Testing whether classifiers on a model's internal activations still catch harmful reasoning as that writing degrades",
+  ]
+    [sections.entries.engineer]
+    bullets = [
+      "Testing whether classifiers on a model's internal activations still catch harmful reasoning as its written reasoning degrades",
+    ]
+
+  [[sections.entries]]
+  heading = "The J-lens offset is the model's token frequency: z-scoring fixes it"
+  detail = "Independent · PyTorch, jacobian-lens · Qwen3, Pythia, GPT-2, Gemma-2"
+  dates = "Aug 2026"
+  url = "https://github.com/Ameya-bit/quantify-jlens-offset"
+  link_label = "GitHub"
+  bullets = [
+    "Traced the per-token bias in a lens that reads a model's internal activations as words to the model's own word frequency (Spearman 0.48); subtracting it made readouts 3.5–7× *worse*",
+    "Replaced subtraction with z-scoring: recovered hidden secret words from fine-tuned models where the published method scored zero, and beat it 0.805 to 0.665 on Gemma-2-9B",
+  ]
+    [sections.entries.engineer]
+    bullets = [
+      "Traced a per-token bias in a tool that reads a model's internal activations to the model's word frequency, and fixed it with z-scoring: recovered secret words where the published method scored zero, beating it 0.805 to 0.665 (Cywinski et al. accuracy)",
+    ]
 
   [[sections.entries]]
   heading = "A Dead-ReLU Absorbing State — Resolving an Open Memorization Anomaly"
@@ -70,9 +114,13 @@ title = "Research"
   link_label = "LessWrong"
   web_url = "../notes/dead-relu-collapse/"
   bullets = [
-    "Explained the one architecture Linsefors & Bushnaq left unresolved in their memorization challenge: a training-dynamics failure, not an expressivity limit — a fact whose hidden units all die has its gradient gated to exactly zero",
-    "Split their conflated bias flag for the discriminating experiment — an out-projection bias rescues completely (1024 facts), an in-projection bias not at all (488) — *overturning* the published account; a transplanted 672-fact witness rules out expressivity outright",
+    "Explained why one small transformer in a published memorization challenge could barely learn: its ReLU units died in training and cut off the gradient, a training failure, not a capacity limit",
+    "Confirmed it with one controlled experiment (a bias after the hidden layer restored full capacity, 1024 facts; before it, none, 488) and hand-built weights storing 672 facts; *overturned* the authors' explanation",
   ]
+    [sections.entries.engineer]
+    bullets = [
+      "Explained why one small transformer in a published memorization challenge could barely learn (dead ReLU units cut off the gradient) and *overturned* the authors' explanation with one controlled experiment",
+    ]
 
   [[sections.entries]]
   heading = "An Induction Head in Disguise — Circuit Analysis of a Character-Level Transformer"
@@ -81,12 +129,15 @@ title = "Research"
   url = "https://www.lesswrong.com/posts/x2ZdCoqAaLedpjDk3/an-induction-head-in-disguise-chasing-grammar-in-a-character"
   link_label = "LessWrong"
   web_url = "../posts/induction-head/"
+  variants = ["research"]
   bullets = [
-    "*Disconfirmed* two of my own hypotheses — quotation and parenthesis grammar — with targeted QK attention-pattern controls",
-    "Trained a 6-block character-level transformer and isolated a copying head via OV-circuit eigenvalues and copying scores",
-    "Found the OV circuit encodes bracket completion while the QK circuit stays blind to it: a half-built mechanism",
+    "Trained a 6-layer character-level transformer on Nietzsche's prose and located the one attention head that copies earlier text forward",
+    "*Ruled out* two hypotheses about the head (quotation and parenthesis matching) with targeted controls",
+    "Found the head had learned half of a bracket-matching mechanism: it knows what to write, but never learned where to look",
   ]
 
+  # Parked (variants = []) when the J-lens study arrived: one page holds four
+  # research entries, and this reproduction is the one the others supersede.
   [[sections.entries]]
   heading = "Reading GPT-2's IOI Circuit Three Ways"
   detail = "Independent · TransformerLens"
@@ -94,21 +145,26 @@ title = "Research"
   url = "https://ameya-bit.github.io/posts/ioi-circuit/index.html"
   link_label = "writeup"
   web_url = "../posts/ioi-circuit/"
+  variants = []
   bullets = [
-    "Recovered the IOI circuit (Wang et al.) with direct logit attribution, activation patching, and path patching, each hand-implemented",
+    "Reproduced a known GPT-2 circuit (Wang et al.) with three attribution methods, each implemented by hand",
   ]
 
   [[sections.entries]]
   heading = "Monte Carlo Radiative Transfer — Neutron-Star Pulse Profiles"
   detail = "Penn State Multi-Campus REU · advised by Prof. Asif ud-Doula · Python"
-  dates = "Oct 2025 – Present"
+  dates = "Oct 2025 – Aug 2026"
   url = "https://sites.psu.edu/mcreu/2026/07/21/where-the-error-hides-how-a-common-assumption-biases-pulse-fraction-for-neutron-stars/"
   link_label = "poster"
   bullets = [
-    "Built a Monte Carlo scattering atmosphere feeding a general-relativistic pulse-profile model (Schwarzschild light-bending, Doppler) to quantify the systematic from the isotropic-emission assumption in neutron-star mass–radius measurements",
-    "Validated against Chandrasekhar's exact H-function (reduced χ² = 0.70) and Bogdanov et al. waveforms (0.11% peak error)",
-    "Showed the systematic *routes* between pulsed fraction and waveform shape; first-author paper in preparation",
+    "Simulated X-ray photons scattering through a neutron star's atmosphere to measure the error a common assumption introduces",
+    "Validated it against an exact analytic solution (reduced χ² = 0.70) and published waveforms (0.11% peak error)",
+    "Showed the error shifts between two observables; first-author paper under review at *Astrophysics and Space Science*",
   ]
+    [sections.entries.engineer]
+    bullets = [
+      "Simulated X-ray scattering in a neutron-star atmosphere; first-author paper under review at *Astrophysics and Space Science*",
+    ]
 
 
 [[sections]]
@@ -117,18 +173,21 @@ title = "Experience"
   [[sections.entries]]
   heading = "Nittany AI Advance Internship Program"
   location = "State College, PA"
-  detail = "Application Specialist · Client: Penn State Office of the Physical Plant"
+  detail = "Application Specialist · Team of 5 · Client: Penn State Office of the Physical Plant"
   dates = "Dec 2025 – Present"
   bullets = [
-    "Scoped ambiguous client requirements into technical documentation for the Docfinity system",
-    "Prototyped evaluation protocols for generative and OCR-derived content; drove requirements to consensus ahead of launch",
+    "Built a Tesseract OCR + LLM + regex pipeline that extracts metadata (project name, ID, and more) from scanned project documents",
+    "Raised extraction accuracy up to 10% by merging the LLM and regex paths and moving from GPT-4o to GPT-5 after benchmarking Azure's 4- and 5-series models; parallelized the pipeline for 5x faster runs",
   ]
 
+  # Parked (variants = []) when the J-lens study arrived: the research page
+  # had one entry's worth of room, and the research took it.
   [[sections.entries]]
   heading = "Penn State Department of Physics"
   location = "University Park, PA"
   detail = "Physics Learning Assistant · PHYS 211"
   dates = "Aug – Dec 2025"
+  variants = []
   bullets = [
     "Taught calculus-based mechanics in problem sessions, labs, and exam prep",
   ]
@@ -142,11 +201,51 @@ title = "Projects"
   # scoped over roughly a year and never converted.
   [[sections.entries]]
   heading = "CrashAI — Crash-Risk Analysis Platform"
-  detail = "Founder & Technical Lead · Scoped with PennDOT safety staff · Python, TypeScript"
+  detail = "Founder & Technical Lead · Team of 3 · 1st of 40 teams, Nittany AI Challenge 2026 · Scoped with PennDOT"
   dates = "Feb – Jul 2026"
   bullets = [
-    "Built a crash-severity model — XGBoost over 81 roadway and behavioral features — with per-site SHAP attribution and what-if simulation",
-    "Led a team across the stack: a 33-tool agent reasoning loop, RAG over agency engineering manuals, a hash-verified artifact pipeline, and an eval harness",
+    "Built a crash-severity model (XGBoost, 81 road and driver features) with per-site explanations and what-if simulation; led a team building a 33-tool agent, retrieval over engineering manuals, and an eval harness",
+  ]
+    [sections.entries.engineer]
+    bullets = [
+      "Built the crash-severity model (XGBoost, 81 road and driver features) with per-site SHAP explanations and what-if simulation, served by a FastAPI REST backend with sub-5 ms road-data lookups from a local spatial index",
+      "Led a team building the React / TypeScript frontend and Python services (33-tool agent loop, retrieval over engineering manuals, hash-verified artifact pipeline, eval harness); shipped with Docker, Cloud Build, Playwright, Vitest",
+    ]
+
+  [[sections.entries]]
+  heading = "Peira — An Agent-Native Instrument for Benefit Cliffs"
+  detail = "Solo · OpenAI WebMCP Challenge entry · TypeScript, React, Zod · Python, FastAPI"
+  dates = "Aug – Sep 2026"
+  url = "https://github.com/Ameya-bit/benefit-cliff-webmcp"
+  link_label = "GitHub"
+  variants = ["engineer"]
+  bullets = [
+    "Built a web app where a person and a ChatGPT agent investigate US benefit cliffs together: 11 agent-callable tools to sweep income, trace the rule behind a cliff, compare households, and find the smallest policy fix",
+    "Kept each tool reply to ~1 KB of derived numbers; Zod validation on every input, a server-side whitelist for policy edits, rate limiting; 21 backend tests and an end-to-end script; live on Netlify and Render",
+  ]
+
+  [[sections.entries]]
+  heading = "Web Vulnerabilities Study — Seven Classes, Defended in Rust and Python"
+  detail = "Solo · Rust (axum, actix-web, sqlx, diesel, casbin) · Python (Flask)"
+  dates = "May 2025"
+  url = "https://github.com/Ameya-bit/vulnerabilties_study"
+  link_label = "GitHub"
+  variants = ["engineer"]
+  bullets = [
+    "Wrote and documented a working defense for seven web vulnerability classes, from SQL injection to OAuth misconfiguration",
+  ]
+
+  # Parked (variants = []): the engineering page is full. Swap it in for
+  # another Projects entry if it earns the room.
+  [[sections.entries]]
+  heading = "photo-constellation — A Face Co-occurrence Graph Over a Photo Library"
+  detail = "Solo · Python"
+  dates = "Aug 2026"
+  url = "https://github.com/Ameya-bit/photo-constellation"
+  link_label = "GitHub"
+  variants = []
+  bullets = [
+    "Built a pipeline from a folder of photographs to a graph of who appears with whom: face detection, identity clustering, a graph layout, and a route through it that meets the most distinct people; embeddings and identities stay off the repository by default",
   ]
 
 
@@ -155,12 +254,25 @@ title = "Skills"
 
   [[sections.skills]]
   label = "ML & Research"
-  text = "Python, PyTorch, HuggingFace Transformers, TransformerLens, NumPy, Scikit-learn, Git"
+  variants = ["research"]
+  text = "Python, PyTorch, HuggingFace Transformers, TransformerLens, NumPy, scikit-learn, Monte Carlo simulation, Git"
 
   [[sections.skills]]
   label = "Interpretability"
-  text = "Transformer circuits, induction heads, OV/QK analysis, activation and path patching, direct logit attribution"
+  variants = ["research"]
+  text = "Transformer circuits, OV/QK analysis, activation and path patching, direct logit attribution, Jacobian and logit lenses"
 
   [[sections.skills]]
-  label = "Methods & Tools"
-  text = "Monte Carlo simulation, numerical validation, linear algebra · Java, JavaScript / React, SQL, Flask"
+  label = "Languages & Frameworks"
+  variants = ["engineer"]
+  text = "Python, TypeScript / JavaScript, Rust, Java, SQL · React, Vite, Node, Zod, FastAPI, Flask"
+
+  [[sections.skills]]
+  label = "Machine Learning"
+  variants = ["engineer"]
+  text = "PyTorch, XGBoost, scikit-learn, HuggingFace Transformers, TransformerLens · RAG, agent tool design (WebMCP)"
+
+  [[sections.skills]]
+  label = "Infrastructure"
+  variants = ["engineer"]
+  text = "Docker, Google Cloud Build, GitHub Actions, Netlify, Render · Playwright, Vitest, pytest, uv, Git"
