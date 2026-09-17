@@ -41,6 +41,11 @@ project:
     # KaTeX is.
     - "notes/**/figures/*.webp"
     - "posts/**/figures/*.webp"
+    # The archival PNGs too. Nothing on the site references them (readers get
+    # the WebP; only the share-card image is followed by the scanner), but
+    # they are what gets hotlinked from elsewhere — a LessWrong linkpost that
+    # carries the full body cannot embed a file the site never shipped.
+    - "posts/**/figures/*.png"
 
 website:
   title: "Ameya Panchal"
