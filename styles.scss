@@ -2583,6 +2583,20 @@ body:has(.hero-screen) { overflow-x: hidden; }
   .colo-spec dd em {
     color: var(--gray-1100);
   }
+
+  // The panda repertoire's status word: the filing voice, on its own line
+  // under the move, tinted only when the move is live.
+  .colo-spec dd .colo-status {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: var(--text-filing);
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--gray-1000);
+
+    &.is-live { color: var(--accent-ink); }
+  }
 }
 
 @media (max-width: 620px) {

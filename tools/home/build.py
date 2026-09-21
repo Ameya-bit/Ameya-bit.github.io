@@ -2,11 +2,15 @@
 """The site adapter: the inventory's view of the home page and the about page.
 
     tools/resume/resume.toml            the inventory: every fact, said once
-        ├── _home.md                    the home page's <section class="cv">
+        ├── _home.md                    the home page's <section class="road">
         │                               (included by index.qmd; committed)
-        └── about/_body.md              the about page's paragraph, which is
-                                        [person] about, passed through as the
-                                        Markdown it is (committed)
+        ├── about/_body.md              the about page's paragraph, which is
+        │                               [person] about, passed through as the
+        │                               Markdown it is (committed)
+        └── colophon/_panda.md          the Panda section of the colophon, from
+                                        tools/home/animations.toml: every move
+                                        the panda has, grouped, with its status
+                                        (committed)
 
 The same split as tools/resume/build.py, one surface over: this script reads
 only the `[person]` block and the items' `home` tables, and writes markup in
@@ -45,6 +49,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 INVENTORY = ROOT / "tools" / "resume" / "resume.toml"
+MOVES = HERE / "animations.toml"
+PANDA_OUT = ROOT / "colophon" / "_panda.md"
 OUT = ROOT / "_home.md"
 ABOUT_OUT = ROOT / "about" / "_body.md"
 GENERATED = (
@@ -114,9 +120,9 @@ def eras_of(items: list) -> list:
 def row_html(row: dict, indent: str) -> str:
     thumb = thumbnail(row["folder"])
     picture = (
-        f'<img class="cv-thumb" src="{thumb}" alt="" loading="lazy">'
+        f'<img class="road-thumb" src="{thumb}" alt="" loading="lazy">'
         if thumb
-        else '<span class="cv-thumb is-blank"></span>'
+        else '<span class="road-thumb is-blank"></span>'
     )
     return (
         f'{indent}<li><a href="{row["folder"]}/">{picture}'
@@ -127,22 +133,22 @@ def row_html(row: dict, indent: str) -> str:
 def work_html(rows: list, indent: str) -> list:
     if not rows:
         return []
-    return [f'{indent}<ul class="cv-work">', *(row_html(r, indent + "  ") for r in rows), f"{indent}</ul>"]
+    return [f'{indent}<ul class="road-work">', *(row_html(r, indent + "  ") for r in rows), f"{indent}</ul>"]
 
 
 def era_html(era: dict, items: list) -> list:
     view = era["home"]
     year, month = view.get("when", era["start"]).split("-")
-    tag = f'<span class="cv-tag">{web_text(view["tag"])}</span>' if "tag" in view else ""
+    tag = f'<span class="road-tag">{web_text(view["tag"])}</span>' if "tag" in view else ""
     more = work_html(rows_of(era, items, "more"), "            ")
     return [
-        '      <div class="cv-era">',
-        f'        <p class="cv-when"><small>{MONTHS[int(month) - 1].upper()}</small>{year}</p>',
-        f'        <p class="cv-name" role="heading" aria-level="2">{web_text(view["name"])}{tag}</p>',
-        f'        <p class="cv-role">{web_text(view["role"])}</p>',
-        f'        <p class="cv-what">{web_text(view["what"])}</p>',
+        '      <div class="road-era">',
+        f'        <p class="road-when"><small>{MONTHS[int(month) - 1].upper()}</small>{year}</p>',
+        f'        <p class="road-name" role="heading" aria-level="2">{web_text(view["name"])}{tag}</p>',
+        f'        <p class="road-role">{web_text(view["role"])}</p>',
+        f'        <p class="road-what">{web_text(view["what"])}</p>',
         *work_html(rows_of(era, items, "row"), "        "),
-        *(['        <details class="cv-more">', "          <summary>More</summary>",
+        *(['        <details class="road-more">', "          <summary>More</summary>",
            *more, "        </details>"] if more else []),
         "      </div>",
     ]
@@ -155,35 +161,76 @@ def section_html(inventory: dict) -> str:
     eras = [line for era in eras_of(items) for line in (*era_html(era, items), "")]
     links = [f'    <a href="{l["href"]}">{web_text(l["label"])}</a>' for l in person["links"]]
     return "\n".join([
-        '<section class="cv" id="top">',
+        '<section class="road" id="top">',
         "",
-        '  <div class="cv-hero">',
-        '    <div class="cv-stage" aria-hidden="true"><img src="assets/favicon.svg" alt=""></div>',
-        f'    <p id="hero-headline" class="cv-ident" role="heading" aria-level="1">{web_text(person["name"])}</p>',
-        f'    <p class="cv-title">{headline}</p>',
-        f'    <p class="cv-now">{web_text(person["now"])}</p>',
+        '  <div class="road-hero">',
+        '    <div class="road-stage" aria-hidden="true"><img src="assets/favicon.svg" alt=""></div>',
+        f'    <p id="hero-headline" class="road-ident" role="heading" aria-level="1">{web_text(person["name"])}</p>',
+        f'    <p class="road-title">{headline}</p>',
+        f'    <p class="road-now">{web_text(person["now"])}</p>',
         "  </div>",
         "",
-        '  <div class="cv-road">',
-        '    <div class="cv-eras">',
-        '      <div class="cv-spine" aria-hidden="true"></div>',
-        '      <p class="cv-road-label" aria-hidden="true">The road</p>',
+        '  <div class="road-track">',
+        '    <div class="road-eras">',
+        '      <div class="road-spine" aria-hidden="true"></div>',
+        '      <p class="road-label" aria-hidden="true">The road</p>',
         "",
         *eras[:-1],
         "    </div>",
         "",
-        '    <div class="cv-end">',
+        '    <div class="road-end">',
         "      <p>End of the road, for now.</p>",
         "      <p>Thanks for walking it with me.</p>",
         "    </div>",
         "  </div>",
         "",
-        '  <nav class="cv-foot" aria-label="Profile links">',
+        '  <nav class="road-foot" aria-label="Profile links">',
         '    <a href="#top">Back to start</a>',
         *links,
         "  </nav>",
         "</section>",
     ])
+
+
+# ---- the colophon's Panda section -------------------------------------------
+
+GROUPS = [
+    ("cel", "Cels", "What the sprite sheet can draw: every pose and cycle, and the hat."),
+    ("primitive", "Primitives", "Motions the code composes from cels."),
+    ("walker", "The hat panda", "The observer's own behaviours."),
+    ("troupe", "A roamer", "One panda at a time going strange: the tier-one anomalies."),
+    ("ensemble", "Ensembles", "Several pandas acting together."),
+    ("scene", "Scenes", "Entrances, tableaux, whole-page choreography."),
+]
+STATUS_WORD = {
+    "live": "on the home page",
+    "shipped": "built, not on the page",
+    "retired": "retired",
+    "reverted": "reverted",
+    "rejected": "rejected unbuilt",
+}
+
+
+def panda_md(moves: list) -> str:
+    out = []
+    for key, title, lead in GROUPS:
+        rows = [m for m in moves if m["group"] == key]
+        if not rows:
+            continue
+        out += [f"### {title}", "", lead, "", "::: {.colo-spec}"]
+        for m in rows:
+            dd = web_text(m["how"])
+            if m.get("note"):
+                dd += f" *{web_text(m['note'])}*"
+            status = STATUS_WORD[m["status"]]
+            out += [
+                f'{web_text(m["name"])}',
+                f":   {dd}",
+                f'    <span class="colo-status is-{m["status"]}">{status}</span>',
+                "",
+            ]
+        out += [":::", ""]
+    return "\n".join(out)
 
 
 def write_if_changed(path: Path, body: str, label: str) -> None:
@@ -198,6 +245,9 @@ def main() -> None:
     about = "\n".join([GENERATED, "", inventory["person"]["about"].strip(), ""])
     write_if_changed(OUT, home, "home page")
     write_if_changed(ABOUT_OUT, about, "about page")
+    moves = tomllib.loads(MOVES.read_text())["moves"]
+    panda_header = GENERATED.replace("tools/resume/resume.toml", "tools/home/animations.toml")
+    write_if_changed(PANDA_OUT, "\n".join([panda_header, "", panda_md(moves)]), "colophon panda")
 
 
 if __name__ == "__main__":

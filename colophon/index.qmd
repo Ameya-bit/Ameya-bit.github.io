@@ -4,9 +4,10 @@ description: "What this site is made of, and which of its decisions are load-bea
 toc: false
 ---
 
-What this site is made of. The five sections below are the five axes the
+What this site is made of. The first five sections are the five axes the
 stylesheet itself is organised on — type, colour, measure, motion, machinery —
-so this page and the file it describes cannot fall out of step.
+so this page and the file it describes cannot fall out of step. The sixth is
+the panda's repertoire.
 
 Every number here is measured rather than estimated. Where a decision has a
 reason, the reason is the part in italics.
@@ -170,3 +171,12 @@ Published
     whether the site still builds; merging to main is the act of publishing, and
     built HTML never enters the history.*
 :::
+
+## Panda
+
+Every move the hat panda and the troupe have been given, whether or not it is
+on the page today. The list is generated from `tools/home/animations.toml`, so
+a move built and later taken off is still on the record here. The sprite sheet
+is ma5a's *panda collision* (MIT); the straw hat is drawn here.
+
+{{< include _panda.md >}}

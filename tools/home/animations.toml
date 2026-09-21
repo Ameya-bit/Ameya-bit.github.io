@@ -1,0 +1,420 @@
+# ---------------------------------------------------------------------------
+# THE PANDA'S REPERTOIRE. Every movement the hat panda and the troupe have
+# ever been given, in one place, so that nothing built is forgotten and the
+# home page's animation can be improved against a full list rather than
+# whatever is still live. Compiled 2026-09-22 from the shipped code
+# (assets/pandas/pandas.js, assets/pandas/engine/), the design docs
+# (design/whimsy.md, panda-choreography.md, panda-chaos.md) and git history.
+#
+# Rendered as the "Panda" section of /colophon/ by tools/home/build.py.
+#
+# Each [[moves]] entry:
+#   name      what it is called
+#   group     "cel" (a drawn pose or cycle from the sprite sheet)
+#             "primitive" (a motion the code composes from cels)
+#             "walker" (the hat panda's own behaviours)
+#             "troupe" (an individual roamer's behaviours)
+#             "ensemble" (several pandas acting together)
+#             "scene" (entrances, tableaux, whole-stage choreography)
+#   status    "live"      on the home page today
+#             "shipped"   built and working in the engine; not on the page
+#             "retired"   built, shipped, then taken off by design review
+#             "reverted"  built and rolled back within the day
+#             "rejected"  specced and refused before building
+#   how       one sentence of mechanics, for whoever rebuilds it
+#   where     the file that holds it (or held it)
+#   since     the commit or date it landed
+#   note      why it went, if it went; anything the next builder should know
+#
+# The sprite sheet is ma5a's "panda collision" (MIT): 13 columns x 5 facing
+# rows (up, diagonal-up, side, diagonal-down, down), left-facing headings
+# mirrored in CSS. The straw hat is composited onto columns 0–2 of every row.
+# ---------------------------------------------------------------------------
+
+# ---- cels: what the sheet can draw ----------------------------------------
+
+[[moves]]
+name = "Walk"
+group = "cel"
+status = "live"
+how = "Columns 0, 1, 2, 1 — contact, dip, contact, dip — one cel every 140 ms, in any of the five facing rows."
+where = "engine/render/cels.js (ANIM_FRAMES, FRAME_MS)"
+since = "ma5a's pen; on this site from 2026-07-10"
+
+[[moves]]
+name = "Stop"
+group = "cel"
+status = "shipped"
+how = "Column 0 held: the contact stride, feet apart."
+where = "engine/render/cels.js"
+since = "ma5a's pen"
+
+[[moves]]
+name = "Idle"
+group = "cel"
+status = "live"
+how = "Column 1 held: legs together, the settled mid-stride dip. Chosen over column 0 because a planted panda should not look caught mid-step."
+where = "engine/render/cels.js"
+since = "a600bb6, 2026-07-23"
+
+[[moves]]
+name = "Fall"
+group = "cel"
+status = "shipped"
+how = "Columns 3, 4, 5, 6, 5, 7: the tumble, ending face-down. The hat is not drawn on these cels — it is on the ground by then."
+where = "engine/render/cels.js"
+since = "ma5a's pen"
+
+[[moves]]
+name = "Fallen"
+group = "cel"
+status = "shipped"
+how = "Column 7 held, lying down."
+where = "engine/render/cels.js"
+since = "ma5a's pen"
+
+[[moves]]
+name = "Stand up"
+group = "cel"
+status = "shipped"
+how = "Columns 7 to 12: from the ground back to standing."
+where = "engine/render/cels.js"
+since = "ma5a's pen"
+
+[[moves]]
+name = "Sit"
+group = "cel"
+status = "live"
+how = "Column 9 of the down-facing row held — a stand-up frame that reads, alone, as sitting. The home page uses it for the rest at the end of the road, hat set down beside."
+where = "assets/home/panda-walk.js (COL_REST)"
+since = "2026-09-21"
+
+[[moves]]
+name = "Leap"
+group = "cel"
+status = "live"
+how = "Column 0 of the diagonal rows held while airborne: the contact stride reads as a jump. The tumble frames would be livelier but are drawn hatless."
+where = "assets/home/panda-walk.js (COL_LEAP)"
+since = "2026-09-21"
+
+[[moves]]
+name = "Seated rider"
+group = "cel"
+status = "shipped"
+how = "Five hand-drawn seated cels, one per facing, for a panda riding on another's head. The one piece of new art the chaos spec allowed, drawn in the body editor."
+where = "engine/render/art-data.js (SIT_CELS)"
+since = "9491b90, 2026-07-24"
+note = "Replaced the zero-art standing rider, which looked wrong."
+
+[[moves]]
+name = "The straw hat"
+group = "cel"
+status = "live"
+how = "A hand-tweaked pixel dǒulì, exported from the studio and baked per facing with a seat offset per walk frame, so it rides the head bob as one piece. A separate loose-hat cel lies on the ground."
+where = "engine/hat.js, engine/render/art-data.js (HAT_PIXELS, HAT_FIT)"
+since = "d642932 and 16cb80d, 2026-07-23 (gold finial and red collar knot)"
+
+# ---- primitives: motions composed from cels --------------------------------
+
+[[moves]]
+name = "Glide"
+group = "primitive"
+status = "shipped"
+how = "Every stride is one 50 px step, and the wrapper glides to it over 2 s (a CSS transition in the original; a ported per-tick ease in the engine, restart semantics and all). The float is ma5a's signature."
+where = "engine/render/renderer.js; config glideTicks"
+since = "ma5a's pen; port 16f5340, 2026-07-27"
+
+[[moves]]
+name = "Scroll walk"
+group = "primitive"
+status = "live"
+how = "The home page's replacement for the glide: the panda's place on the spine is a linear read of scroll position, and the legs run on the 140 ms cel clock only while scrolling continues. Facing follows scroll direction."
+where = "assets/home/panda-walk.js"
+since = "2026-09-21; legs moved from distance-driven to clock-driven 2026-09-22 after reading as a blur"
+
+[[moves]]
+name = "Jump"
+group = "primitive"
+status = "live"
+how = "A timed 620 ms arc between two live endpoints (the hero stage and the head of the road), scaled 6x to 2x in flight, with a sine lift of 22% of the distance. Runs on a clock so it always lands; reverses in the air if the reader turns back."
+where = "assets/home/panda-walk.js (stepJump)"
+since = "2026-09-22"
+note = "Replaced a scroll-scrubbed shrink-and-walk that could park the panda halfway, standing on the intro paragraph."
+
+[[moves]]
+name = "Knock"
+group = "primitive"
+status = "shipped"
+how = "Four hit-corners per panda checked pairwise every 50 ms; the corner pattern picks a knock direction, the loser slides 80 px, plays the fall, lies a while, stands up. Asymmetric: an unstoppable-force flag lets one side knock without being knocked."
+where = "engine/collision.js; config impact, fallTicks, lieTimesTicks"
+since = "ma5a's pen; asymmetry from the conga lines, 4ba8512"
+
+[[moves]]
+name = "Tap to knock"
+group = "primitive"
+status = "shipped"
+how = "Clicking a panda knocks it down."
+where = "engine/render/host.js"
+since = "ma5a's pen"
+
+[[moves]]
+name = "Throw arc"
+group = "primitive"
+status = "shipped"
+how = "A parabola from one point to another over a set time, the sprite frozen on a cel, landing back into the walk. Used for the stack's mount hop, the topple tosses, the hiccup's pop, and the entrance drop."
+where = "pandas.js throwArc; engine/stack.js, anomalies.js"
+since = "b8a548a, 2026-07-23 (the patch's grab-and-fling)"
+
+[[moves]]
+name = "Spin"
+group = "primitive"
+status = "shipped"
+how = "A facing-cycle: the sprite steps through its eight headings one flip per tick for about 1.2 s, which reads as a turn on the spot. Also the tumbler's skid."
+where = "pandas.js spin3d; engine/anomalies.js (spinFlips, spinEvery)"
+since = "b8a548a, 2026-07-23"
+
+[[moves]]
+name = "Breathe"
+group = "primitive"
+status = "live"
+how = "A 2.6 s bob of half a pixel (three pixels on the old hero) on a planted panda, so standing reads as alive rather than stopped."
+where = "engine/render/pandas.css (panda-watch); assets/home/home.css (road-breathe)"
+since = "2026-07-24"
+
+[[moves]]
+name = "Sharp glide"
+group = "primitive"
+status = "reverted"
+how = "The hat panda alone glided in 0.5 s with a sharp ease-out and a 440 ms stride, to read as alert against the troupe's uniform 2 s float."
+where = "bf61b43"
+since = "2026-07-23"
+note = "Reverted the same day (6a8295a): too fast, darted around. Worth knowing before touching the walker's speed again."
+
+# ---- the hat panda's own behaviours ------------------------------------------
+
+[[moves]]
+name = "Observe"
+group = "walker"
+status = "shipped"
+how = "The hat panda holds one incident at a time, walks to a vantage beside it, plants, and watches: a gaze that shifts every 2–4 s between the subject, the nearest bystander and a glance aside."
+where = "engine/watcher.js; engine/render/flourish.js (gaze)"
+since = "e021ecc, 2026-07-23; incident attention 2A, 2026-07-24"
+
+[[moves]]
+name = "Weave"
+group = "walker"
+status = "shipped"
+how = "Navigates around the troupe on the way to a subject, choosing an axis by crowd; if boxed in it holds, re-vantages, or abandons."
+where = "engine/watcher.js (chooseWeaveDir, bestAxis)"
+since = "2cf0d0a, 2026-07-23"
+
+[[moves]]
+name = "Alert stride"
+group = "walker"
+status = "shipped"
+how = "Within 130 px of a closing panda the calm 540 ms stride drops to 380 ms. Never as fast as zoomies."
+where = "pandas.js HAT_ALERT_MS, HAT_DANGER_R"
+since = "2C, 2026-07-24"
+
+[[moves]]
+name = "Sidestep"
+group = "walker"
+status = "shipped"
+how = "A single slow panda closing within 108 px: step calmly aside into the least crowded cell."
+where = "pandas.js HAT_SIDESTEP_R; engine/watcher.js bestEscape"
+since = "2C, 2026-07-24"
+
+[[moves]]
+name = "Dive-roll"
+group = "walker"
+status = "shipped"
+how = "The emergency: a fast or too-close threat triggers the tumble cels at 58 ms each without settling to fallen, carrying him 92 px with invincibility frames, then a 2.6 s cooldown. Rarity is the cooldown, never a scripted miss."
+where = "pandas.js HAT_ROLL_*; engine ANIM.ROLL, MODE.ROLLING"
+since = "2C, 2026-07-24"
+
+[[moves]]
+name = "Hat drop and retrieve"
+group = "walker"
+status = "shipped"
+how = "A knock tosses the hat forward with a small spin; bare-headed, he sprints back at 300 ms a stride, stands over it for a beat, and puts it on. The calm drop variant, not a launch."
+where = "engine/render/flourish.js (TOSS_*, FETCH_*); pandas.js HAT_SPRINT_MS"
+since = "Round 5, 2026-07-10"
+
+[[moves]]
+name = "Overwhelmed"
+group = "walker"
+status = "shipped"
+how = "During a cascade he is pulled to the origin and stands amid the fallen. No freeze, no spotlight."
+where = "engine/cascade.js"
+since = "9491b90, 2026-07-24"
+
+[[moves]]
+name = "Learned line-walker"
+group = "walker"
+status = "shipped"
+how = "A policy network trained on the engine's rollouts drives the hat panda's 17-way action choice (hold, step in eight headings, roll in eight). The site ships only the rules expert; the network lives in the panda-engine repo. A linear probe over it is the belief overlay, which reads but never drives."
+where = "github.com/Ameya-bit/panda-engine; engine/actions.js; stash on panda-hero"
+since = "Phases A–D, 2026-07-27 onward; overlay 2026-08-21"
+note = "The note 'A statue with reflexes' is the write-up of what the policy learned and unlearned."
+
+# ---- a roamer's behaviours (tier 1 anomalies) --------------------------------
+
+[[moves]]
+name = "Sleeper"
+group = "troupe"
+status = "shipped"
+how = "Stops, plays the fall deliberately with no slide, lies 8–20 s, stands, resumes."
+where = "engine/anomalies.js"
+since = "Phase 1, 2026-07-23"
+
+[[moves]]
+name = "Tumbler"
+group = "troupe"
+status = "shipped"
+how = "Trips on nothing: a facing-cycle over a 46 px skid, ends splayed in the fall frames, gets up."
+where = "engine/anomalies.js (trip*)"
+since = "Phase 1, 2026-07-23"
+
+[[moves]]
+name = "Spinner"
+group = "troupe"
+status = "shipped"
+how = "Spins in place 1.2 s, then two or three quick stagger-steps in random directions."
+where = "engine/anomalies.js"
+since = "Phase 1, 2026-07-23"
+
+[[moves]]
+name = "Loop"
+group = "troupe"
+status = "shipped"
+how = "Walks a small closed octagon, turning one step each stride, two to four laps at 420 ms, then snaps out."
+where = "engine/anomalies.js; pandas.js LOOP_*"
+since = "Phase 3, 2026-07-24"
+
+[[moves]]
+name = "Starer"
+group = "troupe"
+status = "shipped"
+how = "Stops, faces the nearest edge, holds the idle 6–12 s. Nothing happens."
+where = "engine/anomalies.js"
+since = "Phase 3, 2026-07-24"
+
+[[moves]]
+name = "Zoomies"
+group = "troupe"
+status = "shipped"
+how = "Locks a heading at three times walking speed until it hits a wall (tumbles) or a panda (an ordinary knock)."
+where = "engine/anomalies.js; pandas.js ZOOM_*"
+since = "Phase 3, 2026-07-24"
+
+[[moves]]
+name = "Moonwalk"
+group = "troupe"
+status = "shipped"
+how = "Travels one heading while facing the exact opposite; the walk cycle plays as usual."
+where = "engine/anomalies.js (MODE.MOONWALK)"
+since = "engine port, 2026-07-27"
+
+[[moves]]
+name = "Hiccup"
+group = "troupe"
+status = "shipped"
+how = "Every two strides, a small convulsive pop straight up: a pocket throw arc that lands back into the gait."
+where = "engine/anomalies.js (hiccupLift); pandas.js HICCUP_*"
+since = "engine port, 2026-07-27"
+
+[[moves]]
+name = "The oblivious one"
+group = "troupe"
+status = "shipped"
+how = "One roamer chosen at spawn wanders a small radius, idles often, and is never picked for anything."
+where = "engine/config.js (oblivious*)"
+since = "Phase 1, 2026-07-23"
+
+# ---- ensembles ---------------------------------------------------------------
+
+[[moves]]
+name = "The stack"
+group = "ensemble"
+status = "shipped"
+how = "Every 60–120 s a base with headroom is chosen; riders hop on by throw arc and sit; the base parades as the unstoppable force while a wobble grows until it topples, tossing riders off. A zoomies panda into the tower topples it early."
+where = "engine/stack.js"
+since = "Phase 4, 2026-07-24"
+
+[[moves]]
+name = "The cascade"
+group = "ensemble"
+status = "shipped"
+how = "Armed every 2–5 min, the next collision escalates: a hard slide aimed at the crowd, then a steered nearest-neighbour chain until 70–90% of the field is down. Recovery is the ordinary get-up, naturally staggered."
+where = "engine/cascade.js"
+since = "Phase 5, 2026-07-24"
+
+[[moves]]
+name = "Conga lines"
+group = "ensemble"
+status = "retired"
+how = "Roamers formed follow-the-leader snakes, each follower stepping into the cell the one ahead vacated; lines grew, dissolved and reformed."
+where = "pandas.js class Line, manageLines (at 4ba8512)"
+since = "4ba8512, 2026-07-23"
+note = "Retired 2026-07-23 by design review: coordination read as uniform and janky, and line membership suppressed the collisions that are the scene's charm."
+
+[[moves]]
+name = "Activation patching"
+group = "ensemble"
+status = "retired"
+how = "When two lines of four or more had headings more than 45° apart, the hat panda froze the scene, spotlit the pair, grabbed a panda from one line by throw arc and inserted it into the other, whose tail peeled onto the new heading."
+where = "pandas.js (at b8a548a); design/panda-choreography.md"
+since = "b8a548a, 2026-07-23"
+note = "Retired with the lines: it fired too rarely and too late for anyone to see. The metaphor was exact and the audience could not read it."
+
+# ---- scenes ------------------------------------------------------------------
+
+[[moves]]
+name = "Walk-in entrance"
+group = "scene"
+status = "shipped"
+how = "The stage starts empty; the hat panda ambles in alone with a 1.8 s head start, then the troupe walks on from the edges two at a time."
+where = "engine/director.js; config entrance*"
+since = "a3dd257, 2026-07-23"
+
+[[moves]]
+name = "Drop entrance"
+group = "scene"
+status = "shipped"
+how = "The roamers rain onto their spots over about 7 s, 650 ms in the air each, and 40% bounce once on landing; the hat panda still walks on."
+where = "engine/config.js (drop*)"
+since = "the site's arrival, 2026-08-03"
+
+[[moves]]
+name = "Hero pin"
+group = "scene"
+status = "shipped"
+how = "The troupe pins to the viewport and stops routing around the hero's words; the fence stopped measuring a moving target."
+where = "panda-hero branch, e232e02 and 7c2e5f0"
+since = "2026-08-20"
+note = "On an unmerged branch."
+
+[[moves]]
+name = "Reduced-motion tableau"
+group = "scene"
+status = "shipped"
+how = "With reduced motion, a composed still: the troupe scattered, one three-high stack mid-parade, one panda fallen, and the hat panda planted facing it."
+where = "engine/render/tableau.js"
+since = "Phase 0, 2026-07-23"
+
+[[moves]]
+name = "Hero to road"
+group = "scene"
+status = "live"
+how = "The home page's whole choreography: large and breathing on the first screen, one leap to the head of the timeline, a scroll-driven walk down it past each era, and a sit at the end with the hat set down. Reduced motion parks the panda in the hero."
+where = "assets/home/panda-walk.js"
+since = "2026-09-21"
+
+[[moves]]
+name = "Cursor trail"
+group = "scene"
+status = "rejected"
+how = "An induction-head trail that replayed the cursor's past trajectory rather than merely lagging it."
+where = "design/whimsy.md, candidate 1"
+since = "2026-07-10"
+note = "Rejected before building."
