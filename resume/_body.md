@@ -37,8 +37,8 @@
 </article>
 <article class="cv-entry">
   <div class="cv-row">
-    <p class="cv-head"><a href="https://github.com/Ameya-bit/quantify-jlens-offset">The J-lens offset is the model&#x27;s token frequency: z-scoring fixes it</a></p>
-    <p class="cv-when">Aug 2026</p>
+    <p class="cv-head"><a href="../posts/jlens-offset/">The J-lens offset is the model&#x27;s token frequency: z-scoring helps</a></p>
+    <p class="cv-when">Aug – Sep 2026</p>
   </div>
   <div class="cv-row">
     <p class="cv-detail">Independent · PyTorch, jacobian-lens · Qwen3, Pythia, GPT-2, Gemma-2</p>
@@ -77,7 +77,7 @@
 </article>
 <article class="cv-entry">
   <div class="cv-row">
-    <p class="cv-head"><a href="https://sites.psu.edu/mcreu/2026/07/21/where-the-error-hides-how-a-common-assumption-biases-pulse-fraction-for-neutron-stars/">Monte Carlo Radiative Transfer — Neutron-Star Pulse Profiles</a></p>
+    <p class="cv-head"><a href="../posts/where-the-error-hides/">Systematic Bias from Assuming Isotropic Surface Emission in Neutron-Star Pulse-Profile Modeling</a></p>
     <p class="cv-when">Oct 2025 – Aug 2026</p>
   </div>
   <div class="cv-row">
@@ -97,7 +97,7 @@
 <article class="cv-entry">
   <div class="cv-row">
     <p class="cv-head">Nittany AI Advance Internship Program</p>
-    <p class="cv-when">Dec 2025 – Present</p>
+    <p class="cv-when">Dec 2025 – Apr 2026</p>
   </div>
   <div class="cv-row">
     <p class="cv-detail">Application Specialist · Team of 5 · Client: Penn State Office of the Physical Plant</p>
@@ -116,7 +116,7 @@
 <article class="cv-entry">
   <div class="cv-row">
     <p class="cv-head">CrashAI — Crash-Risk Analysis Platform</p>
-    <p class="cv-when">Feb – Jul 2026</p>
+    <p class="cv-when">Feb 2026 – Present</p>
   </div>
   <div class="cv-row">
     <p class="cv-detail">Founder &amp; Technical Lead · Team of 3 · 1st of 40 teams, Nittany AI Challenge 2026 · Scoped with PennDOT</p>

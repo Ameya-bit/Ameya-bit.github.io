@@ -1,0 +1,450 @@
+/* The home page as a road (branch `panda-walk`, 2026-09-21) — a CV read as a
+ * timeline, after mikes.cv, with the hat panda where Mike has the aeroplane.
+ *
+ * One panda on screen. It opens large on the first screen, and as the reader
+ * scrolls it shrinks onto the spine and walks the road beside them
+ * (assets/home/panda-walk.js). Everything else is type on a near-white ground.
+ *
+ * Loaded by index.qmd only, and every rule is scoped under `.cv`, so nothing
+ * here can reach a post. The selectors carry `#quarto-content main.content`
+ * because the site's prose rules do, and an id outranks any amount of class. */
+
+/* The ground. Posts stay on stone paper; this page steps up to a near-white,
+ * by moving the one token the rest of the palette already reads from. */
+body:has(.cv) {
+  --gray-100: #f8f6f3;
+  --cv-column: 27rem;      /* the reading column beside the spine */
+  --cv-gutter: 8.6rem;     /* room left of the spine for the year stamps */
+  --cv-spine-gap: 2.7rem;  /* spine to text: the walker's half-width, plus air */
+  --cv-cell: 48px;         /* the sheet is drawn at one sprite unit per CSS pixel */
+  --cv-marker-scale: 2;    /* the walker on the road: 2x, whole pixels (read by panda-walk.js) */
+  --cv-hero-cell: 288px;   /* the hero panda: exactly 6x, so pixels stay square */
+  background-color: var(--gray-100);
+}
+
+/* The masthead's job (the name) moves to the corner block on this page. */
+body:has(.cv) #quarto-header { display: none; }
+
+/* styles.scss says these of body:has(.hero-screen); this page does not carry
+   that class (see index.qmd), so it says them for itself. */
+body:has(.cv) main.content { padding-inline: 0; }
+body:has(.cv) #title-block-header { display: none; }
+
+.cv {
+  position: relative;
+  padding: 0 clamp(1.25rem, 5vw, 2rem) 9rem;
+}
+
+/* ---- the first screen ---- */
+
+.cv-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: clamp(4.5rem, 11svh, 8rem);
+}
+
+/* The hero panda's reserved box. The panda itself is the walker, parked here
+ * by the script; with no script (or reduced motion) a static copy is drawn in. */
+.cv-stage {
+  width: var(--cv-hero-cell);
+  height: var(--cv-hero-cell);
+  position: relative;
+}
+
+/* the name: the one line on the page set in the display weight */
+#quarto-content main.content .cv-ident {
+  margin: 1.2rem 0 0;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--gray-1200);
+}
+
+#quarto-content main.content .cv-title {
+  margin: 0.35rem 0 0;
+  max-width: 30rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 550;
+  line-height: 1.5;
+  color: var(--gray-1200);
+  text-wrap: balance;
+}
+#quarto-content main.content .cv-title span { display: block; }
+
+#quarto-content main.content .cv-now {
+  margin: 0.5rem 0 0;
+  max-width: 31rem;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--gray-1000);
+  text-wrap: pretty;
+}
+
+/* ---- the road ---- */
+
+.cv-road {
+  position: relative;
+  width: min(100%, calc(var(--cv-column) + var(--cv-gutter)));
+  margin: 4.2rem auto 0;
+  padding-left: var(--cv-gutter);
+  /* optical centring: the text column, not the column-plus-gutter, sits on the
+     page axis under the hero, the way Mike's does */
+  transform: translateX(calc(var(--cv-gutter) / -2));
+}
+
+/* the eras share one spine: a dotted rule the panda walks, from the first node
+   down to the end-of-road mark */
+.cv-eras { position: relative; }
+.cv-spine {
+  position: absolute;
+  top: 0.75rem;
+  bottom: -0.95rem;
+  left: calc(var(--cv-spine-gap) * -1);
+  width: 0;
+  border-left: 1px dotted var(--gray-800);
+}
+
+#quarto-content main.content .cv-road-label {
+  position: absolute;
+  top: -1.9rem;
+  left: calc(var(--cv-spine-gap) * -1);
+  transform: translateX(-50%);
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.5625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  white-space: nowrap;
+}
+
+.cv-era {
+  position: relative;
+  padding-bottom: 3.4rem;
+}
+
+/* the node on the spine; filled once the panda has walked past it */
+.cv-era::before {
+  content: "";
+  position: absolute;
+  top: 0.5rem;
+  left: calc(var(--cv-spine-gap) * -1);
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-800);
+  box-shadow: 0 0 0 3px var(--gray-100);
+}
+.cv-era.is-passed::before {
+  background: var(--gray-1200);
+  border-color: var(--gray-1200);
+}
+
+#quarto-content main.content .cv-when {
+  position: absolute;
+  top: 0.08rem;
+  right: calc(100% + var(--cv-spine-gap) + 2.7rem); /* clear of the walker's half-width */
+  margin: 0;
+  text-align: right;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.6875rem;
+  line-height: 1.25;
+  letter-spacing: 0.14em;
+  color: var(--gray-1000);
+  white-space: nowrap;
+}
+#quarto-content main.content .cv-when small {
+  display: block;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: var(--gray-800);
+}
+
+#quarto-content main.content .cv-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--gray-1200);
+}
+#quarto-content main.content .cv-name .cv-tag {
+  margin-left: 0.5rem;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+#quarto-content main.content .cv-role {
+  margin: 0.15rem 0 0;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--gray-1200);
+}
+#quarto-content main.content .cv-what {
+  margin: 0.2rem 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--gray-1000);
+  text-wrap: pretty;
+}
+
+/* ---- the work under an era ---- */
+
+#quarto-content main.content .cv-work {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+#quarto-content main.content .cv-work li {
+  position: relative;
+  margin: 0 0 1.35rem;
+  padding: 0;
+}
+#quarto-content main.content .cv-work li:last-child { margin-bottom: 0; }
+
+/* the small tick each piece of work leaves on the spine */
+#quarto-content main.content .cv-work li::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(var(--cv-spine-gap) * -1);
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  background: var(--gray-800);
+  box-shadow: 0 0 0 3px var(--gray-100);
+}
+
+#quarto-content main.content .cv-work a,
+#quarto-content main.content .cv-work .cv-unlinked {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: 0 0.9rem;
+  align-items: center;
+  margin: 0 -0.6rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+#quarto-content main.content .cv-work a:hover,
+#quarto-content main.content .cv-work a:focus-visible {
+  background: var(--hover-fill);
+}
+
+.cv-thumb {
+  grid-row: 1 / span 2;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--gray-400);
+  background: #fff;
+  object-fit: cover;
+  cursor: inherit;
+}
+/* a piece of work with no figure of its own: a blank plate, not a fake one */
+.cv-thumb.is-blank {
+  display: block;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 5px, var(--gray-300) 5px 6px),
+    var(--gray-100);
+}
+
+#quarto-content main.content .cv-work strong {
+  display: block;
+  align-self: end;
+  font-size: var(--text-apparatus);
+  font-weight: 550;
+  line-height: 1.4;
+  color: var(--gray-1200);
+}
+#quarto-content main.content .cv-work em {
+  display: block;
+  align-self: start;
+  font-style: normal;
+  font-size: var(--text-apparatus-mono);
+  line-height: 1.4;
+  color: var(--gray-1000);
+}
+
+/* the rest of an era's work, folded away: a native disclosure, so it works
+   with no script and the walker simply re-measures the longer road */
+#quarto-content main.content .cv-more { margin-top: 1.1rem; }
+#quarto-content main.content .cv-more > summary {
+  display: inline-block;
+  list-style: none;
+  cursor: pointer;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gray-1000);
+}
+#quarto-content main.content .cv-more > summary::-webkit-details-marker { display: none; }
+#quarto-content main.content .cv-more > summary::after { content: " +"; }
+#quarto-content main.content .cv-more[open] > summary::after { content: " \2212"; }
+#quarto-content main.content .cv-more > summary:hover,
+#quarto-content main.content .cv-more > summary:focus-visible { color: var(--accent-ink); }
+#quarto-content main.content .cv-more > .cv-work { margin-top: 1.1rem; }
+
+/* ---- the end of the road ---- */
+
+.cv-end {
+  position: relative;
+  padding-top: 0.4rem;
+}
+/* the end-of-road mark, where the panda sits down */
+.cv-end::before {
+  content: "";
+  position: absolute;
+  top: 0.95rem;
+  left: calc(var(--cv-spine-gap) * -1);
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-right: 1px solid var(--gray-900);
+  border-bottom: 1px solid var(--gray-900);
+  transform: rotate(45deg) translate(-2px, -2px);
+}
+#quarto-content main.content .cv-end p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--gray-1200);
+  font-weight: 500;
+}
+#quarto-content main.content .cv-end p + p {
+  font-weight: 400;
+  font-size: var(--text-apparatus);
+  color: var(--gray-1000);
+}
+
+/* ---- the walker ---- */
+
+.cv-walker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--cv-cell);
+  height: var(--cv-cell);
+  overflow: hidden;
+  transform-origin: 0 0;
+  pointer-events: none;
+  will-change: transform;
+  z-index: 2;
+}
+.cv-walker.is-flipped .cv-sheet-flip { transform: scaleX(-1); }
+
+/* parked on the first screen, it breathes (the engine's own idle bob) */
+@keyframes cv-breathe {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-0.5px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cv-walker.is-parked .cv-sheet-flip { animation: cv-breathe 2.6s ease-in-out infinite; }
+}
+.cv-stage img { display: block; width: 100%; height: 100%; cursor: default; }
+.cv-sheet-flip {
+  position: absolute;
+  inset: 0;
+}
+.cv-sheet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(13 * var(--cv-cell));
+  height: calc(5 * var(--cv-cell));
+}
+.cv-sheet svg {
+  display: block;
+  fill: #21201c;
+  shape-rendering: crispEdges;
+}
+
+/* the hat, set down beside the panda when it rests at the end of the road */
+.cv-hat {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 14px;
+  transform-origin: 0 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.cv-hat svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  shape-rendering: crispEdges;
+}
+
+/* ---- the fixed foot: the way back, and the way out ---- */
+
+#quarto-content main.content .cv-foot {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 2.2rem;
+  padding: 3.4rem 1.25rem calc(1.4rem + env(safe-area-inset-bottom, 0px));
+  /* opaque behind the links, so the road never reads through them */
+  background: linear-gradient(to bottom, transparent, var(--gray-100) 3.1rem);
+  pointer-events: none;
+}
+#quarto-content main.content .cv-foot a {
+  pointer-events: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--gray-1000);
+}
+#quarto-content main.content .cv-foot a:hover,
+#quarto-content main.content .cv-foot a:focus-visible {
+  color: var(--accent-ink);
+}
+
+/* The colophon whisper stays, clear of the fixed foot. */
+body:has(.cv) .site-colophon { margin-bottom: 6rem; }
+
+/* ---- narrow screens: the year stamps come in over the entry ---- */
+
+@media (max-width: 760px) {
+  body:has(.cv) {
+    --cv-gutter: 2.6rem;
+    --cv-spine-gap: 1.1rem;
+    --cv-marker-scale: 1;  /* no room beside the spine for a 2x walker */
+    --cv-hero-cell: 192px; /* 4x */
+  }
+  .cv-hero { padding-top: 2.5rem; }
+  .cv-road { transform: none; }
+  #quarto-content main.content .cv-when {
+    position: static;
+    text-align: left;
+    margin-bottom: 0.3rem;
+  }
+  #quarto-content main.content .cv-when small {
+    display: inline;
+    margin-right: 0.5em;
+    font-size: inherit;
+    letter-spacing: inherit;
+  }
+  #quarto-content main.content .cv-foot { gap: 0.4rem 1.3rem; }
+}

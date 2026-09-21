@@ -1,49 +1,131 @@
 # ---------------------------------------------------------------------------
-# The résumé's single source of truth. Everything else is generated:
-#   resume/_body.md (the site page's body) and the PDFs (via template.tex).
-# Edit THIS file, then:  python3 tools/resume/build.py --pdf
-# (The page body alone regenerates on every quarto render — pre-render hook.)
+# THE INVENTORY. One file of facts about Ameya's work; every surface is a view
+# of it. It funds the résumé (resume/_body.md and both PDFs, through
+# tools/resume/build.py) and the website (the home page timeline and the about
+# page, through tools/home/build.py).
 #
-# Writing conventions (build.py translates per surface):
+# Edit THIS file, then:  python3 tools/resume/build.py --pdf
+# (The résumé page body and the home page regenerate on every quarto render;
+#  only the PDFs need the command.)
+#
+# THE SHAPE
+#   [person]        who: name, headline, the Now paragraph, the about page's
+#                   paragraph, profile links
+#   [[contact]]     the résumé's contact line, in order
+#   [resume]        résumé settings: the variants and which one the page shows
+#   [[skills]]      skills rows
+#   [[items]]       EVERYTHING ELSE. One item per thing done: a degree, a role,
+#                   a study, a project. An item holds
+#                     - facts, said once      (id, kind, dates, people, tools)
+#                     - one table per surface (how that surface words it)
+#                     - its outputs           (posts, papers, repos, links)
+#
+# ADDING SOMETHING NEW: copy an item, give it a new `id`, fill in the facts.
+# It shows nowhere until a surface table says so, so the inventory can hold
+# more than any one page has room for. That is the point of it.
+#
+# ITEM FACTS
+#   id        a stable slug. Other items point at it; never reuse one.
+#   kind      "education" | "research" | "role" | "teaching" | "project"
+#   title     what it was          org       who it was with or for
+#   start     "YYYY-MM"            end       "YYYY-MM"; leave out while it runs
+#   status    "current" | "ongoing" | "ended". Default: "ended" if there is an
+#             `end`, otherwise "current". "ongoing" = open but not active now.
+#   parent    the id of the item this one sits under (a study under a research
+#             thread). The home page draws children as rows beneath the parent.
+#   location, people, team, tools, models, awards     free facts, all optional
+#   Dates are written ONCE here. Surfaces format them ("Aug – Sep 2026",
+#   "Sep 2026 – Present") unless a surface sets its own `dates` string.
+#
+# [items.resume]  — the résumé's view. No table = not on the résumé.
+#   section     which résumé section it files under
+#   heading, detail, bullets      the résumé's wording
+#   dates       only to override the formatted start/end
+#   url         makes the heading a link, on the PDF and the page
+#   link_label  names that link's destination in the PDF, which has no hover
+#   web_link    "post" | "note": on the PAGE, link to that output of this item
+#               instead of `url` (a site-relative link to the write-up)
+#   variants    which résumés carry it (default: all). [] = parked: the entry
+#               is kept, written and ready, and shown on none of them.
+#   [items.resume.<variant>]  keys that replace the entry's own for that
+#               variant only (e.g. a shorter bullet list)
+#   Within a section, entries appear in the order the items appear below.
+#
+# [items.home]  — the home page timeline's view, read by tools/home/build.py
+#   into _home.md on every render. The page's name, headline, Now paragraph
+#   and foot links come from [person]. Eras run newest first; rows keep the
+#   order the items have in this file.
+#   show    "era"  a node on the road, with name / role / what / tag
+#           "row"  a line of work under its parent era, with title / line
+#           "more" the same, folded under the era's More toggle
+#           "off"  (or no table) not on the home page
+#   when    "YYYY-MM": the stamp beside the node, if not the item's `start`
+#   An era's own output can be its row: put home = "row" | "more" on the
+#   output, with home_title / home_line (see the neutron-star post).
+#
+# [[items.outputs]]  — what the item produced. Keep these LAST in an item.
+#   kind    "post" | "note"  path = its folder on this site. The post's own
+#                            front matter stays the truth for its title,
+#                            description, date and image; never restate them.
+#           "paper"          title, venue, status, role
+#           "poster" | "crosspost" | "demo" | "link"      url (or note)
+#           "repo"           name, url, and optionally claim / language /
+#                            year: what the code is, in one sentence. There is
+#                            no instruments page any more (retired 2026-09-21;
+#                            kept at design/backups/). Code is filed under the
+#                            work it served, and these fields wait for the
+#                            projects page that may replace it.
+#
+# WRITING CONVENTIONS (build.py translates per surface)
 #   " · "  separator      -> \sep in the PDF, middot on the page
 #   — and –               -> --- and -- in the PDF, themselves on the page
 #   *emphasis*            -> \emph{} in the PDF, <em> on the page
 #   χ² (optional " = n")  -> math mode in the PDF, unicode on the page
 #   & % # ~               -> escaped for TeX automatically
 #
-# Per-item switches:
-#   web = false   on a contact item: PDF-only (the phone number stays off the
-#                 public page — the PDF is the subset with the private fields)
-#   url           makes the entry heading a link on both surfaces
-#   link_label    names that link's destination in the PDF, which has no hover
-#   web_url       overrides url on the page (e.g. site-relative post links)
-#
-# Variants — one source, two résumés:
-#   [variants.<name>]         a variant: its PDF filename, its link label on
-#                             the page, and its sections in order (a section
-#                             left out of the list is left out of the variant)
-#   page = "<name>"           which variant the site page renders
-#   variants = ["research"]   on an entry or skills row: belongs to those
-#                             variants only (default: all of them)
-#   [sections.entries.<name>] a per-variant override table on the entry it
-#                             follows: its keys replace the entry's own for
-#                             that variant (e.g. a different bullet list)
+# Lines marked CHECK are facts inferred rather than given. Lines marked REVIEW
+# are places where two surfaces currently disagree.
 # ---------------------------------------------------------------------------
 
-updated = "September 2026"
+
+# ===========================================================================
+# WHO
+# ===========================================================================
+
+[person]
 name = "Ameya Panchal"
-page = "research"
+# The home page's two title lines, and the about page's description.
+headline = ["CS, physics & AI at Penn State.", "Independent interpretability research."]
+# The Now paragraph. Rewritten by hand as the work moves; date it when you do.
+now = "My neutron-star paper is in peer review, and I am transitioning into AI safety research in mechanistic interpretability. Currently I am developing measures for internal monitoring when a model's chain of thought becomes illegible."
+now_updated = "2026-09"
+# The about page's paragraph, in Markdown (links are relative to /about/). The
+# home page already carries the short version; this one is free to grow into
+# the more personal account, for the reader who wants it.
+about = '''I'm an undergraduate at Penn State — computer science with minors in physics and AI, Schreyer Honors College — working toward a career in mechanistic interpretability research. I came up through physics: my first real project was a [Monte Carlo radiative-transfer code](../posts/where-the-error-hides/) for neutron-star atmospheres, the kind of work where nothing counts until it matches an exact answer. Transformers get the same treatment here: I trained a small character-level model and [traced a half-built copying mechanism in its weights](../posts/induction-head/), read [GPT-2's IOI circuit through three methods](../posts/ioi-circuit/) to see where each one goes blind, traced [the J-lens offset to the model's own token frequency](../posts/jlens-offset/), and am currently developing measures for internal monitoring when a model's chain of thought becomes illegible. Everything on this site is built or measured by me — controls included, especially the ones that broke my own hypotheses.'''
+# Deliberately NOT shown anywhere (2026-09-21: no coordinates, no time zone on
+# the site). Kept as a fact in case a surface ever wants the city alone.
+based_in = "State College, PA"
 
-[variants.research]
-pdf = "Ameya_Panchal_Resume.pdf"
-label = "research"
-sections = ["Education", "Research", "Experience", "Projects", "Skills"]
+  # Profile links, in the order the home page's foot shows them.
+  [[person.links]]
+  label = "About"
+  href = "about/"
+  [[person.links]]
+  label = "GitHub"
+  href = "https://github.com/Ameya-bit"
+  [[person.links]]
+  label = "LinkedIn"
+  href = "https://www.linkedin.com/in/ameya-bit"
+  [[person.links]]
+  label = "Email"
+  href = "mailto:ameyapanchal011@gmail.com"
+  [[person.links]]
+  label = "Résumé"
+  href = "resume/"
 
-[variants.engineer]
-pdf = "Ameya_Panchal_Resume_Engineering.pdf"
-label = "engineering"
-sections = ["Education", "Experience", "Projects", "Research", "Skills"]
-
+# The résumé's contact line. `web = false`: PDF-only (the phone number stays
+# off the public page — the PDF is the subset with the private fields).
 [[contact]]
 text = "(781) 870-7474"
 web = false
@@ -65,70 +147,257 @@ text = "linkedin.com/in/ameya-bit"
 href = "https://linkedin.com/in/ameya-bit"
 
 
-[[sections]]
-title = "Education"
+# ===========================================================================
+# THE RÉSUMÉ'S SETTINGS — one source, two résumés
+# ===========================================================================
 
-  [[sections.entries]]
+[resume]
+updated = "September 2026"
+page = "research"          # which variant the site's résumé page renders
+
+  # A variant: its PDF filename, its link label on the page, and its sections
+  # in order (a section left out of the list is left out of the variant).
+  [resume.variants.research]
+  pdf = "Ameya_Panchal_Resume.pdf"
+  label = "research"
+  sections = ["Education", "Research", "Experience", "Projects", "Skills"]
+
+  [resume.variants.engineer]
+  pdf = "Ameya_Panchal_Resume_Engineering.pdf"
+  label = "engineering"
+  sections = ["Education", "Experience", "Projects", "Research", "Skills"]
+
+
+# ===========================================================================
+# SKILLS — rows of the résumé's Skills section; `variants` as on an item
+# ===========================================================================
+
+[[skills]]
+label = "ML & Research"
+variants = ["research"]
+text = "Python, PyTorch, HuggingFace Transformers, TransformerLens, NumPy, scikit-learn, Monte Carlo simulation, Git"
+
+[[skills]]
+label = "Interpretability"
+variants = ["research"]
+text = "Transformer circuits, OV/QK analysis, activation and path patching, direct logit attribution, Jacobian and logit lenses"
+
+[[skills]]
+label = "Languages & Frameworks"
+variants = ["engineer"]
+text = "Python, TypeScript / JavaScript, Rust, Java, SQL · React, Vite, Node, Zod, FastAPI, Flask"
+
+[[skills]]
+label = "Machine Learning"
+variants = ["engineer"]
+text = "PyTorch, XGBoost, scikit-learn, HuggingFace Transformers, TransformerLens · RAG, agent tool design (WebMCP)"
+
+[[skills]]
+label = "Infrastructure"
+variants = ["engineer"]
+text = "Docker, Google Cloud Build, GitHub Actions, Netlify, Render · Playwright, Vitest, pytest, uv, Git"
+
+
+# ===========================================================================
+# THE ITEMS
+# ===========================================================================
+
+# ---- education ------------------------------------------------------------
+
+[[items]]
+id = "penn-state"
+kind = "education"
+org = "The Pennsylvania State University"
+title = "B.S. Computer Science"
+minors = ["Physics", "AI"]
+honors = "Schreyer Honors College"
+gpa = "3.71 / 4.00"
+location = "University Park, PA"
+start = "2024-08"          
+end = "2028-05"            # expected
+status = "current"
+
+  [items.resume]
+  section = "Education"
   heading = "The Pennsylvania State University"
-  location = "University Park, PA"
   detail = "B.S. Computer Science, Minors in Physics and AI · Schreyer Honors College · GPA 3.71 / 4.00"
   dates = "Expected May 2028"
 
+  [items.home]
+  show = "era"
+  name = "The Pennsylvania State University"
+  role = "B.S. Computer Science, minors in Physics and AI"
+  what = "Schreyer Honors College. Expected May 2028."
+  tag = "Current"
 
-[[sections]]
-title = "Research"
 
-  [[sections.entries]]
+# ---- research -------------------------------------------------------------
+
+[[items]]
+id = "spar-cot-probes"
+kind = "research"
+org = "SPAR"
+title = "Do Residual-Stream Probes Survive Degrading Chain-of-Thought Legibility?"
+people = ["Marios Tsatsos (mentor)"]
+team = "two fellow mentees"
+tools = ["PyTorch"]
+start = "2026-09"
+
+  [items.resume]
+  section = "Research"
   heading = "Do Residual-Stream Probes Survive Degrading Chain-of-Thought Legibility?"
   detail = "SPAR · mentored by Marios Tsatsos, with two fellow mentees · PyTorch"
-  dates = "Sep 2026 – Present"
   bullets = [
     "Comparing three published readability scores for a model's written reasoning on one set of traces, to find whether they agree",
     "Testing whether classifiers on a model's internal activations still catch harmful reasoning as that writing degrades",
   ]
-    [sections.entries.engineer]
+    [items.resume.engineer]
     bullets = [
       "Testing whether classifiers on a model's internal activations still catch harmful reasoning as its written reasoning degrades",
     ]
 
-  [[sections.entries]]
-  heading = "The J-lens offset is the model's token frequency: z-scoring fixes it"
+  [items.home]
+  show = "era"
+  name = "SPAR"
+  role = "Mentored research, with two fellow mentees"
+  what = "Do residual-stream probes survive degrading chain-of-thought legibility? Testing whether classifiers on a model's internal activations still catch harmful reasoning as its written reasoning degrades."
+  tag = "Current"
+
+
+# The thread the four independent studies hang from. It has no résumé entry of
+# its own (the résumé lists the studies); it exists so the home page has an era
+# to file them under. Not finished: more will land here as time and interest
+# allow (Ameya, 2026-09-21).
+[[items]]
+id = "independent-research"
+kind = "research"
+org = "Independent"
+title = "Independent research in mechanistic interpretability"
+tools = ["PyTorch", "TransformerLens"]
+models = ["GPT-2", "Pythia", "Qwen3", "Gemma-2"]
+start = "2026-07"
+status = "ongoing"
+
+  [items.home]
+  show = "era"
+  name = "Independent research"
+  role = "Mechanistic interpretability"
+  what = "Circuits and lenses in GPT-2, Pythia, Qwen3 and Gemma-2, with PyTorch and TransformerLens. Every figure regenerates from a public repository."
+  tag = "Ongoing"
+
+
+[[items]]
+id = "jlens-offset"
+kind = "research"
+parent = "independent-research"
+org = "Independent"
+title = "The J-lens offset is the model's token frequency: z-scoring helps"
+tools = ["PyTorch", "jacobian-lens"]
+models = ["Qwen3", "Pythia", "GPT-2", "Gemma-2"]
+start = "2026-08"
+end = "2026-09"
+
+  [items.resume]
+  section = "Research"
+  heading = "The J-lens offset is the model's token frequency: z-scoring helps"
   detail = "Independent · PyTorch, jacobian-lens · Qwen3, Pythia, GPT-2, Gemma-2"
-  dates = "Aug 2026"
-  url = "https://github.com/Ameya-bit/quantify-jlens-offset"
-  link_label = "GitHub"
+  url = "https://ameya-bit.github.io/posts/jlens-offset/"
+  link_label = "post"
+  web_link = "post"
   bullets = [
     "Traced the per-token bias in a lens that reads a model's internal activations as words to the model's own word frequency (Spearman 0.48); subtracting it made readouts 3.5–7× *worse*",
     "Replaced subtraction with z-scoring: recovered hidden secret words from fine-tuned models where the published method scored zero, and beat it 0.805 to 0.665 on Gemma-2-9B",
   ]
-    [sections.entries.engineer]
+    [items.resume.engineer]
     bullets = [
       "Traced a per-token bias in a tool that reads a model's internal activations to the model's word frequency, and fixed it with z-scoring: recovered secret words where the published method scored zero, beating it 0.805 to 0.665 (Cywinski et al. accuracy)",
     ]
 
-  [[sections.entries]]
+  [items.home]
+  show = "row"
+  title = "The J-lens offset is the model's token frequency"
+  line = "Subtracting it hurts; z-scoring it helps"
+
+  [[items.outputs]]
+  kind = "post"
+  path = "posts/jlens-offset"
+  [[items.outputs]]
+  kind = "repo"
+  name = "quantify-jlens-offset"
+  url = "https://github.com/Ameya-bit/quantify-jlens-offset"
+  [[items.outputs]]
+  kind = "crosspost"
+  where = "LessWrong"
+  url = "https://www.lesswrong.com/posts/Qe3jdphWCg9kny3e5/the-j-lens-offset-is-the-model-s-token-frequency-z-scoring"
+  # The from-scratch J-lens replication (jacobian-lens-from-scratch) was
+  # dropped to focus on this study, so it is not an output of anything.
+
+
+[[items]]
+id = "dead-relu"
+kind = "research"
+parent = "independent-research"
+org = "Independent"
+title = "A Dead-ReLU Absorbing State — Resolving an Open Memorization Anomaly"
+tools = ["PyTorch"]
+start = "2026-07"
+end = "2026-07"
+
+  [items.resume]
+  section = "Research"
   heading = "A Dead-ReLU Absorbing State — Resolving an Open Memorization Anomaly"
   detail = "Independent · PyTorch · *LessWrong*"
-  dates = "Jul 2026"
   url = "https://www.lesswrong.com/posts/KWtchKwwnJkd4bwCi/challenge-hand-coding-weights-for-efficient-sequence-1#comment-rknfi2yEozQyEJ6Tp"
   link_label = "LessWrong"
-  web_url = "../notes/dead-relu-collapse/"
+  web_link = "note"
   bullets = [
     "Explained why one small transformer in a published memorization challenge could barely learn: its ReLU units died in training and cut off the gradient, a training failure, not a capacity limit",
     "Confirmed it with one controlled experiment (a bias after the hidden layer restored full capacity, 1024 facts; before it, none, 488) and hand-built weights storing 672 facts; *overturned* the authors' explanation",
   ]
-    [sections.entries.engineer]
+    [items.resume.engineer]
     bullets = [
       "Explained why one small transformer in a published memorization challenge could barely learn (dead ReLU units cut off the gradient) and *overturned* the authors' explanation with one controlled experiment",
     ]
 
-  [[sections.entries]]
+  [items.home]
+  show = "more"
+  title = "A dead-ReLU absorbing state"
+  line = "Why one architecture in a memorization challenge barely learns"
+
+  [[items.outputs]]
+  kind = "note"
+  path = "notes/dead-relu-collapse"
+  [[items.outputs]]
+  kind = "crosspost"
+  where = "LessWrong"
+  note = "A comment on the challenge post, not a post of its own"
+  url = "https://www.lesswrong.com/posts/KWtchKwwnJkd4bwCi/challenge-hand-coding-weights-for-efficient-sequence-1#comment-rknfi2yEozQyEJ6Tp"
+  [[items.outputs]]
+  kind = "repo"
+  name = "mem-toy-scratch"
+  url = "https://github.com/Ameya-bit/mem-toy-scratch"
+  claim = "The memorisation-challenge sweeps: the bias split, the transplant control, and the dead-unit census behind the absorbing-state result."
+  language = "Python"
+  year = 2026
+
+
+[[items]]
+id = "induction-head"
+kind = "research"
+parent = "independent-research"
+org = "Independent"
+title = "An Induction Head in Disguise — Circuit Analysis of a Character-Level Transformer"
+tools = ["PyTorch", "TransformerLens"]
+start = "2026-07"
+end = "2026-07"
+
+  [items.resume]
+  section = "Research"
   heading = "An Induction Head in Disguise — Circuit Analysis of a Character-Level Transformer"
   detail = "Independent · PyTorch, TransformerLens · *LessWrong*"
-  dates = "Jul 2026"
   url = "https://www.lesswrong.com/posts/x2ZdCoqAaLedpjDk3/an-induction-head-in-disguise-chasing-grammar-in-a-character"
   link_label = "LessWrong"
-  web_url = "../posts/induction-head/"
+  web_link = "post"
   variants = ["research"]
   bullets = [
     "Trained a 6-layer character-level transformer on Nietzsche's prose and located the one attention head that copies earlier text forward",
@@ -136,86 +405,266 @@ title = "Research"
     "Found the head had learned half of a bracket-matching mechanism: it knows what to write, but never learned where to look",
   ]
 
-  # Parked (variants = []) when the J-lens study arrived: one page holds four
-  # research entries, and this reproduction is the one the others supersede.
-  [[sections.entries]]
+  [items.home]
+  show = "row"
+  title = "An induction head in disguise"
+  line = "Chasing grammar in a character-level transformer"
+
+  [[items.outputs]]
+  kind = "post"
+  path = "posts/induction-head"
+  [[items.outputs]]
+  kind = "crosspost"
+  where = "LessWrong"
+  url = "https://www.lesswrong.com/posts/x2ZdCoqAaLedpjDk3/an-induction-head-in-disguise-chasing-grammar-in-a-character"
+  [[items.outputs]]
+  kind = "repo"
+  name = "QuotesByNiche"
+  url = "https://github.com/Ameya-bit/QuotesByNiche"
+  claim = "A character-level transformer trained on Nietzsche, and the head analysis that found a copying circuit with half a bracket-completion mechanism in it."
+  language = "Jupyter"
+  year = 2026
+  [[items.outputs]]
+  kind = "demo"
+  name = "Ask Niche"
+  note = "The trained model running in the browser, on the post itself (assets/niche/). Desktop only."
+
+
+# Parked on the résumé (variants = []) when the J-lens study arrived: one page
+# holds four research entries, and this reproduction is the one the others
+# supersede.
+[[items]]
+id = "ioi-circuit"
+kind = "research"
+parent = "independent-research"
+org = "Independent"
+title = "Reading GPT-2's IOI Circuit Three Ways"
+tools = ["TransformerLens"]
+models = ["GPT-2"]
+start = "2026-07"
+end = "2026-07"
+
+  [items.resume]
+  section = "Research"
   heading = "Reading GPT-2's IOI Circuit Three Ways"
   detail = "Independent · TransformerLens"
-  dates = "Jul 2026"
   url = "https://ameya-bit.github.io/posts/ioi-circuit/index.html"
   link_label = "writeup"
-  web_url = "../posts/ioi-circuit/"
+  web_link = "post"
   variants = []
   bullets = [
     "Reproduced a known GPT-2 circuit (Wang et al.) with three attribution methods, each implemented by hand",
   ]
 
-  [[sections.entries]]
-  heading = "Monte Carlo Radiative Transfer — Neutron-Star Pulse Profiles"
+  [items.home]
+  show = "more"
+  title = "Every method has a blind spot"
+  line = "Reading GPT-2's IOI circuit three ways"
+
+  [[items.outputs]]
+  kind = "post"
+  path = "posts/ioi-circuit"
+  [[items.outputs]]
+  kind = "repo"
+  name = "IOI"
+  url = "https://github.com/Ameya-bit/IOI"
+  claim = "Direct logit attribution, activation patching and path patching over GPT-2's IOI circuit. Four notebooks; every figure in the post regenerates from one cached run."
+  language = "Jupyter"
+  year = 2026
+
+
+# The learned line-walker behind the site's pandas: an RL and interpretability
+# project of its own. Not on the résumé. The repository is private, so it has
+# no repo output; the note is its one public write-up.
+[[items]]
+id = "panda-engine"
+kind = "research"
+parent = "independent-research"
+org = "Independent"
+title = "The panda engine — a learned policy for a sprite troupe"
+start = "2026-07"          # CHECK
+status = "ongoing"         # CHECK
+
+  [items.home]
+  show = "more"
+  title = "A statue with reflexes"
+  line = "Cloning an expert taught the policy to walk, not where"
+
+  [[items.outputs]]
+  kind = "note"
+  path = "notes/statue-with-reflexes"
+
+
+# The dates here are the whole arc. The REU programme itself ran June to July
+# 2026; the months from October 2025 were groundwork, getting the bearings of
+# the field. The paper now in review started in June 2026 (Ameya, 2026-09-21).
+[[items]]
+id = "neutron-star"
+kind = "research"
+org = "Penn State Multi-Campus REU"
+title = "Systematic Bias from Assuming Isotropic Surface Emission in Neutron-Star Pulse-Profile Modeling"
+people = ["Prof. Asif ud-Doula (advisor)"]
+tools = ["Python"]
+start = "2025-10"
+end = "2026-08"
+program_start = "2026-06"
+program_end = "2026-07"
+
+  [items.resume]
+  section = "Research"
+  heading = "Systematic Bias from Assuming Isotropic Surface Emission in Neutron-Star Pulse-Profile Modeling"
   detail = "Penn State Multi-Campus REU · advised by Prof. Asif ud-Doula · Python"
-  dates = "Oct 2025 – Aug 2026"
   url = "https://sites.psu.edu/mcreu/2026/07/21/where-the-error-hides-how-a-common-assumption-biases-pulse-fraction-for-neutron-stars/"
   link_label = "poster"
+  web_link = "post"
+  # Dates print as "Oct 2025 – Aug 2026", the whole arc, while the home page
+  # stamps this era June 2026. Both are true, and settled (Ameya, 2026-09-21).
   bullets = [
     "Simulated X-ray photons scattering through a neutron star's atmosphere to measure the error a common assumption introduces",
     "Validated it against an exact analytic solution (reduced χ² = 0.70) and published waveforms (0.11% peak error)",
     "Showed the error shifts between two observables; first-author paper under review at *Astrophysics and Space Science*",
   ]
-    [sections.entries.engineer]
+    [items.resume.engineer]
     bullets = [
       "Simulated X-ray scattering in a neutron-star atmosphere; first-author paper under review at *Astrophysics and Space Science*",
     ]
 
+  [items.home]
+  show = "era"
+  when = "2026-06"
+  name = "Penn State Multi-Campus REU"
+  role = "Undergraduate researcher, advised by Prof. Asif ud-Doula"
+  what = "The paper in peer review today started here: X-ray photons scattering through a neutron star's atmosphere, simulated to measure the error a common assumption introduces. First author, under review at *Astrophysics and Space Science*."
 
-[[sections]]
-title = "Experience"
+  [[items.outputs]]
+  kind = "paper"
+  venue = "Astrophysics and Space Science"
+  status = "under review"
+  role = "first author"
+  started = "2026-06"
+  title = "Systematic Bias from Assuming Isotropic Surface Emission in Neutron-Star Pulse-Profile Modeling"
+  [[items.outputs]]
+  kind = "post"
+  path = "posts/where-the-error-hides"
+  home = "row"
+  home_title = "Where the error hides"
+  home_line = "The isotropy bias in neutron-star pulse profiles"
+  [[items.outputs]]
+  kind = "poster"
+  url = "https://sites.psu.edu/mcreu/2026/07/21/where-the-error-hides-how-a-common-assumption-biases-pulse-fraction-for-neutron-stars/"
+  [[items.outputs]]
+  kind = "repo"
+  name = "mc-radiative-transfer"
+  url = "https://github.com/Ameya-bit/mc-radiative-transfer"
+  claim = "Monte Carlo radiative transfer through a scattering atmosphere. Reproduces Chandrasekhar's H function, and the pulse machinery matches published reference waveforms to 0.11%."
+  language = "Python"
+  year = 2026
 
-  [[sections.entries]]
+
+# ---- roles and teaching ---------------------------------------------------
+
+[[items]]
+id = "nittany-ai-advance"
+kind = "role"
+org = "Nittany AI Advance Internship Program"
+title = "Application Specialist"
+team = "Team of 5"
+client = "Penn State Office of the Physical Plant"
+location = "State College, PA"
+start = "2025-12"
+end = "2026-04"
+
+  [items.resume]
+  section = "Experience"
   heading = "Nittany AI Advance Internship Program"
-  location = "State College, PA"
   detail = "Application Specialist · Team of 5 · Client: Penn State Office of the Physical Plant"
-  dates = "Dec 2025 – Present"
   bullets = [
     "Built a Tesseract OCR + LLM + regex pipeline that extracts metadata (project name, ID, and more) from scanned project documents",
     "Raised extraction accuracy up to 10% by merging the LLM and regex paths and moving from GPT-4o to GPT-5 after benchmarking Azure's 4- and 5-series models; parallelized the pipeline for 5x faster runs",
   ]
 
-  # Parked (variants = []) when the J-lens study arrived: the research page
-  # had one entry's worth of room, and the research took it.
-  [[sections.entries]]
+  # REVIEW: the first candidate to leave the home page. It is finished and the
+  # least related to interpretability; the résumé still carries it.
+  [items.home]
+  show = "era"
+  name = "Nittany AI Advance"
+  role = "Application specialist, team of five · through April 2026"
+  what = "An OCR, LLM and regex pipeline that extracts metadata from scanned project documents, for Penn State's Office of the Physical Plant."
+
+
+# Parked on the résumé (variants = []) when the J-lens study arrived: the
+# research page had one entry's worth of room, and the research took it.
+[[items]]
+id = "physics-la"
+kind = "teaching"
+org = "Penn State Department of Physics"
+title = "Physics Learning Assistant"
+course = "PHYS 211"
+location = "University Park, PA"
+start = "2025-08"
+end = "2025-12"
+
+  [items.resume]
+  section = "Experience"
   heading = "Penn State Department of Physics"
-  location = "University Park, PA"
   detail = "Physics Learning Assistant · PHYS 211"
-  dates = "Aug – Dec 2025"
   variants = []
   bullets = [
     "Taught calculus-based mechanics in problem sessions, labs, and exam prep",
   ]
 
 
-[[sections]]
-title = "Projects"
+# ---- projects -------------------------------------------------------------
 
-  # Private repo, so no url: the entry claims only what was built and led.
-  # PennDOT is named as work performed, never as a deal — the pilot was
-  # scoped over roughly a year and never converted.
-  [[sections.entries]]
+# Private repo, so no url: the entry claims only what was built and led.
+# PennDOT is named as work performed, never as a deal — the pilot was scoped
+# over roughly a year and never converted. The home page leaves PennDOT out.
+[[items]]
+id = "crashai"
+kind = "project"
+org = "CrashAI"
+title = "CrashAI — Crash-Risk Analysis Platform"
+role = "Founder & Technical Lead"
+team = "Team of 3"
+awards = ["1st of 40 teams, Nittany AI Challenge 2026"]
+start = "2026-02"
+status = "current"         # still going (Ameya, 2026-09-21)
+
+  [items.resume]
+  section = "Projects"
   heading = "CrashAI — Crash-Risk Analysis Platform"
   detail = "Founder & Technical Lead · Team of 3 · 1st of 40 teams, Nittany AI Challenge 2026 · Scoped with PennDOT"
-  dates = "Feb – Jul 2026"
   bullets = [
     "Built a crash-severity model (XGBoost, 81 road and driver features) with per-site explanations and what-if simulation; led a team building a 33-tool agent, retrieval over engineering manuals, and an eval harness",
   ]
-    [sections.entries.engineer]
+    [items.resume.engineer]
     bullets = [
       "Built the crash-severity model (XGBoost, 81 road and driver features) with per-site SHAP explanations and what-if simulation, served by a FastAPI REST backend with sub-5 ms road-data lookups from a local spatial index",
       "Led a team building the React / TypeScript frontend and Python services (33-tool agent loop, retrieval over engineering manuals, hash-verified artifact pipeline, eval harness); shipped with Docker, Cloud Build, Playwright, Vitest",
     ]
 
-  [[sections.entries]]
+  [items.home]
+  show = "era"
+  name = "CrashAI"
+  role = "Founder & technical lead, team of three"
+  what = "A crash-risk analysis platform: a crash-severity model with per-site explanations and what-if simulation. First of 40 teams at the Nittany AI Challenge 2026."
+  tag = "Current"
+
+
+[[items]]
+id = "peira"
+kind = "project"
+org = "Solo"
+title = "Peira — An Agent-Native Instrument for Benefit Cliffs"
+context = "OpenAI WebMCP Challenge entry"
+tools = ["TypeScript", "React", "Zod", "Python", "FastAPI"]
+start = "2026-08"
+end = "2026-09"
+
+  [items.resume]
+  section = "Projects"
   heading = "Peira — An Agent-Native Instrument for Benefit Cliffs"
   detail = "Solo · OpenAI WebMCP Challenge entry · TypeScript, React, Zod · Python, FastAPI"
-  dates = "Aug – Sep 2026"
   url = "https://github.com/Ameya-bit/benefit-cliff-webmcp"
   link_label = "GitHub"
   variants = ["engineer"]
@@ -224,10 +673,33 @@ title = "Projects"
     "Kept each tool reply to ~1 KB of derived numbers; Zod validation on every input, a server-side whitelist for policy edits, rate limiting; 21 backend tests and an end-to-end script; live on Netlify and Render",
   ]
 
-  [[sections.entries]]
+  [[items.outputs]]
+  kind = "repo"
+  name = "benefit-cliff-webmcp"
+  url = "https://github.com/Ameya-bit/benefit-cliff-webmcp"
+  [[items.outputs]]
+  kind = "link"
+  name = "Devpost"
+  url = "https://devpost.com/software/peira"
+  # The live deployment will likely come down once the competition ends, so
+  # the Devpost page is the lasting public record, not the demo URL.
+  # REVIEW: the résumé's second bullet ends "live on Netlify and Render".
+  # Cut that clause when the deployment goes.
+
+
+[[items]]
+id = "web-vuln-study"
+kind = "project"
+org = "Solo"
+title = "Web Vulnerabilities Study — Seven Classes, Defended in Rust and Python"
+tools = ["Rust (axum, actix-web, sqlx, diesel, casbin)", "Python (Flask)"]
+start = "2025-05"
+end = "2025-05"
+
+  [items.resume]
+  section = "Projects"
   heading = "Web Vulnerabilities Study — Seven Classes, Defended in Rust and Python"
   detail = "Solo · Rust (axum, actix-web, sqlx, diesel, casbin) · Python (Flask)"
-  dates = "May 2025"
   url = "https://github.com/Ameya-bit/vulnerabilties_study"
   link_label = "GitHub"
   variants = ["engineer"]
@@ -235,12 +707,27 @@ title = "Projects"
     "Wrote and documented a working defense for seven web vulnerability classes, from SQL injection to OAuth misconfiguration",
   ]
 
-  # Parked (variants = []): the engineering page is full. Swap it in for
-  # another Projects entry if it earns the room.
-  [[sections.entries]]
+  [[items.outputs]]
+  kind = "repo"
+  name = "vulnerabilties_study"
+  url = "https://github.com/Ameya-bit/vulnerabilties_study"
+
+
+# Parked on the résumé (variants = []): the engineering page is full. Swap it
+# in for another Projects entry if it earns the room.
+[[items]]
+id = "photo-constellation"
+kind = "project"
+org = "Solo"
+title = "photo-constellation — A Face Co-occurrence Graph Over a Photo Library"
+tools = ["Python"]
+start = "2026-08"
+end = "2026-08"
+
+  [items.resume]
+  section = "Projects"
   heading = "photo-constellation — A Face Co-occurrence Graph Over a Photo Library"
   detail = "Solo · Python"
-  dates = "Aug 2026"
   url = "https://github.com/Ameya-bit/photo-constellation"
   link_label = "GitHub"
   variants = []
@@ -248,31 +735,35 @@ title = "Projects"
     "Built a pipeline from a folder of photographs to a graph of who appears with whom: face detection, identity clustering, a graph layout, and a route through it that meets the most distinct people; embeddings and identities stay off the repository by default",
   ]
 
+  [[items.outputs]]
+  kind = "note"
+  path = "notes/better-than-the-last-one"
+  [[items.outputs]]
+  kind = "repo"
+  name = "photo-constellation"
+  url = "https://github.com/Ameya-bit/photo-constellation"
+  [[items.outputs]]
+  kind = "repo"
+  name = "image-to-image"
+  url = "https://github.com/Ameya-bit/image-to-image"
+  # CHECK: linked from the same note; filed here on that evidence alone.
 
-[[sections]]
-title = "Skills"
 
-  [[sections.skills]]
-  label = "ML & Research"
-  variants = ["research"]
-  text = "Python, PyTorch, HuggingFace Transformers, TransformerLens, NumPy, scikit-learn, Monte Carlo simulation, Git"
+# This website. On no surface yet; here so the inventory is complete.
+[[items]]
+id = "this-site"
+kind = "project"
+org = "Solo"
+title = "ameya-bit.github.io — this site"
+tools = ["Quarto", "SCSS", "JavaScript", "Python"]
+start = "2026-07"
+status = "current"
 
-  [[sections.skills]]
-  label = "Interpretability"
-  variants = ["research"]
-  text = "Transformer circuits, OV/QK analysis, activation and path patching, direct logit attribution, Jacobian and logit lenses"
-
-  [[sections.skills]]
-  label = "Languages & Frameworks"
-  variants = ["engineer"]
-  text = "Python, TypeScript / JavaScript, Rust, Java, SQL · React, Vite, Node, Zod, FastAPI, Flask"
-
-  [[sections.skills]]
-  label = "Machine Learning"
-  variants = ["engineer"]
-  text = "PyTorch, XGBoost, scikit-learn, HuggingFace Transformers, TransformerLens · RAG, agent tool design (WebMCP)"
-
-  [[sections.skills]]
-  label = "Infrastructure"
-  variants = ["engineer"]
-  text = "Docker, Google Cloud Build, GitHub Actions, Netlify, Render · Playwright, Vitest, pytest, uv, Git"
+  [[items.outputs]]
+  kind = "link"
+  name = "Colophon"
+  path = "colophon"
+  [[items.outputs]]
+  kind = "repo"
+  name = "Ameya-bit.github.io"
+  url = "https://github.com/Ameya-bit/Ameya-bit.github.io"

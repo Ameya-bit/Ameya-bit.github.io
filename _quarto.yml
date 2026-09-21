@@ -4,7 +4,9 @@ project:
   # The résumé page's body is generated from tools/resume/resume.toml on every
   # render, so the page can never drift from the source. (The PDF side runs
   # manually: python3 tools/resume/build.py --pdf.)
-  pre-render: tools/resume/build.py
+  pre-render:
+    - tools/resume/build.py
+    - tools/home/build.py
   # Figures get their intrinsic width/height and a load policy read out of the
   # image files themselves, after Quarto has written the HTML. Doing it here
   # rather than in the markdown means the numbers cannot drift from the files
@@ -29,6 +31,7 @@ project:
   resources:
     - "assets/niche/"
     - "assets/pandas/"
+    - "assets/home/"
     - "!assets/pandas/engine/node_modules/"
     # The vendored KaTeX dist. Listed explicitly because the only reference to
     # it is in the script/link tags Quarto generates itself, which its resource
@@ -122,10 +125,8 @@ format:
       - assets/site/figure-zoom.html
       - assets/site/toc-rail.html
       - assets/site/hero-motion.html
-      # The status stamp bails instantly on any page with no .hero-pulse, and
-      # the rail introduction on any page with no TOC — so posts pay only the
-      # parse for the first and the homepage only for the second.
-      - assets/site/hero-status.html
+      # The rail introduction bails instantly on any page with no TOC, so the
+      # homepage pays only the parse.
       - assets/site/rail-intro.html
       # The interactive lens figure — bails on every page with no #ioi-lens.
       - assets/site/ioi-lens.html

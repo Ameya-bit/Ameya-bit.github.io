@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 """The résumé adapter: one source, two variants, two renderers.
 
-    tools/resume/resume.toml            the content, and nothing else
+    tools/resume/resume.toml            the inventory: every fact, said once
         ├── resume/_body.md             the page's body (site language; committed)
         └── build/Resume-<variant>.tex ──latexmk──► assets/<variant's pdf>
 
-A variant ([variants.<name>] in the TOML) is a selection over the one source:
+The TOML is an inventory of items (degrees, roles, studies, projects), each
+carrying its facts, its outputs, and one table per surface. This script reads
+the résumé's view of it: resume_source() reshapes the items that have a
+`resume` table into sections, and everything downstream is unchanged. The
+website's surfaces (the home page timeline, the about page) are read by
+tools/home/build.py; their tables in the TOML are ignored here.
+
+A variant ([resume.variants.<name>] in the TOML) is a selection over the one source:
 its sections in its order, the entries and skills rows tagged for it, and any
 per-variant override tables applied. The page renders the variant the TOML
 names as `page`; --pdf builds every variant's PDF, and the page links them all.
@@ -42,6 +49,83 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 BODY_MD = ROOT / "resume" / "_body.md"
 ASSETS = ROOT / "assets"
+
+
+# ---- the inventory, as the résumé sees it ------------------------------------
+
+MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def format_dates(item: dict) -> str:
+    """An item's start/end ("YYYY-MM") as the résumé prints a date range.
+
+    One month stands alone; a range inside one year names the year once; an
+    item with no end is still running.
+    """
+    sy, sm = (int(x) for x in item["start"].split("-"))
+    start = f"{MONTHS[sm - 1]} {sy}"
+    if "end" not in item:
+        return f"{start} – Present"
+    ey, em = (int(x) for x in item["end"].split("-"))
+    if (sy, sm) == (ey, em):
+        return start
+    if sy == ey:
+        return f"{MONTHS[sm - 1]} – {MONTHS[em - 1]} {ey}"
+    return f"{start} – {MONTHS[em - 1]} {ey}"
+
+
+def resume_entry(item: dict, variant_names: tuple) -> dict:
+    """One inventory item -> the entry dict the renderers read.
+
+    The résumé's wording comes from the item's `resume` table; the facts it
+    does not restate (location, dates) come from the item itself. `web_link`
+    names one of the item's outputs, and resolves to that output's folder.
+    """
+    view = item["resume"]
+    entry = {k: v for k, v in view.items() if k not in ("section", "web_link")}
+    entry.setdefault("dates", format_dates(item))
+    if "location" in item:
+        entry.setdefault("location", item["location"])
+    if "web_link" in view:
+        target = next((o for o in item.get("outputs", []) if o["kind"] == view["web_link"]), None)
+        if target is None:
+            sys.exit(f"resume.toml: {item['id']} has web_link = {view['web_link']!r} but no such output")
+        entry["web_url"] = f"../{target['path']}/"
+    return entry
+
+
+def resume_source(inventory: dict) -> dict:
+    """The inventory, reshaped into the sections the résumé is built from.
+
+    A new dict; the inventory is untouched. Entries keep the inventory's order
+    within their section. The Skills section is the `skills` rows.
+    """
+    settings = inventory["resume"]
+    names = tuple(settings["variants"])
+    titles = []
+    for v in settings["variants"].values():
+        titles += [t for t in v["sections"] if t not in titles]
+    on_resume = [i for i in inventory["items"] if "resume" in i]
+    unknown = {i["resume"]["section"] for i in on_resume} - set(titles)
+    if unknown:
+        sys.exit(f"resume.toml: no variant lists the section(s) {sorted(unknown)}")
+    sections = [
+        {
+            "title": title,
+            "entries": [resume_entry(i, names) for i in on_resume if i["resume"]["section"] == title],
+            "skills": inventory.get("skills", []) if title == "Skills" else [],
+        }
+        for title in titles
+    ]
+    return {
+        "name": inventory["person"]["name"],
+        "updated": settings["updated"],
+        "page": settings["page"],
+        "variants": settings["variants"],
+        "contact": inventory["contact"],
+        "sections": sections,
+    }
 
 
 # ---- variants ---------------------------------------------------------------
@@ -250,7 +334,7 @@ def main() -> None:
                     help="also build every variant's PDF via latexmk into assets/")
     args = ap.parse_args()
 
-    source = tomllib.loads((HERE / "resume.toml").read_text())
+    source = resume_source(tomllib.loads((HERE / "resume.toml").read_text()))
     if source["page"] not in source["variants"]:
         sys.exit(f"resume.toml: page = {source['page']!r} names no variant")
 

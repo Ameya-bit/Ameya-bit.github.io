@@ -2,6 +2,9 @@
 pagetitle: "Ameya Panchal"
 page-layout: full
 toc: false
+include-in-header:
+  - text: |
+      <link rel="stylesheet" href="assets/home/home.css">
 listing:
   - id: writing
     contents: posts
@@ -25,166 +28,49 @@ listing:
 ---
 
 ```{=html}
-<!-- The Now hero (2026-08-18). One lead block — kicker, headline, paragraph —
-     set low in the frame, with the corners keeping their semantic jobs: links
-     top-right, status alone bottom-left, the ledger alone bottom-right. DOM
-     order is lead → links → filing (the reading order); the links corner's
-     position is visual only (flex `order`). Each .rise-mask/.rise pair is one
-     beat of the entrance choreography (assets/site/hero-motion.html).
+<!-- THE ROAD (branch `panda-walk`, 2026-09-21). The home page is a CV read as a
+     timeline, after mikes.cv, with the hat panda where Mike has the aeroplane:
+     it opens large on the first screen, shrinks onto the spine as the reader
+     scrolls, walks the road beside them, and sits down at the end of it, hat off.
+     Styles: assets/home/home.css. The walker: assets/home/panda-walk.js. Both
+     are loaded by this page only.
 
-     WHAT CHANGED, AND WHY. The headline was a tricolon slogan — "LLM circuitry
-     — implemented, documented, shown off" — stepping rightward in three indents.
-     It was the best-composed thing on the page and the emptiest: the largest
-     object on the first screen carried the one sentence a reader could not
-     check, while Penn State, the manuscript and the live experiment sat under
-     it in 14–17px gray. Eight researcher sites worth copying were surveyed
-     (juancadile, katiemccurdy, thesephist, wattenberger, neelnanda, colah,
-     ciechanow.ski) and not one leads with a tagline about its subject area;
-     they lead with a name, a role, or a thing they are doing this month. So the
-     credentials take the display slot and the Now paragraph — Ameya's own
-     words, rewritten by hand as the work moves — stays directly underneath.
-     The staircase goes with the tricolon: two hand-set lines are not a stair.
+     THE SECTION IS GENERATED. _home.md is written by tools/home/build.py from
+     the inventory (tools/resume/resume.toml) on every render: the name, the
+     headline, the Now paragraph, every era, every row, the foot links. To
+     change what the page says, or what is on it, edit the inventory — a new
+     post appears here by being listed as an output of an item whose `home`
+     table shows it. Nothing in _home.md is edited by hand.
 
-     The role line left the identity corner in the same move. It is the
-     headline now, and a page should not state its one durable fact twice on
-     one screen; the corner keeps the links, which is still an object in it.
+     The previous home page (the Now hero, the ledger, the two lists) is kept
+     whole at design/backups/index-2026-09-17-now-hero.qmd.
 
-     The share card mirrors this composition and is regenerated deliberately,
-     not on render: python3 tools/og-card/build.py.
-
-     The 2026-08-16 build first tried a fuller "CV first screen" — a selected-
-     work strip and a figure plate (a head of the induction post's model reading
-     the headline, real baked attention) — and Ameya cut both the same day: the
-     strip only repeated the Writing list below, and the plate meant nothing
-     outside the induction post. The plate is BANKED for a "latest work" role:
-     tools/hero-plate/compute.py + assets/site/hero-plate.html stay in the tree
-     unwired; the markup, CSS and _quarto.yml wiring are in commit 84641f7. -->
-<section class="hero-screen">
-  <div class="hero" aria-labelledby="hero-headline">
-    <div class="hero-inner">
-      <div class="hero-lead">
-        <p class="hero-kicker"><span class="rise-mask"><span class="rise" style="--beat: 0ms">Now</span></span></p>
-        <p id="hero-headline" class="hero-headline" role="heading" aria-level="1"><span class="rise-mask"><span class="rise" style="--beat: 60ms">CS, physics &amp; AI at Penn State.</span></span><span class="rise-mask"><span class="rise" style="--beat: 140ms">Independent interpretability research.</span></span></p>
-        <div class="rise-mask"><div class="rise hero-now" style="--beat: 240ms">
-          <p>I am in the process of publishing a neutron-star paper, and am transitioning into AI safety research in mechanistic interpretability. Currently I am working to reproduce the early-layer degradation result from the Global Workspace paper (Gurnee et al., 2026).</p>
-        </div></div>
-      </div>
-
-      <div class="hero-ident">
-        <div class="rise-mask"><nav class="hero-links rise" style="--beat: 320ms" aria-label="Profile links">
-          <a href="about/">About</a>
-          <a href="https://github.com/Ameya-bit">GitHub</a>
-          <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
-          <a href="mailto:ameyapanchal011@gmail.com">Email</a>
-          <a href="resume/">Résumé</a>
-        </nav></div>
-      </div>
-
-      <div class="hero-foot">
-        <!-- The status line, genuinely live (2026-08-04). The QUESTION is
-             editorial and stays in the markup — it is the one sentence that
-             says what I am doing right now. What JS adds is the evidence that
-             it is still happening: the last push to the experiment's repo, as
-             a relative stamp (assets/site/hero-status.html). Named by
-             `data-repo`, so pointing the line at the next project is a
-             one-attribute edit.
-             The COMMIT MESSAGE is deliberately not shown — "fix seed" in a
-             hero is worse than nothing; freshness is the only part of a commit
-             stream a visitor can use.
-             Both the stamp and the cursor ship `hidden`. The cursor's whole
-             claim is "this line is live", so it may only appear once something
-             live has actually landed — with JS off, rate-limited, or the repo
-             gone, the line renders as the plain question it always was, and
-             nothing blinks to promise otherwise. -->
-        <p class="hero-status"><span class="rise-mask"><span class="rise" style="--beat: 440ms">Current experiment&ensp;·&ensp;Does Anthropic's global workspace result replicate?<span class="hero-pulse" data-repo="Ameya-bit/jacobian-lens-from-scratch" hidden></span><span class="hero-cursor" aria-hidden="true" hidden></span></span></span></p>
-        <!-- The ledger (the banked catalogue-cover move, adopted 2026-08-04): the
-             hero's bottom-right corner is the site's table of contents — one row
-             per collection, trailing mono numerals for the honest counts (mono is
-             the numbering system, nothing else). The hardcoded counts are correct
-             at publish time; the script at the foot of this file re-reads them
-             from the rendered listings so they can never drift.
-
-             INSTRUMENTS (2026-08-06) is the first row that leaves this page, and
-             the first whose count the script cannot check: /instruments/ is a
-             hand-written page, not a Quarto listing, so there is nothing on the
-             homepage to count. It therefore carries no `data-counts` and the
-             script skips it by construction rather than by accident. The rows on
-             that page are the source of truth — add one there, change the 05
-             here.
-
-             `data-counts` sits on the NUMERAL, not on the anchor (2026-08-20).
-             The section kickers below now carry the same count in the same
-             numeral, so the attribute moved onto the element that actually holds
-             the digits and one selector feeds both. The instruments row still
-             opts out by simply not carrying it. -->
-        <nav class="hero-ledger" aria-label="Site contents"><span class="rise-mask"><span class="rise" style="--beat: 500ms">
-          <a href="#writing-section">Writing<span class="ledger-n" data-counts="writing">03</span></a>
-          <a href="#notes-section">Notes<span class="ledger-n" data-counts="notes">03</span></a>
-          <a href="instruments/">Instruments<span class="ledger-n">05</span></a>
-        </span></span></nav>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- Panda engine disabled 2026-08-03: the minimalist base gets finished first,
-     whimsy returns only once the base stands on its own (design/direction.md,
-     session log). Assets and engine stay in assets/pandas/; development
-     continues in github.com/Ameya-bit/panda-engine. To re-enable, restore the
-     `#panda-stage` div above and the loader script from git history. -->
+     NOT `.hero-screen`. assets/site/hero-motion.html fades and lifts whatever
+     carries that class as the page scrolls — right for a one-screen hero, fatal
+     for a section that IS the page (everything dimmed to nothing, and the
+     transform made the fixed foot scroll away). The three home-page rules that
+     styles.scss keys on body:has(.hero-screen) are restated in home.css. -->
 ```
 
-::: {#writing-section .writing-section}
+{{< include _home.md >}}
 
 ```{=html}
-<!-- Kickers are p+role=heading, not h2: the section-numeral machinery is
-     scoped to main.content h2s and would stamp a gutter "01" on these labels
-     (same reason the hero headline is a p). Visible on BOTH lists (2026-08-04,
-     Ameya's catch): the label used to live only in the hero's cue, which the
-     seam dims on scroll — so by the time the reader reached the list, its
-     name had faded out. Labels belong to the content they label. -->
-<p class="list-kicker" role="heading" aria-level="2">Writing<span class="kicker-n" data-counts="writing">03</span></p>
+<!-- The two listings still render, hidden: the front matter's `feed: true`
+     builds the RSS feed from the writing listing, and Quarto appends any
+     listing whose target div is missing to the end of the page. -->
+<div hidden>
 ```
 
 ::: {#writing}
 :::
 
-:::
-
-::: {#notes-section .notes-section}
-
-```{=html}
-<p class="list-kicker" role="heading" aria-level="2">Notes<span class="kicker-n" data-counts="notes">03</span></p>
-```
-
 ::: {#notes}
 :::
 
-:::
-
 ```{=html}
-<!-- The colophon whisper (2026-08-06). /colophon/ is deliberately NOT a ledger
-     row: the ledger files work, and a page about how the site is built is the
-     site talking about itself. A quiet centred line under everything is the rank
-     that claim deserves — and it is the exact object this rule was written for
-     back when it carried a panda credit. -->
+</div>
+
 <p class="site-colophon"><a href="colophon/">Colophon</a> — how this site is built.</p>
-```
 
-```{=html}
-<!-- The honest-count guarantee: re-read each collection's size from the
-     listings this same page just rendered. No fetch, no state — if JS is off,
-     the publish-time numbers in the markup stand (and were true when written).
-     padStart keeps the two-digit filing format the numerals share with the
-     posts' section counters.
-
-     One pass over every `[data-counts]` on the page (2026-08-20), which is now
-     four elements rather than two: the hero ledger's rows and the two section
-     kickers. Feeding both from the same query is the point — the ledger and the
-     kicker publish the same number, so they must not be able to disagree. -->
-<script>
-  document.querySelectorAll("[data-counts]").forEach(function (el) {
-    var n = document.querySelectorAll("#listing-" + el.getAttribute("data-counts") + " .quarto-post").length;
-    if (n) el.textContent = String(n).padStart(2, "0");
-  });
-</script>
+<script type="module" src="assets/home/panda-walk.js"></script>
 ```
