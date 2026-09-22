@@ -7,42 +7,85 @@ What the sprite sheet can draw: every pose and cycle, and the hat.
 ::: {.colo-spec}
 Walk
 :   Columns 0, 1, 2, 1 — contact, dip, contact, dip — one cel every 140 ms, in any of the five facing rows.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[16,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:150,&quot;ms&quot;:4200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-150,&quot;ms&quot;:4200,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-live">on the home page</span>
 
 Stop
 :   Column 0 held: the contact stride, feet apart.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[80,10],&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;up&quot;,&quot;ms&quot;:1400}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Idle
 :   Column 1 held: legs together, the settled mid-stride dip. Chosen over column 0 because a planted panda should not look caught mid-step.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;Stop on the left, then idle on the right: the same panda, feet apart against feet together.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[60,10],&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1800},{&quot;at&quot;:[110,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1800}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Stop on the left, then idle on the right: the same panda, feet apart against feet together.</figcaption>
+    </figure>
     <span class="colo-status is-live">on the home page</span>
 
 Fall
 :   Columns 3, 4, 5, 6, 5, 7: the tumble, ending face-down. The hat is not drawn on these cels — it is on the ground by then.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[40,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:40,&quot;ms&quot;:1200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:80,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:1200},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:700}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Fallen
 :   Column 7 held, lying down.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[80,10],&quot;cel&quot;:&quot;fallen&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:2000},{&quot;cel&quot;:&quot;fallen&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:2000},{&quot;cel&quot;:&quot;fallen&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:2000}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Stand up
 :   Columns 7 to 12: from the ground back to standing.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[80,10],&quot;cel&quot;:&quot;fallen&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:900},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:1500}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
-Sit
-:   Column 9 of the down-facing row held — a stand-up frame that reads, alone, as sitting. The home page uses it for the rest at the end of the road, hat set down beside.
+Sit down
+:   The stand-up cycle run backwards from standing: columns 12, 11, 10, 9 of the down-facing row, one a beat, and the last held — a stand-up frame that reads, alone, as sitting. The home page plays it for the rest at the end of the road, hat set down beside at the first beat. *Until 2026-09-22 it cut straight to column 9.*
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;Standing, then the three cels down into the sit.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[60,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1200},{&quot;cel&quot;:12,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;ground&quot;,&quot;ms&quot;:140},{&quot;cel&quot;:11,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;ground&quot;,&quot;ms&quot;:140},{&quot;cel&quot;:10,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;ground&quot;,&quot;ms&quot;:140},{&quot;cel&quot;:&quot;sit&quot;,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;ground&quot;,&quot;ms&quot;:3200}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Standing, then the three cels down into the sit.</figcaption>
+    </figure>
     <span class="colo-status is-live">on the home page</span>
 
 Leap
 :   Column 0 of the diagonal rows held while airborne: the contact stride reads as a jump. The tumble frames would be livelier but are drawn hatless.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.0,&quot;actors&quot;:[[{&quot;at&quot;:[20,40],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:900},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;dx&quot;:130,&quot;ms&quot;:620,&quot;arc&quot;:32,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:-130,&quot;ms&quot;:620,&quot;arc&quot;:32,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-live">on the home page</span>
 
 Seated rider
 :   Five hand-drawn seated cels, one per facing, for a panda riding on another&#x27;s head. The one piece of new art the chaos spec allowed, drawn in the body editor. *Replaced the zero-art standing rider, which looked wrong.*
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.4,&quot;caption&quot;:&quot;Riding on the base panda&#x27;s head.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[30,58],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:140,&quot;ms&quot;:4200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-140,&quot;ms&quot;:4200,&quot;ease&quot;:&quot;linear&quot;}],[{&quot;at&quot;:[30,20],&quot;rider&quot;:true,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:140,&quot;ms&quot;:4200,&quot;ease&quot;:&quot;linear&quot;},{&quot;rider&quot;:true,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-140,&quot;ms&quot;:4200,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Riding on the base panda&#x27;s head.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 The straw hat
 :   A hand-tweaked pixel dǒulì, exported from the studio and baked per facing with a seat offset per walk frame, so it rides the head bob as one piece. A separate loose-hat cel lies on the ground.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[80,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1600},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;ground&quot;,&quot;ms&quot;:1600},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1600},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;hat&quot;:&quot;ground&quot;,&quot;ms&quot;:1600}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-live">on the home page</span>
 
 :::
@@ -54,18 +97,36 @@ Motions the code composes from cels.
 ::: {.colo-spec}
 Glide
 :   Every stride is one 50 px step, and the wrapper glides to it over 2 s (a CSS transition in the original; a ported per-tick ease in the engine, restart semantics and all). The float is ma5a&#x27;s signature.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;Three strides of 50 px, each a 2 s ease-out.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[16,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:150,&quot;ms&quot;:6000},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-150,&quot;ms&quot;:6000}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Three strides of 50 px, each a 2 s ease-out.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Scroll walk
 :   The home page&#x27;s replacement for the glide: the panda&#x27;s place on the spine is a linear read of scroll position, and the legs run on the 140 ms cel clock only while scrolling continues. Facing follows scroll direction.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.4,&quot;actors&quot;:[[{&quot;at&quot;:[80,4],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;down&quot;,&quot;dy&quot;:56,&quot;ms&quot;:2800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:900},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;up&quot;,&quot;dy&quot;:-56,&quot;ms&quot;:2800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:900}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-live">on the home page</span>
 
 Jump
 :   A timed 620 ms arc between two live endpoints (the hero stage and the head of the road), scaled 6x to 2x in flight, with a sine lift of 22% of the distance. Runs on a clock so it always lands; reverses in the air if the reader turns back. *Replaced a scroll-scrubbed shrink-and-walk that could park the panda halfway, standing on the intro paragraph.*
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.4,&quot;actors&quot;:[[{&quot;at&quot;:[10,6],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1200},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;dx&quot;:150,&quot;dy&quot;:50,&quot;ms&quot;:620,&quot;arc&quot;:44,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1600},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:-150,&quot;dy&quot;:-50,&quot;ms&quot;:620,&quot;arc&quot;:44,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-live">on the home page</span>
 
 Knock
 :   Four hit-corners per panda checked pairwise every 50 ms; the corner pattern picks a knock direction, the loser slides 80 px, plays the fall, lies a while, stands up. Asymmetric: an unstoppable-force flag lets one side knock without being knocked.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;An 80 px slide, then the fall plays through.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[20,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:80,&quot;ms&quot;:2400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:4600}],[{&quot;at&quot;:[130,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:2400},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:80,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:1500},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:1420}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>An 80 px slide, then the fall plays through.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Tap to knock
@@ -74,18 +135,44 @@ Tap to knock
 
 Throw arc
 :   A parabola from one point to another over a set time, the sprite frozen on a cel, landing back into the walk. Used for the stack&#x27;s mount hop, the topple tosses, the hiccup&#x27;s pop, and the entrance drop.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.2,&quot;actors&quot;:[[{&quot;at&quot;:[20,50],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1000},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;dx&quot;:140,&quot;ms&quot;:650,&quot;arc&quot;:64,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:-140,&quot;ms&quot;:650,&quot;arc&quot;:64,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Spin
 :   A facing-cycle: the sprite steps through its eight headings one flip per tick for about 1.2 s, which reads as a turn on the spot. Also the tumbler&#x27;s skid.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[80,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:900},{&quot;spin&quot;:true,&quot;ms&quot;:1200},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1400}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Breathe
 :   A 2.6 s bob of half a pixel (three pixels on the old hero) on a planted panda, so standing reads as alive rather than stopped.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[80,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:2600,&quot;arc&quot;:1.5},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:2600,&quot;arc&quot;:1.5}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
+    <span class="colo-status is-live">on the home page</span>
+
+Double blink
+:   Eight face-white pixels laid over the eyes of the standing panda for one 140 ms beat, leaving a one-pixel lid line: two blinks close together, a long rest, one blink, on a 6.9 s loop. Only the eyes change; head, hat and hands hold. *Chosen in the idle studio over breathing, head bobs and glances: at 48 px a belly can only grow by whole pixels and never came out fluid, and ma5a&#x27;s own idles are one-pixel changes. Runs alongside Breathe whenever the panda stands facing the reader.*
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;The loop in full: a double blink, a rest of three and a half seconds, a single.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[80,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:2660},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;blink&quot;:true,&quot;ms&quot;:140},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:140},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;blink&quot;:true,&quot;ms&quot;:140},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:3640},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;blink&quot;:true,&quot;ms&quot;:140}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>The loop in full: a double blink, a rest of three and a half seconds, a single.</figcaption>
+    </figure>
     <span class="colo-status is-live">on the home page</span>
 
 Sharp glide
 :   The hat panda alone glided in 0.5 s with a sharp ease-out and a 440 ms stride, to read as alert against the troupe&#x27;s uniform 2 s float. *Reverted the same day (6a8295a): too fast, darted around. Worth knowing before touching the walker&#x27;s speed again.*
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.4,&quot;caption&quot;:&quot;Above, the troupe&#x27;s 2 s float. Below, the reverted 0.5 s snap at a 440 ms stride.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[16,6],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:150,&quot;ms&quot;:6000},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-150,&quot;ms&quot;:6000}],[{&quot;at&quot;:[16,58],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:150,&quot;ms&quot;:1320,&quot;ease&quot;:&quot;sharp&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:4680},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-150,&quot;ms&quot;:1320,&quot;ease&quot;:&quot;sharp&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:4680}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Above, the troupe&#x27;s 2 s float. Below, the reverted 0.5 s snap at a 440 ms stride.</figcaption>
+    </figure>
     <span class="colo-status is-reverted">reverted</span>
 
 :::
@@ -97,30 +184,62 @@ The observer's own behaviours.
 ::: {.colo-spec}
 Observe
 :   The hat panda holds one incident at a time, walks to a vantage beside it, plants, and watches: a gaze that shifts every 2–4 s between the subject, the nearest bystander and a glance aside.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;A sleeper goes down; the hat panda walks to a vantage and its gaze shifts every couple of seconds.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[150,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:1200},{&quot;cel&quot;:&quot;fall&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:5200},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:920}],[{&quot;at&quot;:[20,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:60,&quot;ms&quot;:2400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:2200},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;ms&quot;:1600},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1400}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>A sleeper goes down; the hat panda walks to a vantage and its gaze shifts every couple of seconds.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Weave
 :   Navigates around the troupe on the way to a subject, choosing an axis by crowd; if boxed in it holds, re-vantages, or abandons.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.4,&quot;actors&quot;:[[{&quot;at&quot;:[70,36],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:7000}],[{&quot;at&quot;:[130,36],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;ms&quot;:7000}],[{&quot;at&quot;:[10,36],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:30,&quot;ms&quot;:1200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:36,&quot;dy&quot;:36,&quot;ms&quot;:1200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:60,&quot;ms&quot;:1400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:36,&quot;dy&quot;:-36,&quot;ms&quot;:1200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:30,&quot;ms&quot;:1000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1000}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Alert stride
 :   Within 130 px of a closing panda the calm 540 ms stride drops to 380 ms. Never as fast as zoomies.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;A 540 ms stride, then 380 ms once something is closing.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[10,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:54,&quot;ms&quot;:2160,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:76,&quot;ms&quot;:1520,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:2320}],[{&quot;at&quot;:[220,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:2160},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-150,&quot;ms&quot;:1520,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:2320}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>A 540 ms stride, then 380 ms once something is closing.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Sidestep
 :   A single slow panda closing within 108 px: step calmly aside into the least crowded cell.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.4,&quot;actors&quot;:[[{&quot;at&quot;:[100,20],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:1600},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;down&quot;,&quot;dy&quot;:48,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:2200},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;up&quot;,&quot;dy&quot;:-48,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:1360}],[{&quot;at&quot;:[220,20],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-230,&quot;ms&quot;:4800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:1200}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Dive-roll
 :   The emergency: a fast or too-close threat triggers the tumble cels at 58 ms each without settling to fallen, carrying him 92 px with invincibility frames, then a 2.6 s cooldown. Rarity is the cooldown, never a scripted miss.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;Five tumble cels at 58 ms, 92 px of travel. The cels are drawn hatless.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[100,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:900},{&quot;cel&quot;:&quot;roll&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;dx&quot;:92,&quot;ms&quot;:290,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:3810}],[{&quot;at&quot;:[230,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:300},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-240,&quot;ms&quot;:1400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fall&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:700},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:920}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Five tumble cels at 58 ms, 92 px of travel. The cels are drawn hatless.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Hat drop and retrieve
 :   A knock tosses the hat forward with a small spin; bare-headed, he sprints back at 300 ms a stride, stands over it for a beat, and puts it on. The calm drop variant, not a launch.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;Re-enacted: the loose hat is the second actor here.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[60,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:800},{&quot;cel&quot;:&quot;fall&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;dx&quot;:40,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:1000},{&quot;cel&quot;:&quot;standUp&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;hat&quot;:&quot;off&quot;,&quot;dx&quot;:-50,&quot;ms&quot;:600,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:750},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:1600}],[{&quot;at&quot;:[86,42],&quot;cel&quot;:1,&quot;hat&quot;:&quot;ground&quot;,&quot;hide&quot;:true,&quot;ms&quot;:800},{&quot;at&quot;:[130,-20],&quot;cel&quot;:1,&quot;hat&quot;:&quot;ground&quot;,&quot;hide&quot;:true,&quot;ms&quot;:4030},{&quot;at&quot;:[130,-20],&quot;cel&quot;:1,&quot;hat&quot;:&quot;ground&quot;,&quot;hide&quot;:true,&quot;ms&quot;:1600}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Re-enacted: the loose hat is the second actor here.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Overwhelmed
 :   During a cascade he is pulled to the origin and stands amid the fallen. No freeze, no spotlight.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.6,&quot;actors&quot;:[[{&quot;at&quot;:[10,16],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:800},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:30,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:3400},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:1120}],[{&quot;at&quot;:[70,16],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:30,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:3000},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:920}],[{&quot;at&quot;:[200,16],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:2000},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:-30,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:2600},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:720}],[{&quot;at&quot;:[130,-30],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;down&quot;,&quot;dy&quot;:46,&quot;ms&quot;:2200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:4800}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Learned line-walker
@@ -136,38 +255,75 @@ One panda at a time going strange: the tier-one anomalies.
 ::: {.colo-spec}
 Sleeper
 :   Stops, plays the fall deliberately with no slide, lies 8–20 s, stands, resumes.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[30,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:50,&quot;ms&quot;:1600,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fall&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:4000},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:50,&quot;ms&quot;:1600,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Tumbler
 :   Trips on nothing: a facing-cycle over a 46 px skid, ends splayed in the fall frames, gets up.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[30,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:50,&quot;ms&quot;:1600,&quot;ease&quot;:&quot;linear&quot;},{&quot;spin&quot;:true,&quot;dx&quot;:46,&quot;ms&quot;:700,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:900},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:50,&quot;ms&quot;:1600,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Spinner
 :   Spins in place 1.2 s, then two or three quick stagger-steps in random directions.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.6,&quot;actors&quot;:[[{&quot;at&quot;:[80,14],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:800},{&quot;spin&quot;:true,&quot;ms&quot;:1200},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:18,&quot;dy&quot;:10,&quot;ms&quot;:300,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-22,&quot;dy&quot;:-12,&quot;ms&quot;:300,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:20,&quot;ms&quot;:300,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:60,&quot;ms&quot;:1800,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Loop
 :   Walks a small closed octagon, turning one step each stride, two to four laps at 420 ms, then snaps out.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.8,&quot;actors&quot;:[[{&quot;at&quot;:[60,6],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:24,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:24,&quot;dy&quot;:24,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;down&quot;,&quot;dy&quot;:24,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-24,&quot;dy&quot;:24,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-24,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-24,&quot;dy&quot;:-24,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;up&quot;,&quot;dy&quot;:-24,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:24,&quot;dy&quot;:-24,&quot;ms&quot;:420,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Starer
 :   Stops, faces the nearest edge, holds the idle 6–12 s. Nothing happens.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[30,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:40,&quot;ms&quot;:1400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:4200},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-40,&quot;ms&quot;:1400,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Zoomies
 :   Locks a heading at three times walking speed until it hits a wall (tumbles) or a panda (an ordinary knock).
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;caption&quot;:&quot;Three times walking speed into the wall.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[10,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:30,&quot;ms&quot;:1200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:190,&quot;ms&quot;:1100,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fall&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:700},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-220,&quot;ms&quot;:3000,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Three times walking speed into the wall.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Moonwalk
 :   Travels one heading while facing the exact opposite; the walk cycle plays as usual.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[20,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:150,&quot;ms&quot;:4200,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-150,&quot;ms&quot;:3000,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Hiccup
 :   Every two strides, a small convulsive pop straight up: a pocket throw arc that lands back into the gait.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.6,&quot;actors&quot;:[[{&quot;at&quot;:[20,14],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:40,&quot;ms&quot;:1300,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:1,&quot;row&quot;:&quot;side&quot;,&quot;arc&quot;:14,&quot;ms&quot;:220,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:40,&quot;ms&quot;:1300,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:1,&quot;row&quot;:&quot;side&quot;,&quot;arc&quot;:14,&quot;ms&quot;:220,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:40,&quot;ms&quot;:1300,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-120,&quot;ms&quot;:2200,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 The oblivious one
 :   One roamer chosen at spawn wanders a small radius, idles often, and is never picked for anything.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[80,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:3000},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:20,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;ms&quot;:2600},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-20,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:2200}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 :::
@@ -179,18 +335,37 @@ Several pandas acting together.
 ::: {.colo-spec}
 The stack
 :   Every 60–120 s a base with headroom is chosen; riders hop on by throw arc and sit; the base parades as the unstoppable force while a wobble grows until it topples, tossing riders off. A zoomies panda into the tower topples it early.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:3.3,&quot;caption&quot;:&quot;Re-enacted at the engine&#x27;s timings: mount by throw arc, parade, topple.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[60,104],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:3000},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:100,&quot;ms&quot;:4000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:800},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:3000}],[{&quot;at&quot;:[150,104],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;ms&quot;:1500},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-90,&quot;dy&quot;:-38,&quot;ms&quot;:650,&quot;arc&quot;:40,&quot;ease&quot;:&quot;linear&quot;},{&quot;rider&quot;:true,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:850},{&quot;rider&quot;:true,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:100,&quot;ms&quot;:4000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:70,&quot;dy&quot;:38,&quot;ms&quot;:800,&quot;arc&quot;:30,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fall&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:760}],[{&quot;at&quot;:[-30,104],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:2350},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:90,&quot;dy&quot;:-76,&quot;ms&quot;:650,&quot;arc&quot;:44,&quot;ease&quot;:&quot;linear&quot;},{&quot;rider&quot;:true,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:100,&quot;ms&quot;:4000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-60,&quot;dy&quot;:76,&quot;ms&quot;:800,&quot;arc&quot;:40,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fall&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:760}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Re-enacted at the engine&#x27;s timings: mount by throw arc, parade, topple.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 The cascade
 :   Armed every 2–5 min, the next collision escalates: a hard slide aimed at the crowd, then a steered nearest-neighbour chain until 70–90% of the field is down. Recovery is the ordinary get-up, naturally staggered.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[0,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:40,&quot;ms&quot;:1400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:6600}],[{&quot;at&quot;:[52,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:36,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:3300},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:1620}],[{&quot;at&quot;:[104,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:2000},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:36,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:3000},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:1320}],[{&quot;at&quot;:[156,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:2600},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:36,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:2700},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:1020}],[{&quot;at&quot;:[208,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:3200},{&quot;cel&quot;:&quot;fall&quot;,&quot;dx&quot;:36,&quot;ms&quot;:840,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fallen&quot;,&quot;ms&quot;:2400},{&quot;cel&quot;:&quot;standUp&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;ms&quot;:720}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Conga lines
 :   Roamers formed follow-the-leader snakes, each follower stepping into the cell the one ahead vacated; lines grew, dissolved and reformed. *Retired 2026-07-23 by design review: coordination read as uniform and janky, and line membership suppressed the collisions that are the scene&#x27;s charm.*
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.4,&quot;caption&quot;:&quot;Re-enacted: each follower steps into the cell the one ahead vacated.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[10,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:0},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:120,&quot;ms&quot;:2400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:24,&quot;dy&quot;:40,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-168,&quot;ms&quot;:3400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:24,&quot;dy&quot;:-40,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1500}],[{&quot;at&quot;:[10,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:500},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:120,&quot;ms&quot;:2400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:24,&quot;dy&quot;:40,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-168,&quot;ms&quot;:3400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:24,&quot;dy&quot;:-40,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1000}],[{&quot;at&quot;:[10,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1000},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:120,&quot;ms&quot;:2400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:24,&quot;dy&quot;:40,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-168,&quot;ms&quot;:3400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:24,&quot;dy&quot;:-40,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:500}],[{&quot;at&quot;:[10,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1500},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:120,&quot;ms&quot;:2400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:24,&quot;dy&quot;:40,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;dx&quot;:-168,&quot;ms&quot;:3400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dUp&quot;,&quot;dx&quot;:24,&quot;dy&quot;:-40,&quot;ms&quot;:800,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:0}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Re-enacted: each follower steps into the cell the one ahead vacated.</figcaption>
+    </figure>
     <span class="colo-status is-retired">retired</span>
 
 Activation patching
 :   When two lines of four or more had headings more than 45° apart, the hat panda froze the scene, spotlit the pair, grabbed a panda from one line by throw arc and inserted it into the other, whose tail peeled onto the new heading. *Retired with the lines: it fired too rarely and too late for anyone to see. The metaphor was exact and the audience could not read it.*
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.6,&quot;caption&quot;:&quot;Re-enacted: two lines freeze, one panda is flung from the first into the tail of the second, and carries on with its heading.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[10,6],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:60,&quot;ms&quot;:2000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:90,&quot;ms&quot;:3000,&quot;ease&quot;:&quot;linear&quot;}],[{&quot;at&quot;:[-40,6],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:60,&quot;ms&quot;:2000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:100,&quot;dy&quot;:60,&quot;ms&quot;:900,&quot;arc&quot;:50,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:54,&quot;dy&quot;:36,&quot;ms&quot;:2100,&quot;ease&quot;:&quot;linear&quot;}],[{&quot;at&quot;:[120,30],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:36,&quot;dy&quot;:24,&quot;ms&quot;:2000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:54,&quot;dy&quot;:36,&quot;ms&quot;:3000,&quot;ease&quot;:&quot;linear&quot;}],[{&quot;at&quot;:[90,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:36,&quot;dy&quot;:24,&quot;ms&quot;:2000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;stop&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;ms&quot;:1400},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;dx&quot;:54,&quot;dy&quot;:36,&quot;ms&quot;:3000,&quot;ease&quot;:&quot;linear&quot;}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Re-enacted: two lines freeze, one panda is flung from the first into the tail of the second, and carries on with its heading.</figcaption>
+    </figure>
     <span class="colo-status is-retired">retired</span>
 
 :::
@@ -202,10 +377,19 @@ Entrances, tableaux, whole-page choreography.
 ::: {.colo-spec}
 Walk-in entrance
 :   The stage starts empty; the hat panda ambles in alone with a 1.8 s head start, then the troupe walks on from the edges two at a time.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:1.4,&quot;actors&quot;:[[{&quot;at&quot;:[-50,10],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:110,&quot;ms&quot;:3600,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:3400}],[{&quot;at&quot;:[260,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:1800},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;hat&quot;:&quot;off&quot;,&quot;dx&quot;:-90,&quot;ms&quot;:3000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:2200}],[{&quot;at&quot;:[300,10],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:2850},{&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;flip&quot;:true,&quot;hat&quot;:&quot;off&quot;,&quot;dx&quot;:-90,&quot;ms&quot;:3000,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;dDown&quot;,&quot;flip&quot;:true,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:1150}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Drop entrance
 :   The roamers rain onto their spots over about 7 s, 650 ms in the air each, and 40% bounce once on landing; the hat panda still walks on.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:2.6,&quot;caption&quot;:&quot;Re-enacted: 650 ms in the air, and some bounce once.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[40,-60],&quot;cel&quot;:1,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:400},{&quot;cel&quot;:1,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;dy&quot;:120,&quot;ms&quot;:650,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fall&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;fallen&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:1200},{&quot;cel&quot;:&quot;standUp&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:2070}],[{&quot;at&quot;:[130,-60],&quot;cel&quot;:1,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:1300},{&quot;cel&quot;:1,&quot;row&quot;:&quot;down&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;dy&quot;:120,&quot;ms&quot;:650,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:0,&quot;row&quot;:&quot;dDown&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;dx&quot;:60,&quot;ms&quot;:450,&quot;arc&quot;:46,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;fall&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;fallen&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:900},{&quot;cel&quot;:&quot;standUp&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:840},{&quot;cel&quot;:&quot;idle&quot;,&quot;hat&quot;:&quot;off&quot;,&quot;ms&quot;:1020}],[{&quot;at&quot;:[-50,60],&quot;cel&quot;:&quot;walk&quot;,&quot;row&quot;:&quot;side&quot;,&quot;dx&quot;:90,&quot;ms&quot;:3400,&quot;ease&quot;:&quot;linear&quot;},{&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;down&quot;,&quot;ms&quot;:2600}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>Re-enacted: 650 ms in the air, and some bounce once.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Hero pin
@@ -214,6 +398,11 @@ Hero pin
 
 Reduced-motion tableau
 :   With reduced motion, a composed still: the troupe scattered, one three-high stack mid-parade, one panda fallen, and the hat panda planted facing it.
+
+    <figure class="panda-specimen" data-demo="{&quot;h&quot;:3.3,&quot;caption&quot;:&quot;A still: the stack mid-parade, one fallen, the hat panda facing it.&quot;,&quot;actors&quot;:[[{&quot;at&quot;:[40,104],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:4000}],[{&quot;at&quot;:[40,66],&quot;rider&quot;:true,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:4000}],[{&quot;at&quot;:[40,28],&quot;rider&quot;:true,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:4000}],[{&quot;at&quot;:[190,104],&quot;cel&quot;:&quot;fallen&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:4000}],[{&quot;at&quot;:[130,104],&quot;cel&quot;:&quot;idle&quot;,&quot;row&quot;:&quot;side&quot;,&quot;ms&quot;:4000}]]}">
+      <div class="specimen-stage" aria-hidden="true"></div>
+      <figcaption>A still: the stack mid-parade, one fallen, the hat panda facing it.</figcaption>
+    </figure>
     <span class="colo-status is-shipped">built, not on the page</span>
 
 Hero to road

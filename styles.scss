@@ -2597,6 +2597,81 @@ body:has(.hero-screen) { overflow-x: hidden; }
 
     &.is-live { color: var(--accent-ink); }
   }
+
+  // The specimen: a stage the width of the column, the panda drawn at 2x on
+  // whole pixels. Nothing in it is a link; the caption is apparatus.
+  .colo-spec dd .panda-specimen {
+    // the stage takes the whole measure: it starts under the label column
+    margin: 0.7rem 0 0.4rem calc(-8.5rem - 1.412rem);
+  }
+
+  .colo-spec dd .specimen-stage {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--gray-200);
+  }
+
+  .colo-spec dd .panda-specimen figcaption {
+    margin-top: 0.4rem;
+    font-size: var(--text-apparatus);
+    line-height: 1.5;
+    color: var(--gray-1000);
+  }
+
+  .specimen-panda,
+  .specimen-hat {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    pointer-events: none;
+  }
+
+  .specimen-panda {
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+  }
+
+  .specimen-flip {
+    position: absolute;
+    inset: 0;
+
+    &.is-flipped { transform: scaleX(-1); }
+  }
+
+  .specimen-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(13 * 48px);
+    height: calc(5 * 48px);
+
+    svg { display: block; fill: #21201c; shape-rendering: crispEdges; }
+  }
+
+  .specimen-sit {
+    position: absolute;
+    inset: 0;
+
+    svg { fill: #21201c; }
+  }
+
+  .specimen-blink {
+    position: absolute;
+    inset: 0;
+
+    &[hidden] { display: none; }
+    svg { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
+  }
+
+  .specimen-hat {
+    width: 28px;
+    height: 14px;
+
+    svg { display: block; width: 100%; height: 100%; shape-rendering: crispEdges; }
+  }
 }
 
 @media (max-width: 620px) {
@@ -2608,6 +2683,10 @@ body:has(.hero-screen) { overflow-x: hidden; }
 
   #quarto-content main.content .colo-spec dt {
     padding-bottom: 0;
+  }
+
+  #quarto-content main.content .colo-spec dd .panda-specimen {
+    margin-left: 0;
   }
 
   #quarto-content main.content .colo-spec dd {

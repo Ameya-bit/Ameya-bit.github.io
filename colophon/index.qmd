@@ -180,3 +180,7 @@ a move built and later taken off is still on the record here. The sprite sheet
 is ma5a's *panda collision* (MIT); the straw hat is drawn here.
 
 {{< include _panda.md >}}
+
+```{=html}
+<script type="module" src="../assets/home/panda-specimen.js"></script>
+```

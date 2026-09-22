@@ -41,6 +41,15 @@ how = "Columns 0, 1, 2, 1 — contact, dip, contact, dip — one cel every 140 m
 where = "engine/render/cels.js (ANIM_FRAMES, FRAME_MS)"
 since = "ma5a's pen; on this site from 2026-07-10"
 
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[16,10], cel="walk", row="side", dx=150, ms=4200, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-150, ms=4200, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "Stop"
 group = "cel"
@@ -48,6 +57,18 @@ status = "shipped"
 how = "Column 0 held: the contact stride, feet apart."
 where = "engine/render/cels.js"
 since = "ma5a's pen"
+
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[80,10], cel="stop", row="down", ms=1400},
+      {cel="stop", row="dDown", ms=1400},
+      {cel="stop", row="side", ms=1400},
+      {cel="stop", row="dUp", ms=1400},
+      {cel="stop", row="up", ms=1400},
+    ],
+  ]
 
 [[moves]]
 name = "Idle"
@@ -57,6 +78,16 @@ how = "Column 1 held: legs together, the settled mid-stride dip. Chosen over col
 where = "engine/render/cels.js"
 since = "a600bb6, 2026-07-23"
 
+  [moves.demo]
+  h = 1.4
+  caption = "Stop on the left, then idle on the right: the same panda, feet apart against feet together."
+  actors = [
+  [
+      {at=[60,10], cel="stop", row="down", ms=1800},
+      {at=[110,10], cel="idle", row="down", ms=1800},
+    ],
+  ]
+
 [[moves]]
 name = "Fall"
 group = "cel"
@@ -64,6 +95,18 @@ status = "shipped"
 how = "Columns 3, 4, 5, 6, 5, 7: the tumble, ending face-down. The hat is not drawn on these cels — it is on the ground by then."
 where = "engine/render/cels.js"
 since = "ma5a's pen"
+
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[40,10], cel="walk", row="side", dx=40, ms=1200, ease="linear"},
+      {cel="fall", dx=80, ms=840, ease="linear"},
+      {cel="fallen", ms=1200},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=700},
+    ],
+  ]
 
 [[moves]]
 name = "Fallen"
@@ -73,6 +116,16 @@ how = "Column 7 held, lying down."
 where = "engine/render/cels.js"
 since = "ma5a's pen"
 
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[80,10], cel="fallen", row="side", ms=2000},
+      {cel="fallen", row="side", flip=true, ms=2000},
+      {cel="fallen", row="down", ms=2000},
+    ],
+  ]
+
 [[moves]]
 name = "Stand up"
 group = "cel"
@@ -81,13 +134,37 @@ how = "Columns 7 to 12: from the ground back to standing."
 where = "engine/render/cels.js"
 since = "ma5a's pen"
 
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[80,10], cel="fallen", row="side", ms=900},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=1500},
+    ],
+  ]
+
 [[moves]]
-name = "Sit"
+name = "Sit down"
 group = "cel"
 status = "live"
-how = "Column 9 of the down-facing row held — a stand-up frame that reads, alone, as sitting. The home page uses it for the rest at the end of the road, hat set down beside."
-where = "assets/home/panda-walk.js (COL_REST)"
+how = "The stand-up cycle run backwards from standing: columns 12, 11, 10, 9 of the down-facing row, one a beat, and the last held — a stand-up frame that reads, alone, as sitting. The home page plays it for the rest at the end of the road, hat set down beside at the first beat."
+where = "assets/home/panda-walk.js (SIT_DOWN)"
 since = "2026-09-21"
+note = "Until 2026-09-22 it cut straight to column 9."
+
+  [moves.demo]
+  h = 1.4
+  caption = "Standing, then the three cels down into the sit."
+  actors = [
+  [
+      {at=[60,10], cel="idle", row="down", ms=1200},
+      {cel=12, row="down", hat="ground", ms=140},
+      {cel=11, row="down", hat="ground", ms=140},
+      {cel=10, row="down", hat="ground", ms=140},
+      {cel="sit", row="down", hat="ground", ms=3200},
+    ],
+  ]
 
 [[moves]]
 name = "Leap"
@@ -96,6 +173,17 @@ status = "live"
 how = "Column 0 of the diagonal rows held while airborne: the contact stride reads as a jump. The tumble frames would be livelier but are drawn hatless."
 where = "assets/home/panda-walk.js (COL_LEAP)"
 since = "2026-09-21"
+
+  [moves.demo]
+  h = 2.0
+  actors = [
+  [
+      {at=[20,40], cel="idle", row="down", ms=900},
+      {cel=0, row="dDown", flip=true, dx=130, ms=620, arc=32, ease="linear"},
+      {cel="idle", row="down", ms=1400},
+      {cel=0, row="dUp", dx=-130, ms=620, arc=32, ease="linear"},
+    ],
+  ]
 
 [[moves]]
 name = "Seated rider"
@@ -106,6 +194,20 @@ where = "engine/render/art-data.js (SIT_CELS)"
 since = "9491b90, 2026-07-24"
 note = "Replaced the zero-art standing rider, which looked wrong."
 
+  [moves.demo]
+  h = 2.4
+  caption = "Riding on the base panda's head."
+  actors = [
+  [
+      {at=[30,58], cel="walk", row="side", dx=140, ms=4200, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-140, ms=4200, ease="linear"},
+    ],
+  [
+      {at=[30,20], rider=true, row="side", dx=140, ms=4200, ease="linear"},
+      {rider=true, row="side", flip=true, dx=-140, ms=4200, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "The straw hat"
 group = "cel"
@@ -113,6 +215,17 @@ status = "live"
 how = "A hand-tweaked pixel dǒulì, exported from the studio and baked per facing with a seat offset per walk frame, so it rides the head bob as one piece. A separate loose-hat cel lies on the ground."
 where = "engine/hat.js, engine/render/art-data.js (HAT_PIXELS, HAT_FIT)"
 since = "d642932 and 16cb80d, 2026-07-23 (gold finial and red collar knot)"
+
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[80,10], cel="idle", row="down", ms=1600},
+      {cel="idle", row="down", hat="ground", ms=1600},
+      {cel="idle", row="side", ms=1600},
+      {cel="idle", row="side", hat="ground", ms=1600},
+    ],
+  ]
 
 # ---- primitives: motions composed from cels --------------------------------
 
@@ -124,6 +237,16 @@ how = "Every stride is one 50 px step, and the wrapper glides to it over 2 s (a 
 where = "engine/render/renderer.js; config glideTicks"
 since = "ma5a's pen; port 16f5340, 2026-07-27"
 
+  [moves.demo]
+  h = 1.4
+  caption = "Three strides of 50 px, each a 2 s ease-out."
+  actors = [
+  [
+      {at=[16,10], cel="walk", row="side", dx=150, ms=6000},
+      {cel="walk", row="side", flip=true, dx=-150, ms=6000},
+    ],
+  ]
+
 [[moves]]
 name = "Scroll walk"
 group = "primitive"
@@ -131,6 +254,17 @@ status = "live"
 how = "The home page's replacement for the glide: the panda's place on the spine is a linear read of scroll position, and the legs run on the 140 ms cel clock only while scrolling continues. Facing follows scroll direction."
 where = "assets/home/panda-walk.js"
 since = "2026-09-21; legs moved from distance-driven to clock-driven 2026-09-22 after reading as a blur"
+
+  [moves.demo]
+  h = 2.4
+  actors = [
+  [
+      {at=[80,4], cel="walk", row="down", dy=56, ms=2800, ease="linear"},
+      {cel="idle", row="down", ms=900},
+      {cel="walk", row="up", dy=-56, ms=2800, ease="linear"},
+      {cel="idle", row="down", ms=900},
+    ],
+  ]
 
 [[moves]]
 name = "Jump"
@@ -141,6 +275,17 @@ where = "assets/home/panda-walk.js (stepJump)"
 since = "2026-09-22"
 note = "Replaced a scroll-scrubbed shrink-and-walk that could park the panda halfway, standing on the intro paragraph."
 
+  [moves.demo]
+  h = 2.4
+  actors = [
+  [
+      {at=[10,6], cel="idle", row="down", ms=1200},
+      {cel=0, row="dDown", flip=true, dx=150, dy=50, ms=620, arc=44, ease="linear"},
+      {cel="idle", row="down", ms=1600},
+      {cel=0, row="dUp", dx=-150, dy=-50, ms=620, arc=44, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "Knock"
 group = "primitive"
@@ -148,6 +293,23 @@ status = "shipped"
 how = "Four hit-corners per panda checked pairwise every 50 ms; the corner pattern picks a knock direction, the loser slides 80 px, plays the fall, lies a while, stands up. Asymmetric: an unstoppable-force flag lets one side knock without being knocked."
 where = "engine/collision.js; config impact, fallTicks, lieTimesTicks"
 since = "ma5a's pen; asymmetry from the conga lines, 4ba8512"
+
+  [moves.demo]
+  h = 1.4
+  caption = "An 80 px slide, then the fall plays through."
+  actors = [
+  [
+      {at=[20,10], cel="walk", row="side", dx=80, ms=2400, ease="linear"},
+      {cel="idle", row="side", ms=4600},
+    ],
+  [
+      {at=[130,10], cel="idle", row="side", flip=true, ms=2400},
+      {cel="fall", dx=80, ms=840, ease="linear"},
+      {cel="fallen", ms=1500},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=1420},
+    ],
+  ]
 
 [[moves]]
 name = "Tap to knock"
@@ -165,6 +327,17 @@ how = "A parabola from one point to another over a set time, the sprite frozen o
 where = "pandas.js throwArc; engine/stack.js, anomalies.js"
 since = "b8a548a, 2026-07-23 (the patch's grab-and-fling)"
 
+  [moves.demo]
+  h = 2.2
+  actors = [
+  [
+      {at=[20,50], cel="idle", row="down", ms=1000},
+      {cel=0, row="dDown", flip=true, dx=140, ms=650, arc=64, ease="linear"},
+      {cel="idle", row="down", ms=1400},
+      {cel=0, row="dUp", dx=-140, ms=650, arc=64, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "Spin"
 group = "primitive"
@@ -172,6 +345,16 @@ status = "shipped"
 how = "A facing-cycle: the sprite steps through its eight headings one flip per tick for about 1.2 s, which reads as a turn on the spot. Also the tumbler's skid."
 where = "pandas.js spin3d; engine/anomalies.js (spinFlips, spinEvery)"
 since = "b8a548a, 2026-07-23"
+
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[80,10], cel="idle", row="down", ms=900},
+      {spin=true, ms=1200},
+      {cel="idle", row="down", ms=1400},
+    ],
+  ]
 
 [[moves]]
 name = "Breathe"
@@ -181,6 +364,38 @@ how = "A 2.6 s bob of half a pixel (three pixels on the old hero) on a planted p
 where = "engine/render/pandas.css (panda-watch); assets/home/home.css (road-breathe)"
 since = "2026-07-24"
 
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[80,10], cel="idle", row="down", ms=2600, arc=1.5},
+      {cel="idle", row="down", ms=2600, arc=1.5},
+    ],
+  ]
+
+[[moves]]
+name = "Double blink"
+group = "primitive"
+status = "live"
+how = "Eight face-white pixels laid over the eyes of the standing panda for one 140 ms beat, leaving a one-pixel lid line: two blinks close together, a long rest, one blink, on a 6.9 s loop. Only the eyes change; head, hat and hands hold."
+where = "assets/home/panda-blink.js; assets/home/panda-walk.js (road-blink)"
+since = "2026-09-22"
+note = "Chosen in the idle studio over breathing, head bobs and glances: at 48 px a belly can only grow by whole pixels and never came out fluid, and ma5a's own idles are one-pixel changes. Runs alongside Breathe whenever the panda stands facing the reader."
+
+  [moves.demo]
+  h = 1.4
+  caption = "The loop in full: a double blink, a rest of three and a half seconds, a single."
+  actors = [
+  [
+      {at=[80,10], cel="idle", row="down", ms=2660},
+      {cel="idle", row="down", blink=true, ms=140},
+      {cel="idle", row="down", ms=140},
+      {cel="idle", row="down", blink=true, ms=140},
+      {cel="idle", row="down", ms=3640},
+      {cel="idle", row="down", blink=true, ms=140},
+    ],
+  ]
+
 [[moves]]
 name = "Sharp glide"
 group = "primitive"
@@ -189,6 +404,22 @@ how = "The hat panda alone glided in 0.5 s with a sharp ease-out and a 440 ms st
 where = "bf61b43"
 since = "2026-07-23"
 note = "Reverted the same day (6a8295a): too fast, darted around. Worth knowing before touching the walker's speed again."
+
+  [moves.demo]
+  h = 2.4
+  caption = "Above, the troupe's 2 s float. Below, the reverted 0.5 s snap at a 440 ms stride."
+  actors = [
+  [
+      {at=[16,6], cel="walk", row="side", dx=150, ms=6000},
+      {cel="walk", row="side", flip=true, dx=-150, ms=6000},
+    ],
+  [
+      {at=[16,58], cel="walk", row="side", dx=150, ms=1320, ease="sharp"},
+      {cel="idle", row="side", ms=4680},
+      {cel="walk", row="side", flip=true, dx=-150, ms=1320, ease="sharp"},
+      {cel="idle", row="side", flip=true, ms=4680},
+    ],
+  ]
 
 # ---- the hat panda's own behaviours ------------------------------------------
 
@@ -200,6 +431,26 @@ how = "The hat panda holds one incident at a time, walks to a vantage beside it,
 where = "engine/watcher.js; engine/render/flourish.js (gaze)"
 since = "e021ecc, 2026-07-23; incident attention 2A, 2026-07-24"
 
+  [moves.demo]
+  h = 1.4
+  caption = "A sleeper goes down; the hat panda walks to a vantage and its gaze shifts every couple of seconds."
+  actors = [
+  [
+      {at=[150,10], cel="walk", row="side", flip=true, ms=1200},
+      {cel="fall", ms=840},
+      {cel="fallen", ms=5200},
+      {cel="standUp", ms=840},
+      {cel="walk", row="side", flip=true, ms=920},
+    ],
+  [
+      {at=[20,10], cel="walk", row="side", dx=60, ms=2400, ease="linear"},
+      {cel="idle", row="side", ms=2200},
+      {cel="idle", row="dDown", ms=1600},
+      {cel="idle", row="side", ms=1400},
+      {cel="idle", row="down", ms=1400},
+    ],
+  ]
+
 [[moves]]
 name = "Weave"
 group = "walker"
@@ -207,6 +458,25 @@ status = "shipped"
 how = "Navigates around the troupe on the way to a subject, choosing an axis by crowd; if boxed in it holds, re-vantages, or abandons."
 where = "engine/watcher.js (chooseWeaveDir, bestAxis)"
 since = "2cf0d0a, 2026-07-23"
+
+  [moves.demo]
+  h = 2.4
+  actors = [
+  [
+      {at=[70,36], cel="idle", row="down", ms=7000},
+    ],
+  [
+      {at=[130,36], cel="idle", row="dDown", flip=true, ms=7000},
+    ],
+  [
+      {at=[10,36], cel="walk", row="side", dx=30, ms=1200, ease="linear"},
+      {cel="walk", row="dDown", dx=36, dy=36, ms=1200, ease="linear"},
+      {cel="walk", row="side", dx=60, ms=1400, ease="linear"},
+      {cel="walk", row="dUp", dx=36, dy=-36, ms=1200, ease="linear"},
+      {cel="walk", row="side", dx=30, ms=1000, ease="linear"},
+      {cel="idle", row="down", ms=1000},
+    ],
+  ]
 
 [[moves]]
 name = "Alert stride"
@@ -216,6 +486,22 @@ how = "Within 130 px of a closing panda the calm 540 ms stride drops to 380 ms. 
 where = "pandas.js HAT_ALERT_MS, HAT_DANGER_R"
 since = "2C, 2026-07-24"
 
+  [moves.demo]
+  h = 1.4
+  caption = "A 540 ms stride, then 380 ms once something is closing."
+  actors = [
+  [
+      {at=[10,10], cel="walk", row="side", dx=54, ms=2160, ease="linear"},
+      {cel="walk", row="side", dx=76, ms=1520, ease="linear"},
+      {cel="idle", row="side", ms=2320},
+    ],
+  [
+      {at=[220,10], cel="idle", row="side", flip=true, ms=2160},
+      {cel="walk", row="side", flip=true, dx=-150, ms=1520, ease="linear"},
+      {cel="idle", row="side", flip=true, ms=2320},
+    ],
+  ]
+
 [[moves]]
 name = "Sidestep"
 group = "walker"
@@ -223,6 +509,22 @@ status = "shipped"
 how = "A single slow panda closing within 108 px: step calmly aside into the least crowded cell."
 where = "pandas.js HAT_SIDESTEP_R; engine/watcher.js bestEscape"
 since = "2C, 2026-07-24"
+
+  [moves.demo]
+  h = 2.4
+  actors = [
+  [
+      {at=[100,20], cel="idle", row="side", flip=true, ms=1600},
+      {cel="walk", row="down", dy=48, ms=420, ease="linear"},
+      {cel="idle", row="down", ms=2200},
+      {cel="walk", row="up", dy=-48, ms=420, ease="linear"},
+      {cel="idle", row="side", flip=true, ms=1360},
+    ],
+  [
+      {at=[220,20], cel="walk", row="side", flip=true, dx=-230, ms=4800, ease="linear"},
+      {cel="idle", row="side", flip=true, ms=1200},
+    ],
+  ]
 
 [[moves]]
 name = "Dive-roll"
@@ -232,6 +534,25 @@ how = "The emergency: a fast or too-close threat triggers the tumble cels at 58 
 where = "pandas.js HAT_ROLL_*; engine ANIM.ROLL, MODE.ROLLING"
 since = "2C, 2026-07-24"
 
+  [moves.demo]
+  h = 1.4
+  caption = "Five tumble cels at 58 ms, 92 px of travel. The cels are drawn hatless."
+  actors = [
+  [
+      {at=[100,10], cel="idle", row="side", flip=true, ms=900},
+      {cel="roll", hat="off", dx=92, ms=290, ease="linear"},
+      {cel="idle", row="side", flip=true, ms=3810},
+    ],
+  [
+      {at=[230,10], cel="idle", row="side", flip=true, ms=300},
+      {cel="walk", row="side", flip=true, dx=-240, ms=1400, ease="linear"},
+      {cel="fall", ms=840},
+      {cel="fallen", ms=700},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=920},
+    ],
+  ]
+
 [[moves]]
 name = "Hat drop and retrieve"
 group = "walker"
@@ -240,6 +561,26 @@ how = "A knock tosses the hat forward with a small spin; bare-headed, he sprints
 where = "engine/render/flourish.js (TOSS_*, FETCH_*); pandas.js HAT_SPRINT_MS"
 since = "Round 5, 2026-07-10"
 
+  [moves.demo]
+  h = 1.4
+  caption = "Re-enacted: the loose hat is the second actor here."
+  actors = [
+  [
+      {at=[60,10], cel="walk", row="side", ms=800},
+      {cel="fall", hat="off", dx=40, ms=840, ease="linear"},
+      {cel="fallen", hat="off", ms=1000},
+      {cel="standUp", hat="off", ms=840},
+      {cel="walk", row="side", flip=true, hat="off", dx=-50, ms=600, ease="linear"},
+      {cel="idle", row="down", hat="off", ms=750},
+      {cel="idle", row="down", ms=1600},
+    ],
+  [
+      {at=[86,42], cel=1, hat="ground", hide=true, ms=800},
+      {at=[130,-20], cel=1, hat="ground", hide=true, ms=4030},
+      {at=[130,-20], cel=1, hat="ground", hide=true, ms=1600},
+    ],
+  ]
+
 [[moves]]
 name = "Overwhelmed"
 group = "walker"
@@ -247,6 +588,36 @@ status = "shipped"
 how = "During a cascade he is pulled to the origin and stands amid the fallen. No freeze, no spotlight."
 where = "engine/cascade.js"
 since = "9491b90, 2026-07-24"
+
+  [moves.demo]
+  h = 1.6
+  actors = [
+  [
+      {at=[10,16], cel="idle", row="side", ms=800},
+      {cel="fall", dx=30, ms=840, ease="linear"},
+      {cel="fallen", ms=3400},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=1120},
+    ],
+  [
+      {at=[70,16], cel="idle", row="dDown", ms=1400},
+      {cel="fall", dx=30, ms=840, ease="linear"},
+      {cel="fallen", ms=3000},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=920},
+    ],
+  [
+      {at=[200,16], cel="idle", row="side", flip=true, ms=2000},
+      {cel="fall", dx=-30, ms=840, ease="linear"},
+      {cel="fallen", ms=2600},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=720},
+    ],
+  [
+      {at=[130,-30], cel="walk", row="down", dy=46, ms=2200, ease="linear"},
+      {cel="idle", row="down", ms=4800},
+    ],
+  ]
 
 [[moves]]
 name = "Learned line-walker"
@@ -267,6 +638,18 @@ how = "Stops, plays the fall deliberately with no slide, lies 8–20 s, stands, 
 where = "engine/anomalies.js"
 since = "Phase 1, 2026-07-23"
 
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[30,10], cel="walk", row="side", dx=50, ms=1600, ease="linear"},
+      {cel="fall", ms=840},
+      {cel="fallen", ms=4000},
+      {cel="standUp", ms=840},
+      {cel="walk", row="side", dx=50, ms=1600, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "Tumbler"
 group = "troupe"
@@ -274,6 +657,18 @@ status = "shipped"
 how = "Trips on nothing: a facing-cycle over a 46 px skid, ends splayed in the fall frames, gets up."
 where = "engine/anomalies.js (trip*)"
 since = "Phase 1, 2026-07-23"
+
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[30,10], cel="walk", row="side", dx=50, ms=1600, ease="linear"},
+      {spin=true, dx=46, ms=700, ease="linear"},
+      {cel="fallen", ms=900},
+      {cel="standUp", ms=840},
+      {cel="walk", row="side", dx=50, ms=1600, ease="linear"},
+    ],
+  ]
 
 [[moves]]
 name = "Spinner"
@@ -283,6 +678,19 @@ how = "Spins in place 1.2 s, then two or three quick stagger-steps in random dir
 where = "engine/anomalies.js"
 since = "Phase 1, 2026-07-23"
 
+  [moves.demo]
+  h = 1.6
+  actors = [
+  [
+      {at=[80,14], cel="walk", row="side", ms=800},
+      {spin=true, ms=1200},
+      {cel="walk", row="dDown", dx=18, dy=10, ms=300, ease="linear"},
+      {cel="walk", row="dUp", flip=true, dx=-22, dy=-12, ms=300, ease="linear"},
+      {cel="walk", row="side", dx=20, ms=300, ease="linear"},
+      {cel="walk", row="side", dx=60, ms=1800, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "Loop"
 group = "troupe"
@@ -290,6 +698,21 @@ status = "shipped"
 how = "Walks a small closed octagon, turning one step each stride, two to four laps at 420 ms, then snaps out."
 where = "engine/anomalies.js; pandas.js LOOP_*"
 since = "Phase 3, 2026-07-24"
+
+  [moves.demo]
+  h = 2.8
+  actors = [
+  [
+      {at=[60,6], cel="walk", row="side", dx=24, ms=420, ease="linear"},
+      {cel="walk", row="dDown", dx=24, dy=24, ms=420, ease="linear"},
+      {cel="walk", row="down", dy=24, ms=420, ease="linear"},
+      {cel="walk", row="dDown", flip=true, dx=-24, dy=24, ms=420, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-24, ms=420, ease="linear"},
+      {cel="walk", row="dUp", flip=true, dx=-24, dy=-24, ms=420, ease="linear"},
+      {cel="walk", row="up", dy=-24, ms=420, ease="linear"},
+      {cel="walk", row="dUp", dx=24, dy=-24, ms=420, ease="linear"},
+    ],
+  ]
 
 [[moves]]
 name = "Starer"
@@ -299,6 +722,16 @@ how = "Stops, faces the nearest edge, holds the idle 6–12 s. Nothing happens."
 where = "engine/anomalies.js"
 since = "Phase 3, 2026-07-24"
 
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[30,10], cel="walk", row="side", dx=40, ms=1400, ease="linear"},
+      {cel="idle", row="side", ms=4200},
+      {cel="walk", row="dDown", flip=true, dx=-40, ms=1400, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "Zoomies"
 group = "troupe"
@@ -306,6 +739,20 @@ status = "shipped"
 how = "Locks a heading at three times walking speed until it hits a wall (tumbles) or a panda (an ordinary knock)."
 where = "engine/anomalies.js; pandas.js ZOOM_*"
 since = "Phase 3, 2026-07-24"
+
+  [moves.demo]
+  h = 1.4
+  caption = "Three times walking speed into the wall."
+  actors = [
+  [
+      {at=[10,10], cel="walk", row="side", dx=30, ms=1200, ease="linear"},
+      {cel="walk", row="side", dx=190, ms=1100, ease="linear"},
+      {cel="fall", ms=840},
+      {cel="fallen", ms=700},
+      {cel="standUp", ms=840},
+      {cel="walk", row="side", flip=true, dx=-220, ms=3000, ease="linear"},
+    ],
+  ]
 
 [[moves]]
 name = "Moonwalk"
@@ -315,6 +762,15 @@ how = "Travels one heading while facing the exact opposite; the walk cycle plays
 where = "engine/anomalies.js (MODE.MOONWALK)"
 since = "engine port, 2026-07-27"
 
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[20,10], cel="walk", row="side", flip=true, dx=150, ms=4200, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-150, ms=3000, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "Hiccup"
 group = "troupe"
@@ -323,6 +779,19 @@ how = "Every two strides, a small convulsive pop straight up: a pocket throw arc
 where = "engine/anomalies.js (hiccupLift); pandas.js HICCUP_*"
 since = "engine port, 2026-07-27"
 
+  [moves.demo]
+  h = 1.6
+  actors = [
+  [
+      {at=[20,14], cel="walk", row="side", dx=40, ms=1300, ease="linear"},
+      {cel=1, row="side", arc=14, ms=220, ease="linear"},
+      {cel="walk", row="side", dx=40, ms=1300, ease="linear"},
+      {cel=1, row="side", arc=14, ms=220, ease="linear"},
+      {cel="walk", row="side", dx=40, ms=1300, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-120, ms=2200, ease="linear"},
+    ],
+  ]
+
 [[moves]]
 name = "The oblivious one"
 group = "troupe"
@@ -330,6 +799,18 @@ status = "shipped"
 how = "One roamer chosen at spawn wanders a small radius, idles often, and is never picked for anything."
 where = "engine/config.js (oblivious*)"
 since = "Phase 1, 2026-07-23"
+
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[80,10], cel="idle", row="down", ms=3000},
+      {cel="walk", row="side", dx=20, ms=800, ease="linear"},
+      {cel="idle", row="dDown", ms=2600},
+      {cel="walk", row="side", flip=true, dx=-20, ms=800, ease="linear"},
+      {cel="idle", row="down", ms=2200},
+    ],
+  ]
 
 # ---- ensembles ---------------------------------------------------------------
 
@@ -341,6 +822,37 @@ how = "Every 60–120 s a base with headroom is chosen; riders hop on by throw a
 where = "engine/stack.js"
 since = "Phase 4, 2026-07-24"
 
+  [moves.demo]
+  h = 3.3
+  caption = "Re-enacted at the engine's timings: mount by throw arc, parade, topple."
+  actors = [
+  [
+      {at=[60,104], cel="idle", row="side", ms=3000},
+      {cel="walk", row="side", dx=100, ms=4000, ease="linear"},
+      {cel="idle", row="side", ms=800},
+      {cel="idle", row="side", ms=3000},
+    ],
+  [
+      {at=[150,104], cel="idle", row="side", flip=true, ms=1500},
+      {cel=0, row="dDown", flip=true, dx=-90, dy=-38, ms=650, arc=40, ease="linear"},
+      {rider=true, row="side", ms=850},
+      {rider=true, row="side", dx=100, ms=4000, ease="linear"},
+      {cel=0, row="dDown", dx=70, dy=38, ms=800, arc=30, ease="linear"},
+      {cel="fall", ms=840},
+      {cel="fallen", ms=1400},
+      {cel="standUp", ms=760},
+    ],
+  [
+      {at=[-30,104], cel="idle", row="side", ms=2350},
+      {cel=0, row="dDown", dx=90, dy=-76, ms=650, arc=44, ease="linear"},
+      {rider=true, row="side", dx=100, ms=4000, ease="linear"},
+      {cel=0, row="dDown", flip=true, dx=-60, dy=76, ms=800, arc=40, ease="linear"},
+      {cel="fall", ms=840},
+      {cel="fallen", ms=1400},
+      {cel="standUp", ms=760},
+    ],
+  ]
+
 [[moves]]
 name = "The cascade"
 group = "ensemble"
@@ -348,6 +860,43 @@ status = "shipped"
 how = "Armed every 2–5 min, the next collision escalates: a hard slide aimed at the crowd, then a steered nearest-neighbour chain until 70–90% of the field is down. Recovery is the ordinary get-up, naturally staggered."
 where = "engine/cascade.js"
 since = "Phase 5, 2026-07-24"
+
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[0,10], cel="walk", row="side", dx=40, ms=1400, ease="linear"},
+      {cel="idle", row="side", ms=6600},
+    ],
+  [
+      {at=[52,10], cel="idle", row="side", ms=1400},
+      {cel="fall", dx=36, ms=840, ease="linear"},
+      {cel="fallen", ms=3300},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=1620},
+    ],
+  [
+      {at=[104,10], cel="idle", row="side", ms=2000},
+      {cel="fall", dx=36, ms=840, ease="linear"},
+      {cel="fallen", ms=3000},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=1320},
+    ],
+  [
+      {at=[156,10], cel="idle", row="side", ms=2600},
+      {cel="fall", dx=36, ms=840, ease="linear"},
+      {cel="fallen", ms=2700},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=1020},
+    ],
+  [
+      {at=[208,10], cel="idle", row="side", ms=3200},
+      {cel="fall", dx=36, ms=840, ease="linear"},
+      {cel="fallen", ms=2400},
+      {cel="standUp", ms=840},
+      {cel="idle", ms=720},
+    ],
+  ]
 
 [[moves]]
 name = "Conga lines"
@@ -358,6 +907,44 @@ where = "pandas.js class Line, manageLines (at 4ba8512)"
 since = "4ba8512, 2026-07-23"
 note = "Retired 2026-07-23 by design review: coordination read as uniform and janky, and line membership suppressed the collisions that are the scene's charm."
 
+  [moves.demo]
+  h = 2.4
+  caption = "Re-enacted: each follower steps into the cell the one ahead vacated."
+  actors = [
+  [
+      {at=[10,10], cel="idle", row="side", ms=0},
+      {cel="walk", row="side", dx=120, ms=2400, ease="linear"},
+      {cel="walk", row="dDown", dx=24, dy=40, ms=800, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-168, ms=3400, ease="linear"},
+      {cel="walk", row="dUp", dx=24, dy=-40, ms=800, ease="linear"},
+      {cel="idle", row="side", ms=1500},
+    ],
+  [
+      {at=[10,10], cel="idle", row="side", ms=500},
+      {cel="walk", row="side", dx=120, ms=2400, ease="linear"},
+      {cel="walk", row="dDown", dx=24, dy=40, ms=800, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-168, ms=3400, ease="linear"},
+      {cel="walk", row="dUp", dx=24, dy=-40, ms=800, ease="linear"},
+      {cel="idle", row="side", ms=1000},
+    ],
+  [
+      {at=[10,10], cel="idle", row="side", ms=1000},
+      {cel="walk", row="side", dx=120, ms=2400, ease="linear"},
+      {cel="walk", row="dDown", dx=24, dy=40, ms=800, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-168, ms=3400, ease="linear"},
+      {cel="walk", row="dUp", dx=24, dy=-40, ms=800, ease="linear"},
+      {cel="idle", row="side", ms=500},
+    ],
+  [
+      {at=[10,10], cel="idle", row="side", ms=1500},
+      {cel="walk", row="side", dx=120, ms=2400, ease="linear"},
+      {cel="walk", row="dDown", dx=24, dy=40, ms=800, ease="linear"},
+      {cel="walk", row="side", flip=true, dx=-168, ms=3400, ease="linear"},
+      {cel="walk", row="dUp", dx=24, dy=-40, ms=800, ease="linear"},
+      {cel="idle", row="side", ms=0},
+    ],
+  ]
+
 [[moves]]
 name = "Activation patching"
 group = "ensemble"
@@ -366,6 +953,33 @@ how = "When two lines of four or more had headings more than 45° apart, the hat
 where = "pandas.js (at b8a548a); design/panda-choreography.md"
 since = "b8a548a, 2026-07-23"
 note = "Retired with the lines: it fired too rarely and too late for anyone to see. The metaphor was exact and the audience could not read it."
+
+  [moves.demo]
+  h = 2.6
+  caption = "Re-enacted: two lines freeze, one panda is flung from the first into the tail of the second, and carries on with its heading."
+  actors = [
+  [
+      {at=[10,6], cel="walk", row="side", dx=60, ms=2000, ease="linear"},
+      {cel="stop", row="side", ms=1400},
+      {cel="walk", row="side", dx=90, ms=3000, ease="linear"},
+    ],
+  [
+      {at=[-40,6], cel="walk", row="side", dx=60, ms=2000, ease="linear"},
+      {cel="stop", row="side", ms=1400},
+      {cel=0, row="dDown", dx=100, dy=60, ms=900, arc=50, ease="linear"},
+      {cel="walk", row="dDown", dx=54, dy=36, ms=2100, ease="linear"},
+    ],
+  [
+      {at=[120,30], cel="walk", row="dDown", dx=36, dy=24, ms=2000, ease="linear"},
+      {cel="stop", row="dDown", ms=1400},
+      {cel="walk", row="dDown", dx=54, dy=36, ms=3000, ease="linear"},
+    ],
+  [
+      {at=[90,10], cel="walk", row="dDown", dx=36, dy=24, ms=2000, ease="linear"},
+      {cel="stop", row="dDown", ms=1400},
+      {cel="walk", row="dDown", dx=54, dy=36, ms=3000, ease="linear"},
+    ],
+  ]
 
 # ---- scenes ------------------------------------------------------------------
 
@@ -377,6 +991,25 @@ how = "The stage starts empty; the hat panda ambles in alone with a 1.8 s head s
 where = "engine/director.js; config entrance*"
 since = "a3dd257, 2026-07-23"
 
+  [moves.demo]
+  h = 1.4
+  actors = [
+  [
+      {at=[-50,10], cel="walk", row="side", dx=110, ms=3600, ease="linear"},
+      {cel="idle", row="down", ms=3400},
+    ],
+  [
+      {at=[260,10], cel="idle", row="side", flip=true, hat="off", ms=1800},
+      {cel="walk", row="side", flip=true, hat="off", dx=-90, ms=3000, ease="linear"},
+      {cel="idle", row="down", hat="off", ms=2200},
+    ],
+  [
+      {at=[300,10], cel="idle", row="side", flip=true, hat="off", ms=2850},
+      {cel="walk", row="side", flip=true, hat="off", dx=-90, ms=3000, ease="linear"},
+      {cel="idle", row="dDown", flip=true, hat="off", ms=1150},
+    ],
+  ]
+
 [[moves]]
 name = "Drop entrance"
 group = "scene"
@@ -384,6 +1017,33 @@ status = "shipped"
 how = "The roamers rain onto their spots over about 7 s, 650 ms in the air each, and 40% bounce once on landing; the hat panda still walks on."
 where = "engine/config.js (drop*)"
 since = "the site's arrival, 2026-08-03"
+
+  [moves.demo]
+  h = 2.6
+  caption = "Re-enacted: 650 ms in the air, and some bounce once."
+  actors = [
+  [
+      {at=[40,-60], cel=1, row="down", hat="off", ms=400},
+      {cel=1, row="down", hat="off", dy=120, ms=650, ease="linear"},
+      {cel="fall", hat="off", ms=840},
+      {cel="fallen", hat="off", ms=1200},
+      {cel="standUp", hat="off", ms=840},
+      {cel="idle", hat="off", ms=2070},
+    ],
+  [
+      {at=[130,-60], cel=1, row="down", hat="off", ms=1300},
+      {cel=1, row="down", hat="off", dy=120, ms=650, ease="linear"},
+      {cel=0, row="dDown", hat="off", dx=60, ms=450, arc=46, ease="linear"},
+      {cel="fall", hat="off", ms=840},
+      {cel="fallen", hat="off", ms=900},
+      {cel="standUp", hat="off", ms=840},
+      {cel="idle", hat="off", ms=1020},
+    ],
+  [
+      {at=[-50,60], cel="walk", row="side", dx=90, ms=3400, ease="linear"},
+      {cel="idle", row="down", ms=2600},
+    ],
+  ]
 
 [[moves]]
 name = "Hero pin"
@@ -401,6 +1061,27 @@ status = "shipped"
 how = "With reduced motion, a composed still: the troupe scattered, one three-high stack mid-parade, one panda fallen, and the hat panda planted facing it."
 where = "engine/render/tableau.js"
 since = "Phase 0, 2026-07-23"
+
+  [moves.demo]
+  h = 3.3
+  caption = "A still: the stack mid-parade, one fallen, the hat panda facing it."
+  actors = [
+  [
+      {at=[40,104], cel="idle", row="side", ms=4000},
+    ],
+  [
+      {at=[40,66], rider=true, row="side", ms=4000},
+    ],
+  [
+      {at=[40,28], rider=true, row="side", ms=4000},
+    ],
+  [
+      {at=[190,104], cel="fallen", row="side", ms=4000},
+    ],
+  [
+      {at=[130,104], cel="idle", row="side", ms=4000},
+    ],
+  ]
 
 [[moves]]
 name = "Hero to road"

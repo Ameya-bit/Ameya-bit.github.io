@@ -41,6 +41,8 @@ from the fresh one (both checked, 2026-09-21). A single-file
 after editing the inventory if you are not doing a full render or a preview.
 """
 
+import html
+import json
 import re
 import sys
 import tomllib
@@ -211,6 +213,19 @@ STATUS_WORD = {
 }
 
 
+def specimen_html(demo: dict, indent: str) -> list:
+    """The figure the specimen player mounts: its script as a data attribute."""
+    payload = html.escape(json.dumps(demo, separators=(",", ":")), quote=True)
+    lines = [
+        f'{indent}<figure class="panda-specimen" data-demo="{payload}">',
+        f'{indent}  <div class="specimen-stage" aria-hidden="true"></div>',
+    ]
+    if demo.get("caption"):
+        lines.append(f'{indent}  <figcaption>{web_text(demo["caption"])}</figcaption>')
+    lines.append(f"{indent}</figure>")
+    return lines
+
+
 def panda_md(moves: list) -> str:
     out = []
     for key, title, lead in GROUPS:
@@ -223,12 +238,10 @@ def panda_md(moves: list) -> str:
             if m.get("note"):
                 dd += f" *{web_text(m['note'])}*"
             status = STATUS_WORD[m["status"]]
-            out += [
-                f'{web_text(m["name"])}',
-                f":   {dd}",
-                f'    <span class="colo-status is-{m["status"]}">{status}</span>',
-                "",
-            ]
+            out += [f'{web_text(m["name"])}', f":   {dd}"]
+            if "demo" in m:
+                out += ["", *specimen_html(m["demo"], "    ")]
+            out += [f'    <span class="colo-status is-{m["status"]}">{status}</span>', ""]
         out += [":::", ""]
     return "\n".join(out)
 

@@ -350,6 +350,19 @@ body:has(.road) #title-block-header { display: none; }
 }
 .road-walker.is-flipped .road-sheet-flip { transform: scaleX(-1); }
 
+/* the lids: eight face-white pixels over the eyes, shown for one beat of a blink */
+.road-blink {
+  position: absolute;
+  inset: 0;
+}
+.road-blink[hidden] { display: none; }
+.road-blink svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  shape-rendering: crispEdges;
+}
+
 /* parked on the first screen, it breathes (the engine's own idle bob) */
 @keyframes road-breathe {
   0%, 100% { transform: translateY(0); }
@@ -447,5 +460,14 @@ body:has(.road) .site-colophon { margin-bottom: 6rem; }
     font-size: inherit;
     letter-spacing: inherit;
   }
-  #quarto-content main.content .road-foot { gap: 0.4rem 1.3rem; }
+  /* Pinned, the links wrap to two rows and hold a seventh of a phone screen
+     over the road. At this width the foot is where it says: the end of the
+     page, after the road, under the reader's thumb only when they get there. */
+  #quarto-content main.content .road-foot {
+    position: static;
+    gap: 0.4rem 1.3rem;
+    padding: 2.6rem 1rem 0.4rem;
+    background: none;
+  }
+  body:has(.road) .site-colophon { margin-bottom: 2.5rem; }
 }

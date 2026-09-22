@@ -5,7 +5,8 @@
 //   THE HERO   standing large in the stage box at the top of the page.
 //   THE ROAD   small, on the timeline's spine. Its place on the spine is a
 //              linear read of how far the page has been scrolled, so it reaches
-//              the end of the road exactly when the reader does, and sits down.
+//              the end of the road exactly when the reader does, and sits down
+//              (the stand-up cels run backwards, hat set down beside it).
 //
 // and one way between them: A JUMP. When the reader scrolls past the jump line
 // the panda leaps from the hero to the head of the road in one timed arc; when
@@ -20,18 +21,24 @@
 // The drawing is the engine's own sprite sheet (render/art.js is a pure string
 // module: no DOM, no state), so this is the same panda, hat and all.
 //
-// Reduced motion: the panda is parked in the hero and never moves. The era
-// nodes still fill as they come well inside the screen.
+// Standing and facing the reader (parked in the hero, or stopped on the
+// road) it blinks: eight lid pixels laid over the eyes on the rhythm in
+// panda-blink.js. The lids are an overlay, not a cel, so the sheet is untouched.
+//
+// Reduced motion: the panda is parked in the hero and never moves or blinks.
+// The era nodes still fill as they come well inside the screen.
 
 import { SPRITE_HAT, looseHatSvg } from '../pandas/engine/render/art.js';
 import { ROW, FRAME_MS } from '../pandas/engine/render/cels.js';
+import { blinkSvg, runBlink } from './panda-blink.js';
 
 const CELL = 48;              // the sheet is drawn at one sprite unit per CSS px
 // (the walker's size on the road is CSS's call: --road-marker-scale, whole numbers)
 const WALK = [0, 1, 2, 1];    // contact, dip, contact, dip
 const COL_IDLE = 1;           // legs together: a settled stand
 const COL_LEAP = 0;           // the contact stride, legs apart: reads as a leap in the air
-const COL_REST = 9;           // a get-up cel, front view: the panda sitting, hat off
+const SIT_DOWN = [12, 11, 10, 9]; // the stand-up cycle (7..12) run backwards from standing,
+                                  // one cel a beat; the last one holds: sitting, hat off
 const ANCHOR = 0.42;          // where on the screen the walker starts down the road
 const END_MARGIN_PX = 24;     // arrive just before the page runs out
 const IDLE_MS = 160;          // no scroll for this long: stop walking
@@ -55,8 +62,11 @@ function start() {
   const walker = document.createElement('div');
   walker.className = 'road-walker is-parked';
   walker.setAttribute('aria-hidden', 'true');
-  walker.innerHTML = `<div class="road-sheet-flip"><div class="road-sheet">${SPRITE_HAT}</div></div>`;
+  walker.innerHTML =
+    `<div class="road-sheet-flip"><div class="road-sheet">${SPRITE_HAT}</div>` +
+    `<div class="road-blink" hidden>${blinkSvg()}</div></div>`;
   const sheet = walker.querySelector('.road-sheet');
+  const lids = walker.querySelector('.road-blink');
 
   const hat = document.createElement('div');
   hat.className = 'road-hat';
@@ -79,7 +89,11 @@ function start() {
   let idleTimer = 0;
   let restTimer = 0;
   let resting = false;
+  let sitStart = 0;          // when the sit-down began, on performance.now()
+  let sitTimer = 0;
   let queued = false;
+  let standing = false;      // drawn as the idle cel, facing the reader: the eyes that blink
+  let eyesClosed = false;    // where the blink loop is right now
 
   const clamp01 = (v) => Math.min(1, Math.max(0, v));
   const ease = (t) => t * t * (3 - 2 * t);
@@ -126,8 +140,18 @@ function start() {
     walker.classList.toggle('is-flipped', flipped);
   }
 
+  function showLids() {
+    lids.hidden = !(standing && eyesClosed);
+  }
+
   function render() {
     if (!geo) return;
+    standing = false;
+    draw();
+    showLids();
+  }
+
+  function draw() {
     const y = window.scrollY;
     const u = clamp01((y - geo.s0) / (endScroll() - geo.s0));
     const roadY = lerp(geo.spineTop, geo.spineBottom, u);
@@ -151,7 +175,8 @@ function start() {
     walker.classList.toggle('is-parked', jump === 0);
 
     if (resting && jump === 1) {
-      showCel(COL_REST, 'down', false);
+      const beat = Math.floor((performance.now() - sitStart) / FRAME_MS);
+      showCel(SIT_DOWN[Math.min(beat, SIT_DOWN.length - 1)], 'down', false);
       hat.hidden = false;
       hat.style.transform =
         `translate(${px - 24 * geo.marker}px, ${py + (CELL - 19) * geo.marker}px) scale(${geo.marker})`;
@@ -167,6 +192,7 @@ function start() {
     }
     if (jump === 0 || !scrolling) {
       showCel(COL_IDLE, 'down', false);
+      standing = true;
       return;
     }
     const col = WALK[Math.floor(performance.now() / FRAME_MS) % WALK.length];
@@ -199,8 +225,16 @@ function start() {
   function armRest() {
     clearTimeout(restTimer);
     if (geo && jump === 1 && window.scrollY >= endScroll()) {
-      restTimer = setTimeout(() => { resting = true; render(); }, REST_MS);
+      restTimer = setTimeout(() => { resting = true; sitStart = performance.now(); render(); tickSit(); }, REST_MS);
     }
+  }
+
+  // redraws on each beat of the sit-down, until the last cel holds
+  function tickSit() {
+    clearTimeout(sitTimer);
+    const beat = Math.floor((performance.now() - sitStart) / FRAME_MS);
+    if (beat >= SIT_DOWN.length - 1) return;
+    sitTimer = setTimeout(() => { render(); tickSit(); }, FRAME_MS);
   }
 
   function onScroll() {
@@ -211,6 +245,7 @@ function start() {
     scrolling = true;
     clearTimeout(idleTimer);
     clearTimeout(restTimer);
+    clearTimeout(sitTimer);
     idleTimer = setTimeout(() => { scrolling = false; render(); armRest(); }, IDLE_MS);
     aim();
     if (queued) return;
@@ -247,6 +282,7 @@ function start() {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
   window.addEventListener('scroll', reduced ? markPassedStatic : onScroll, { passive: true });
   relayout();
+  if (!reduced) runBlink((closed) => { eyesClosed = closed; showLids(); });
 
   // for the console, and for measuring the thing without watching it
   window.__walk = {
