@@ -87,11 +87,14 @@ def resume_entry(item: dict, variant_names: tuple) -> dict:
     entry.setdefault("dates", format_dates(item))
     if "location" in item:
         entry.setdefault("location", item["location"])
+    if "dates" not in view:
+        entry["span"] = (item["start"], item.get("end"))
     if "web_link" in view:
         target = next((o for o in item.get("outputs", []) if o["kind"] == view["web_link"]), None)
         if target is None:
             sys.exit(f"resume.toml: {item['id']} has web_link = {view['web_link']!r} but no such output")
         entry["web_url"] = f"../{target['path']}/"
+        entry["web_folder"] = target["path"]
     return entry
 
 
@@ -157,6 +160,25 @@ def select(data: dict, variant: str) -> dict:
         for title in data["variants"][variant]["sections"]
     ]
     return {**data, "sections": sections}
+
+
+# ---- a post's own picture ---------------------------------------------------
+
+def front_matter_image(folder: str) -> str | None:
+    """A post's `image:` from its own front matter, or None."""
+    text = (ROOT / folder / "index.qmd").read_text()
+    block = text.split("---", 2)[1] if text.startswith("---") else ""
+    found = re.search(r"^image:\s*(.+?)\s*$", block, flags=re.M)
+    return found.group(1).strip("\"'") if found else None
+
+
+def thumbnail(folder: str) -> str | None:
+    """Site-relative path of a post's thumbnail, preferring the shipped .webp."""
+    image = front_matter_image(folder)
+    if image is None:
+        return None
+    webp = Path(folder) / Path(image).with_suffix(".webp")
+    return str(webp) if (ROOT / webp).exists() else str(Path(folder) / image)
 
 
 # ---- text conversions -------------------------------------------------------
@@ -250,60 +272,103 @@ def gen_tex(data: dict) -> str:
 
 
 # ---- the page body (superset renderer) --------------------------------------
+#
+# The page speaks the home page's road (2026-09-23): each section is a stretch
+# of road, a dotted spine with a node per entry, the dates hung in the gutter to
+# its left in the road's mono stamps, a node filled while the work is still
+# running. An entry that has a post carries that post's figure beside it, the
+# way a row on the road does. The PDF is untouched by any of this.
+
+# A figure in a bullet: a number standing alone, with its decimals, a range
+# (3.5–7), and a unit (x, ×, %). Not a digit inside a name (GPT-4o, Qwen3,
+# 6-layer, Gemma-2-9B), and not the digits of an HTML entity (&#x27;).
+FIGURE = re.compile(r"(?<![\w.#&;-])\d+(?:\.\d+)?(?:–\d+(?:\.\d+)?)?(?:×|%|x\b)?(?![\w-])")
+
+
+def month_stamp(ym: str) -> str:
+    year, month = ym.split("-")
+    return f"{MONTHS[int(month) - 1].upper()} {year}"
+
+
+def when_html(e: dict) -> str:
+    """The gutter stamp: start over end, or the item's own wording if it has one."""
+    if "span" not in e:
+        # an item's own wording ("Expected May 2028"): the month and year keep a
+        # line of their own, the way a range's end does
+        *lead, month, year = web_text(e["dates"]).upper().split()
+        head = f'<span>{" ".join(lead)}</span>' if lead else ""
+        return f'<p class="cv-when">{head}<span>{month} {year}</span></p>'
+    start, end = e["span"]
+    if end == start:
+        return f'<p class="cv-when"><span>{month_stamp(start)}</span></p>'
+    last = month_stamp(end) if end else "NOW"
+    return f'<p class="cv-when"><span>{month_stamp(start)}</span><span>– {last}</span></p>'
+
+
+def point_html(b: str) -> str:
+    """A bullet, with its figures set in the weight the eye scans for."""
+    return FIGURE.sub(lambda m: f'<b class="cv-fig">{m.group(0)}</b>', web_text(b))
+
+
+def entry_html(e: dict) -> list:
+    link = e.get("web_url") or e.get("url")
+    head = web_text(e["heading"])
+    if link:
+        head = f'<a href="{link}">{head}</a>'
+    thumb = thumbnail(e["web_folder"]) if "web_folder" in e else None
+    running = "span" in e and e["span"][1] is None
+    classes = "cv-entry" + (" is-running" if running else "") + (" has-thumb" if thumb else "")
+    out = [f'<article class="{classes}">', f"  {when_html(e)}"]
+    if thumb:
+        out.append(f'  <a class="cv-thumb" href="{e["web_url"]}" tabindex="-1" aria-hidden="true">'
+                   f'<img src="../{thumb}" alt="" loading="lazy"></a>')
+    out.append(f'  <p class="cv-head">{head}</p>')
+    detail = web_text(e["detail"])
+    if e.get("location"):
+        detail += f' <span class="cv-where">· {web_text(e["location"])}</span>'
+    out.append(f'  <p class="cv-detail">{detail}</p>')
+    if e.get("bullets"):
+        out.append('  <ul class="cv-points">')
+        out += [f"    <li>{point_html(b)}</li>" for b in e["bullets"]]
+        out.append("  </ul>")
+    out.append("</article>")
+    return out
+
 
 def gen_web(data: dict) -> str:
-    # The page shows one variant; the filing line offers every variant's PDF,
-    # the page's own first.
+    # The page shows one variant; the buttons offer every variant's PDF, the
+    # page's own first.
     page = data["page"]
     order = [page] + [v for v in data["variants"] if v != page]
-    links = " · ".join(
-        f'<a href="../assets/{data["variants"][v]["pdf"]}">{web_text(data["variants"][v]["label"])}</a>'
+    buttons = [
+        f'  <a class="cv-pdf" href="../assets/{data["variants"][v]["pdf"]}">'
+        f'{web_text(data["variants"][v]["label"].capitalize())}<small>PDF</small></a>'
         for v in order
-    )
+    ]
     out = [
         "<!-- GENERATED by tools/resume/build.py from resume.toml — do not edit."
         " Regenerates on every quarto render (pre-render hook). -->",
         "",
         "```{=html}",
-        f'<p class="cv-filing">Updated {web_text(data["updated"])}'
-        f" · Download as PDF: {links}</p>",
+        f'<p class="cv-filing">Updated {web_text(data["updated"])}</p>',
+        '<nav class="cv-pdfs" aria-label="Download the résumé">',
+        *buttons,
+        "</nav>",
         "```",
     ]
 
     for sec in data["sections"]:
-        out.append("")
-        out.append("## " + sec["title"])
-        out.append("")
-        out.append("```{=html}")
-
-        for e in sec.get("entries", []):
-            link = e.get("web_url") or e.get("url")
-            head = web_text(e["heading"])
-            if link:
-                head = f'<a href="{link}">{head}</a>'
-            out.append('<article class="cv-entry">')
-            out.append('  <div class="cv-row">')
-            out.append(f'    <p class="cv-head">{head}</p>')
-            out.append(f'    <p class="cv-when">{web_text(e["dates"])}</p>')
-            out.append("  </div>")
-            out.append('  <div class="cv-row">')
-            out.append(f'    <p class="cv-detail">{web_text(e["detail"])}</p>')
-            if e.get("location"):
-                out.append(f'    <p class="cv-where">{web_text(e["location"])}</p>')
-            out.append("  </div>")
-            if e.get("bullets"):
-                out.append('  <ul class="cv-points">')
-                for b in e["bullets"]:
-                    out.append(f"    <li>{web_text(b)}</li>")
-                out.append("  </ul>")
-            out.append("</article>")
-
+        out += ["", "## " + sec["title"], "", "```{=html}"]
+        if sec.get("entries"):
+            out.append('<div class="cv-road">')
+            for e in sec["entries"]:
+                out += entry_html(e)
+            out.append("</div>")
         for sk in sec.get("skills", []):
             out.append(
-                f'<p class="cv-skill"><strong>{web_text(sk["label"])}:</strong> '
+                f'<p class="cv-skill"><strong>{web_text(sk["label"])}</strong> '
                 f'{web_text(sk["text"])}</p>'
             )
-
         out.append("```")
 
     return "\n".join(out) + "\n"

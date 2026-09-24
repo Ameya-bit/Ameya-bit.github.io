@@ -28,16 +28,19 @@ palette changes — not a render hook.
 Requires the Playwright CLI (npx playwright) for the one screenshot.
 """
 
+import html
 import pathlib
 import re
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 STYLES = ROOT / "styles.scss"
 FONTS = ROOT / "design" / "fonts"
 OUT = ROOT / "assets" / "og-card.png"
+INVENTORY = ROOT / "tools" / "resume" / "resume.toml"
 
 # Facebook and X both want 1200x630 for the large-summary card.
 WIDTH, HEIGHT = 1200, 630
@@ -72,7 +75,22 @@ def font_face(weight: int, filename: str) -> str:
     )
 
 
+def count_pieces(folder: str) -> int:
+    """How many posts (or notes) the site has: one folder with an index.qmd each."""
+    return sum(1 for f in (ROOT / folder).glob("*/index.qmd"))
+
+
 def card_html(t: dict[str, str]) -> str:
+    # The words come from the inventory and the counts from the folders, so the
+    # card cannot go on advertising a page the site retired (it did: it counted
+    # "Instruments 05" for weeks after /instruments/ was taken down).
+    person = tomllib.loads(INVENTORY.read_text(encoding="utf-8"))["person"]
+    name = html.escape(person["name"])
+    headline = "".join(f"<b>{html.escape(line)}</b>" for line in person["headline"])
+    ledger = "".join(
+        f"<span>{label}<em>{count_pieces(folder):02d}</em></span>"
+        for label, folder in (("Writing", "posts"), ("Notes", "notes"))
+    )
     faces = "".join(
         font_face(w, f) for w, f in ((400, "Nunito-Regular.ttf"), (500, "Nunito-Medium.ttf"), (600, "Nunito-SemiBold.ttf"))
     )
@@ -111,18 +129,14 @@ body{{
 .url{{font-size:17px;color:{t['--gray-1000']}}}
 </style></head><body>
   <div class="top">
-    <span class="name">Ameya Panchal</span>
+    <span class="name">{name}</span>
   </div>
   <div>
     <div class="kicker">Now</div>
-    <div class="hl"><b>CS, physics &amp; AI at Penn State.</b><b>Independent interpretability research.</b></div>
+    <div class="hl">{headline}</div>
   </div>
   <div class="foot">
-    <div class="ledger">
-      <span>Writing<em>04</em></span>
-      <span>Notes<em>03</em></span>
-      <span>Instruments<em>05</em></span>
-    </div>
+    <div class="ledger">{ledger}</div>
     <span class="url">ameya-bit.github.io</span>
   </div>
 </body></html>

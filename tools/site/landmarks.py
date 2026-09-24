@@ -5,10 +5,10 @@ These are all in markup Quarto emits, not in anything written by hand, which is
 why they are corrected here rather than in a template. Every one was found by
 the 2026-08-05 audit (axe-core, three engines, five widths).
 
-1. THREE NAVIGATION LANDMARKS, TWO UNNAMED. A post page emits nav.navbar (the
-   masthead), nav#quarto-sidebar, and nav#TOC. Only the TOC has an accessible
-   name, so a screen-reader user gets an undifferentiated list of "navigation".
-   The masthead gets a name. The sidebar gets role="presentation": it is a bare
+1. NAVIGATION LANDMARKS, UNNAMED. A post page emits nav#quarto-sidebar and
+   nav#TOC (it emitted a nav.navbar masthead too, until the masthead was
+   removed on 2026-09-23; the foot bar that replaced it names itself). Only the
+   TOC has an accessible name. The sidebar gets role="presentation": it is a bare
    wrapper whose only child is the TOC, so it should not be a landmark at all —
    presentation drops its own semantics and leaves every descendant intact.
 
@@ -35,7 +35,6 @@ OUT = Path(os.environ.get("QUARTO_PROJECT_OUTPUT_DIR", ROOT / "_site"))
 if not OUT.is_absolute():
     OUT = ROOT / OUT
 
-NAVBAR = re.compile(r"<nav\b(?![^>]*\baria-label=)([^>]*\bclass=\"[^\"]*\bnavbar\b[^\"]*\"[^>]*)>")
 SIDEBAR = re.compile(r"<nav\b(?![^>]*\brole=)([^>]*\bid=\"quarto-sidebar\"[^>]*)>")
 TABLE_OPEN = re.compile(r"<table\b[^>]*>", re.IGNORECASE)
 
@@ -87,16 +86,15 @@ def main() -> None:
     for html in sorted(OUT.rglob("*.html")):
         text = original = html.read_text(encoding="utf-8")
 
-        text, n1 = NAVBAR.subn(r'<nav aria-label="Site"\1>', text)
-        text, n2 = SIDEBAR.subn(r'<nav role="presentation"\1>', text)
-        navs += n1 + n2
+        text, n = SIDEBAR.subn(r'<nav role="presentation"\1>', text)
+        navs += n
 
         text, n3 = wrap_tables(text)
         tables += n3
 
         if text != original:
             html.write_text(text, encoding="utf-8")
-    print(f"landmarks: named/demoted {navs} nav landmarks, wrapped {tables} tables")
+    print(f"landmarks: demoted {navs} nav landmarks, wrapped {tables} tables")
 
 
 if __name__ == "__main__":

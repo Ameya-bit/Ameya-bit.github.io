@@ -17,7 +17,9 @@
  * labels in the filing voice. Mono is the numbering system and nothing else,
  * so here it sets the year stamps only. */
 body:has(.road) {
-  --road-column: 27rem;      /* the reading column beside the spine */
+  --road-column: 34.824rem;  /* the reading column beside the spine: the posts'
+                                own text column (592px at calibration), so home
+                                and a post share both edges (2026-09-23) */
   --road-gutter: 8.6rem;     /* room left of the spine for the year stamps */
   --road-spine-gap: 2.7rem;  /* spine to text: the walker's half-width, plus air */
   --road-cell: 48px;         /* the sheet is drawn at one sprite unit per CSS pixel */
@@ -29,16 +31,12 @@ body:has(.road) {
 #quarto-content main.content .road-tag,
 #quarto-content main.content .road-label,
 #quarto-content main.content .road-more > summary,
-#quarto-content main.content .road-foot a,
 #quarto-content main.content .road-when small {
   font-family: inherit;
   font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
-
-/* The masthead's job (the name) moves to the corner block on this page. */
-body:has(.road) #quarto-header { display: none; }
 
 /* styles.scss says these of body:has(.hero-screen); this page does not carry
    that class (see index.qmd), so it says them for itself. */
@@ -104,12 +102,13 @@ body:has(.road) #title-block-header { display: none; }
 
 .road-track {
   position: relative;
-  width: min(100%, calc(var(--road-column) + var(--road-gutter)));
+  width: min(100%, calc(var(--road-column) + 2 * var(--road-gutter)));
   margin: 5.4rem auto 0;
-  padding-left: var(--road-gutter);
-  /* optical centring: the text column, not the column-plus-gutter, sits on the
-     page axis under the hero, the way Mike's does */
-  transform: translateX(calc(var(--road-gutter) / -2));
+  /* the text column sits on the page axis, where a post's does; the year
+     stamps hang in the gutter to its left, as a post's section numerals do.
+     The gutter is mirrored on the right only so the centring holds: when the
+     window is too narrow for both, the column gives, never the stamps */
+  padding-inline: var(--road-gutter);
 }
 
 /* the eras share one spine: a dotted rule the panda walks, from the first node
@@ -372,9 +371,18 @@ body:has(.road) #title-block-header { display: none; }
   .road-walker.is-parked .road-sheet-flip { animation: road-breathe 2.6s ease-in-out infinite; }
 }
 .road-stage img { display: block; width: 100%; height: 100%; cursor: default; }
+/* Clipped HERE as well as on the walker, and it is load-bearing on iPhones.
+ * The breathing animation gives this box its own compositing layer, and a layer
+ * is as big as everything it paints: unclipped, that is the whole 624 x 240
+ * sheet, which at the hero's 4x and a phone's 3x pixel ratio is a ~7500 x 2900
+ * bitmap. iOS Safari declines to draw a layer that size, so the parked panda
+ * was invisible on real phones (fine in desktop emulation, whose GPU allows
+ * it) and reappeared on the road, where the animation stops. Clipped, the
+ * layer is one 48 x 48 cel. */
 .road-sheet-flip {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 .road-sheet {
   position: absolute;
@@ -407,33 +415,11 @@ body:has(.road) #title-block-header { display: none; }
   shape-rendering: crispEdges;
 }
 
-/* ---- the fixed foot: the way back, and the way out ---- */
+/* ---- the foot ---- */
 
-#quarto-content main.content .road-foot {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 5;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.4rem 2.2rem;
-  padding: 3.4rem 1.25rem calc(1.4rem + env(safe-area-inset-bottom, 0px));
-  /* opaque behind the links, so the road never reads through them */
-  background: linear-gradient(to bottom, transparent, var(--gray-100) 3.1rem);
-  pointer-events: none;
-}
-#quarto-content main.content .road-foot a {
-  pointer-events: auto;
-  font-size: var(--text-filing);
-  text-decoration: none;
-  color: var(--gray-1000);
-}
-#quarto-content main.content .road-foot a:hover,
-#quarto-content main.content .road-foot a:focus-visible {
-  color: var(--accent-ink);
-}
+/* The link bar is the site's (styles.scss, .site-foot). Here it only stays
+   pinned rather than fading while the reader scrolls: the road is walked, not
+   read, and the bar is how the walk ends. */
 
 /* The colophon whisper stays, clear of the fixed foot. */
 body:has(.road) .site-colophon { margin-bottom: 6rem; }
@@ -448,7 +434,7 @@ body:has(.road) .site-colophon { margin-bottom: 6rem; }
     --road-hero-cell: 192px; /* 4x */
   }
   .road-hero { padding-top: 2.5rem; }
-  .road-track { transform: none; }
+  .road-track { padding-right: 0; }
   #quarto-content main.content .road-when {
     position: static;
     text-align: left;
@@ -463,10 +449,9 @@ body:has(.road) .site-colophon { margin-bottom: 6rem; }
   /* Pinned, the links wrap to two rows and hold a seventh of a phone screen
      over the road. At this width the foot is where it says: the end of the
      page, after the road, under the reader's thumb only when they get there. */
-  #quarto-content main.content .road-foot {
+  body:has(.road) #quarto-content > .site-foot {
     position: static;
-    gap: 0.4rem 1.3rem;
-    padding: 2.6rem 1rem 0.4rem;
+    padding-bottom: calc(0.4rem + env(safe-area-inset-bottom, 0px));
     background: none;
   }
   body:has(.road) .site-colophon { margin-bottom: 2.5rem; }

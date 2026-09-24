@@ -78,14 +78,5 @@
       <p>Thanks for walking it with me.</p>
     </div>
   </div>
-
-  <nav class="road-foot" aria-label="Profile links">
-    <a href="#top">Back to start</a>
-    <a href="about/">About</a>
-    <a href="https://github.com/Ameya-bit">GitHub</a>
-    <a href="https://www.linkedin.com/in/ameya-bit">LinkedIn</a>
-    <a href="mailto:ameyapanchal011@gmail.com">Email</a>
-    <a href="resume/">Résumé</a>
-  </nav>
 </section>
 ```

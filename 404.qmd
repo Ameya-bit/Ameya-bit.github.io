@@ -18,8 +18,7 @@ results on this site, this one is not interesting.
      underline, a hairline baseline instead. -->
 <nav class="notfound-links" aria-label="Site sections">
   <a href="/">Home</a>
-  <a href="/#writing-section">Writing</a>
-  <a href="/#notes-section">Notes</a>
   <a href="/about/">About</a>
+  <a href="/resume/">Résumé</a>
 </nav>
 ```

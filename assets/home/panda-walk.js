@@ -15,8 +15,10 @@
 // scrolling through it, and it lands either way. (It was scroll-scrubbed once:
 // the panda could be parked halfway, standing on the intro paragraph.)
 //
-// The legs run on the engine's own cel clock (FRAME_MS), not on distance
-// covered: tied to distance, a fast scroll made them a blur.
+// The legs run on a clock (WALK_MS), not on distance covered: tied to
+// distance, a fast scroll made them a blur. The clock is the walk's own, slower
+// than the engine's cel beat (FRAME_MS, which the blink and the sit-down keep):
+// at 140 ms a step the panda read as scurrying whenever the road moved fast.
 //
 // The drawing is the engine's own sprite sheet (render/art.js is a pure string
 // module: no DOM, no state), so this is the same panda, hat and all.
@@ -35,6 +37,7 @@ import { blinkSvg, runBlink } from './panda-blink.js';
 const CELL = 48;              // the sheet is drawn at one sprite unit per CSS px
 // (the walker's size on the road is CSS's call: --road-marker-scale, whole numbers)
 const WALK = [0, 1, 2, 1];    // contact, dip, contact, dip
+const WALK_MS = 220;          // one walk cel: a full stride (4 cels) is 0.88 s
 const COL_IDLE = 1;           // legs together: a settled stand
 const COL_LEAP = 0;           // the contact stride, legs apart: reads as a leap in the air
 const SIT_DOWN = [12, 11, 10, 9]; // the stand-up cycle (7..12) run backwards from standing,
@@ -195,7 +198,7 @@ function start() {
       standing = true;
       return;
     }
-    const col = WALK[Math.floor(performance.now() / FRAME_MS) % WALK.length];
+    const col = WALK[Math.floor(performance.now() / WALK_MS) % WALK.length];
     showCel(col, heading === 'down' ? 'down' : 'up', false);
   }
 
