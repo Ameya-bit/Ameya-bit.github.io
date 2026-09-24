@@ -15,6 +15,15 @@
 // scrolling through it, and it lands either way. (It was scroll-scrubbed once:
 // the panda could be parked halfway, standing on the intro paragraph.)
 //
+// While it walks, the panda is pinned to the SCREEN (position: fixed), not
+// placed on the page. Placed on the page, a fast scroll left afterimages: the
+// browser scrolls the page, panda and all, on its own thread, and the script
+// only puts the panda back on the next frame, so every frame drew it twice, once
+// carried off and once returned. Walking, its place on the screen barely moves
+// (the road slides under it), so pinned there the browser holds it still and
+// the script only nudges it. At the two ends of the road, where it stands on the
+// page and the page carries it, it goes back to being placed on the page.
+//
 // The legs run on a clock (WALK_MS), not on distance covered: tied to
 // distance, a fast scroll made them a blur. The clock is the walk's own, slower
 // than the engine's cel beat (FRAME_MS, which the blink and the sit-down keep):
@@ -115,27 +124,43 @@ function start() {
     const marker = parseFloat(getComputedStyle(root).getPropertyValue('--road-marker-scale')) || 1;
     // jumpLine: the scroll at which the panda leaves the hero — a nudge of
     // scroll, or later if the head of the road would still be hidden under the
-    // fixed foot. s0: where the road starts to move under it. s1Wish: where it
-    // would like to reach the end (capped against the page's real length at
-    // render time, because late fonts and images change the document's height
-    // without resizing anything this module observes).
+    // fixed foot. s0Wish / s1Wish: where the road would like to start and stop
+    // moving under it, with the panda held at the ANCHOR line (both settled at
+    // render time by walkRange(), because late fonts and images change the
+    // document's height without resizing anything this module observes).
     const jumpLine = Math.max(JUMP_LINE_PX, rootTop + spine.y - (vh - LANDING_CLEAR_PX));
     geo = {
       marker,
+      rootLeft: r.left,     // the road's box, on the screen (sideways) and on the page
+      rootTop,
       hero: { cx: s.x + s.w / 2, cy: s.y + s.h / 2, scale: s.w / CELL },
       spineX: spine.x,
       spineTop: spine.y,
       spineBottom: spine.y + spine.h,
       jumpLine,
-      s0: Math.max(rootTop + spine.y - ANCHOR * vh, jumpLine + 1),
+      s0Wish: rootTop + spine.y - ANCHOR * vh,
       s1Wish: rootTop + spine.y + spine.h - ANCHOR * vh,
       nodes: eraEls.map((el) => rel(el).y + 12),
     };
   }
 
-  function endScroll() {
+  // The stretch of scroll the walk is spread over. It ends where the page runs
+  // out, if that comes before the wish; and it then STARTS earlier by the same
+  // amount, so the stretch stays as long as the road. One pixel of scroll, one
+  // pixel of road: the panda holds one place on the screen for the whole walk
+  // (lower than the anchor, on a short page), which is what lets the browser
+  // hold it still through a fast scroll. Squeezed into a shorter stretch it had
+  // to creep down the screen every frame, and each creep was an afterimage.
+  function walkRange() {
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    return Math.max(geo.s0 + 1, Math.min(geo.s1Wish, maxScroll - END_MARGIN_PX));
+    const road = geo.spineBottom - geo.spineTop;
+    const s1 = Math.min(geo.s1Wish, maxScroll - END_MARGIN_PX);
+    const s0 = Math.max(geo.jumpLine + 1, Math.min(geo.s0Wish, s1 - road));
+    return { s0, s1: Math.max(s0 + 1, s1) };
+  }
+
+  function endScroll() {
+    return walkRange().s1;
   }
 
   function showCel(col, rowName, flipped) {
@@ -156,7 +181,8 @@ function start() {
 
   function draw() {
     const y = window.scrollY;
-    const u = clamp01((y - geo.s0) / (endScroll() - geo.s0));
+    const { s0, s1 } = walkRange();
+    const u = clamp01((y - s0) / (s1 - s0));
     const roadY = lerp(geo.spineTop, geo.spineBottom, u);
 
     // Both ends of the leap are live: the road end moves as the page scrolls,
@@ -171,7 +197,11 @@ function start() {
     const snap = jump === 1 ? Math.round : (v) => v;
     const px = snap(lerp(geo.hero.cx, geo.spineX, e) - size / 2);
     const py = snap(lerp(geo.hero.cy, roadY, e) - arc - size / 2);
-    walker.style.transform = `translate(${px}px, ${py}px) scale(${scale})`;
+    const riding = jump === 1 && u > 0 && u < 1;
+    walker.classList.toggle('is-riding', riding);
+    walker.style.transform = riding
+      ? `translate(${Math.round(geo.rootLeft + px)}px, ${Math.round(geo.rootTop + py - y)}px) scale(${scale})`
+      : `translate(${px}px, ${py}px) scale(${scale})`;
 
     const feetY = py + size / 2;
     eraEls.forEach((el, i) => el.classList.toggle('is-passed', jump === 1 && feetY >= geo.nodes[i] - 1));
@@ -289,7 +319,7 @@ function start() {
 
   // for the console, and for measuring the thing without watching it
   window.__walk = {
-    get geo() { return geo && { ...geo, s1: endScroll() }; },
+    get geo() { return geo && { ...geo, ...walkRange() }; },
     get resting() { return resting; },
     get jump() { return jump; },
     walker,

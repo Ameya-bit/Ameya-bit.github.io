@@ -348,6 +348,9 @@ body:has(.road) #title-block-header { display: none; }
   z-index: 2;
 }
 .road-walker.is-flipped .road-sheet-flip { transform: scaleX(-1); }
+/* walking, it is pinned to the screen: the browser holds it still through a fast
+   scroll instead of the script chasing it (see panda-walk.js) */
+.road-walker.is-riding { position: fixed; }
 
 /* the lids: eight face-white pixels over the eyes, shown for one beat of a blink */
 .road-blink {
