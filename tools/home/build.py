@@ -185,18 +185,20 @@ def site_href(href: str) -> str:
 def foot_html(person: dict) -> str:
     """The link bar, and the few lines that fade it while a page is read.
 
-    The first link is the way back: "Home" on every page but the home page, and
-    "Back to start" there (the stylesheet shows one of the two). Off the home
+    The first link is the way back, and it is the name: to the home page from
+    every other page, to the top of the road on the home page itself (the
+    stylesheet shows one of the two). Off the home
     page the bar fades out while the reader scrolls down and returns when they
     scroll up, reach the end, or are at the top: the grammar the masthead name
     used to speak, before this bar replaced it (2026-09-23).
     """
+    name = web_text(person["name"])
     links = [f'  <a href="{site_href(l["href"])}">{web_text(l["label"])}</a>' for l in person["links"]]
     return "\n".join([
         GENERATED,
         '<nav class="site-foot" aria-label="Site">',
-        '  <a class="site-foot-home" href="/">Home</a>',
-        '  <a class="site-foot-top" href="#top">Back to start</a>',
+        f'  <a class="site-foot-home" href="/">{name}</a>',
+        f'  <a class="site-foot-top" href="#top">{name}</a>',
         *links,
         "</nav>",
         "<script>",

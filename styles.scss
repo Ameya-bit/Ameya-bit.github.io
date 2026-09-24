@@ -318,8 +318,8 @@ h3, .h3, h4, .h4 { font-weight: 500; }
 // The name that stood at the top of every page is gone; this bar replaced it,
 // on every page, the home page included. Its markup is generated from the
 // inventory (assets/site/site-foot.html, by tools/home/build.py). The first
-// link is the way back: "Home" everywhere but the home page, "Back to start"
-// there.
+// link is the way back, and it is the name: home from every other page, the
+// top of the road on the home page.
 //
 // Pinned to the bottom of the window and opaque behind its links, so no text
 // ever reads through them. Off the home page it fades out while the reader
