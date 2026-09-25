@@ -5,6 +5,7 @@
 <nav class="cv-pdfs" aria-label="Download the résumé">
   <a class="cv-pdf" href="../assets/Ameya_Panchal_Resume.pdf">Research<small>PDF</small></a>
   <a class="cv-pdf" href="../assets/Ameya_Panchal_Resume_Engineering.pdf">Engineering<small>PDF</small></a>
+  <a class="cv-pdf" href="../assets/Ameya_Panchal_CV.pdf">CV<small>PDF</small></a>
 </nav>
 ```
 
@@ -20,7 +21,7 @@
 </div>
 ```
 
-## Research
+## Research Experience
 
 ```{=html}
 <div class="cv-road">
@@ -29,8 +30,8 @@
   <p class="cv-head">Do Residual-Stream Probes Survive Degrading Chain-of-Thought Legibility?</p>
   <p class="cv-detail">SPAR · mentored by Marios Tsatsos, with two fellow mentees · PyTorch</p>
   <ul class="cv-points">
-    <li>Comparing three published readability scores for a model&#x27;s written reasoning on one set of traces, to find whether they agree</li>
-    <li>Testing whether classifiers on a model&#x27;s internal activations still catch harmful reasoning as that writing degrades</li>
+    <li>Finding borderline prompts to train an activation probe on, and replicating chain-of-thought illegibility</li>
+    <li>Testing what current chain-of-thought monitors miss, before settling on the project&#x27;s direction</li>
   </ul>
 </article>
 <article class="cv-entry has-thumb">
@@ -39,7 +40,7 @@
   <p class="cv-head"><a href="../posts/jlens-offset/">The J-lens offset is the model&#x27;s token frequency: z-scoring helps</a></p>
   <p class="cv-detail">Independent · PyTorch, jacobian-lens · Qwen3, Pythia, GPT-2, Gemma-2</p>
   <ul class="cv-points">
-    <li>Traced the per-token bias in a lens that reads a model&#x27;s internal activations as words to the model&#x27;s own word frequency (Spearman <b class="cv-fig">0.48</b>); subtracting it made readouts <b class="cv-fig">3.5–7×</b> <em>worse</em></li>
+    <li>Traced the per-token bias in a lens that reads a large language model&#x27;s internal activations as words to the model&#x27;s own word frequency (Spearman <b class="cv-fig">0.48</b>); subtracting it made readouts <b class="cv-fig">3.5–7×</b> <em>worse</em></li>
     <li>Replaced subtraction with z-scoring: recovered hidden secret words from fine-tuned models where the published method scored zero, and beat it <b class="cv-fig">0.805</b> to <b class="cv-fig">0.665</b> on Gemma-2-9B</li>
   </ul>
 </article>
@@ -111,6 +112,6 @@
 ## Skills
 
 ```{=html}
-<p class="cv-skill"><strong>ML &amp; Research</strong> Python, PyTorch, HuggingFace Transformers, TransformerLens, NumPy, scikit-learn, Monte Carlo simulation, Git</p>
-<p class="cv-skill"><strong>Interpretability</strong> Transformer circuits, OV/QK analysis, activation and path patching, direct logit attribution, Jacobian and logit lenses</p>
+<p class="cv-skill"><strong>Machine Learning</strong> Python, PyTorch, HuggingFace Transformers, TransformerLens, NumPy, scikit-learn, Monte Carlo simulation, Git</p>
+<p class="cv-skill"><strong>Mechanistic Interpretability</strong> Circuits, OV/QK analysis, activation and path patching, direct logit attribution, Jacobian and logit lenses</p>
 ```

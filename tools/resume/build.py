@@ -60,8 +60,9 @@ MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
 def format_dates(item: dict) -> str:
     """An item's start/end ("YYYY-MM") as the résumé prints a date range.
 
-    One month stands alone; a range inside one year names the year once; an
-    item with no end is still running.
+    One month stands alone; a range gives both ends their year ("Aug 2026 –
+    Sep 2026", never "Aug – Sep 2026": ATS parsers read a yearless start as
+    unknown and misjudge the duration); an item with no end is still running.
     """
     sy, sm = (int(x) for x in item["start"].split("-"))
     start = f"{MONTHS[sm - 1]} {sy}"
@@ -70,8 +71,6 @@ def format_dates(item: dict) -> str:
     ey, em = (int(x) for x in item["end"].split("-"))
     if (sy, sm) == (ey, em):
         return start
-    if sy == ey:
-        return f"{MONTHS[sm - 1]} – {MONTHS[em - 1]} {ey}"
     return f"{start} – {MONTHS[em - 1]} {ey}"
 
 
@@ -95,14 +94,64 @@ def resume_entry(item: dict, variant_names: tuple) -> dict:
             sys.exit(f"resume.toml: {item['id']} has web_link = {view['web_link']!r} but no such output")
         entry["web_url"] = f"../{target['path']}/"
         entry["web_folder"] = target["path"]
+    repos = [o["url"] for o in item.get("outputs", []) if o["kind"] == "repo"]
+    if repos and view.get("url") not in repos:   # a heading that is the repo says it already
+        entry["code"] = repos
     return entry
+
+
+def month_year(date: str) -> str:
+    """ "YYYY-MM" or "YYYY-MM-DD" -> "Aug 2026"."""
+    year, month = date.split("-")[:2]
+    return f"{MONTHS[int(month) - 1]} {year}"
+
+
+def author_list(authors: list) -> str:
+    if len(authors) < 3:
+        return " and ".join(authors)
+    return ", ".join(authors[:-1]) + ", and " + authors[-1]
+
+
+def outputs_of(inventory: dict, kind: str) -> list:
+    return [o for i in inventory["items"] for o in i.get("outputs", []) if o["kind"] == kind]
+
+
+def listed_lines(inventory: dict, title: str) -> list:
+    """The one-line rows of a section written from facts, not entries.
+
+    Publications and Presentations cite the items' paper and poster outputs,
+    newest first; Honors & Awards lists the items' awards in file order; References is
+    the CV's one sentence. Every other section has none. A line is text plus
+    the right-hand meta, and a url when its title links somewhere.
+    """
+    if title == "Publications":
+        papers = sorted(outputs_of(inventory, "paper"), key=lambda o: o["submitted"], reverse=True)
+        return [
+            {"text": f"{author_list(o['authors'])}. “{o['title']}.” *{o['venue']}*, {o['status']}.",
+             "meta": f"Submitted {month_year(o['submitted'])}"}
+            for o in papers
+        ]
+    if title == "Presentations":
+        posters = sorted(outputs_of(inventory, "poster"), key=lambda o: o["date"], reverse=True)
+        return [
+            {"text": f"{author_list(o['authors'])}. “{o['title']}.” Poster, {o['event']}, {o['place']}.",
+             "meta": month_year(o["date"]), "url": o.get("url")}
+            for o in posters
+        ]
+    if title == "Honors & Awards":
+        return [{"text": a["name"], "meta": a["when"]}
+                for i in inventory["items"] for a in i.get("awards", [])]
+    if title == "References":
+        return [{"text": inventory["resume"]["references"], "meta": ""}]
+    return []
 
 
 def resume_source(inventory: dict) -> dict:
     """The inventory, reshaped into the sections the résumé is built from.
 
     A new dict; the inventory is untouched. Entries keep the inventory's order
-    within their section. The Skills section is the `skills` rows.
+    within their section. The Skills section is the `skills` rows; the listed
+    sections (see listed_lines) are rows written from the items' facts.
     """
     settings = inventory["resume"]
     names = tuple(settings["variants"])
@@ -118,6 +167,7 @@ def resume_source(inventory: dict) -> dict:
             "title": title,
             "entries": [resume_entry(i, names) for i in on_resume if i["resume"]["section"] == title],
             "skills": inventory.get("skills", []) if title == "Skills" else [],
+            "lines": listed_lines(inventory, title),
         }
         for title in titles
     ]
@@ -156,10 +206,11 @@ def select(data: dict, variant: str) -> dict:
             "title": title,
             "entries": [view(e) for e in by_title[title].get("entries", []) if belongs(e)],
             "skills": [view(s) for s in by_title[title].get("skills", []) if belongs(s)],
+            "lines": by_title[title].get("lines", []),
         }
         for title in data["variants"][variant]["sections"]
     ]
-    return {**data, "sections": sections}
+    return {**data, "sections": sections, "variant": variant}
 
 
 # ---- a post's own picture ---------------------------------------------------
@@ -194,6 +245,7 @@ def tex_text(s: str) -> str:
     # Same treatment for ρ (a correlation), the résumé's other Greek letter.
     s = re.sub(r"ρ( = [\d.]+)?", lambda m: r"$\rho" + (m.group(1) or "") + "$", s)
     s = s.replace("−", "$-$").replace("×", r"$\times$")   # U+2212, U+00D7
+    s = s.replace("“", "``").replace("”", "''")
     s = s.replace(" · ", r"\sep ")
     s = s.replace("—", "---").replace("–", "--")
     # Interword (not sentence-ending) spaces after abbreviations the résumé uses.
@@ -214,6 +266,12 @@ def tex_url(s: str) -> str:
     return s
 
 
+def code_link(url: str) -> str:
+    """A repository URL, printed without its scheme and linked to itself."""
+    shown = tex_text(url.removeprefix("https://")).replace("_", r"\_")
+    return f"\\href{{{tex_url(url)}}}{{{shown}}}"
+
+
 def web_text(s: str) -> str:
     """Plain content string -> page HTML (unicode kept as itself)."""
     s = html.escape(s)
@@ -226,6 +284,11 @@ def web_text(s: str) -> str:
 def gen_tex(data: dict) -> str:
     out = []
 
+    # The document's own title and author, which ATS imports and file previews
+    # show in place of the filename.
+    doc = data["variants"][data["variant"]].get("doc", "Résumé")
+    out.append(f"\\hypersetup{{pdftitle={{{tex_text(data['name'])} {tex_text(doc)}}}, pdfauthor={{{tex_text(data['name'])}}}}}")
+
     out.append("%----------HEADING----------")
     out.append("\\begin{center}")
     out.append("  {\\sizeName\\bfseries " + tex_text(data["name"]) + "}\\\\[\\gapS]")
@@ -237,6 +300,14 @@ def gen_tex(data: dict) -> str:
         items.append(boxed)
     out.append("  {\\sizeContact\n    " + "\\sep\n    ".join(items) + "%\n  }")
     out.append("\\end{center}")
+
+    if data["variants"][data["variant"]].get("pages", 1) > 1:
+        # A document that turns a page carries its name and page number on each.
+        out.append("\\pagestyle{fancy}\\fancyhf{}\\renewcommand{\\headrulewidth}{0pt}")
+        out.append("\\setlength{\\footskip}{18pt}")
+        out.append("\\fancyfoot[C]{\\footnotesize " + tex_text(data["name"])
+                   + "\\sep " + tex_text(data["variants"][data["variant"]]["label"])
+                   + "\\sep \\thepage}")
 
     for sec in data["sections"]:
         out.append("\n\n%----------" + sec["title"].upper() + "----------")
@@ -254,11 +325,22 @@ def gen_tex(data: dict) -> str:
             out.append("\\entry")
             out.append(f"  {{{head}}}{{{tex_text(e.get('location', ''))}}}")
             out.append(f"  {{{tex_text(e['detail'])}}}{{{tex_text(e['dates'])}}}")
-            if e.get("bullets"):   # an empty itemize is a TeX error
+            code = e.get("code", []) if data["variants"][data["variant"]].get("code_links") else []
+            if e.get("bullets") or code:   # an empty itemize is a TeX error
                 out.append("\\begin{points}")
-                for b in e["bullets"]:
+                for b in e.get("bullets", []):
                     out.append("  \\item " + tex_text(b))
+                if code:
+                    links = ", ".join(code_link(u) for u in code)
+                    out.append("  \\item Code: " + links)
                 out.append("\\end{points}")
+
+        for ln in sec.get("lines", []):
+            text = tex_text(ln["text"])
+            if ln.get("url"):
+                # the title, between its quotes, is the link
+                text = re.sub(r"``(.+?)''", lambda m: f"``\\href{{{tex_url(ln['url'])}}}{{{m.group(1)}}}''", text)
+            out.append(f"\\listline{{{text}}}{{{tex_text(ln['meta'])}}}")
 
         if sec.get("skills"):
             out.append("")
@@ -342,7 +424,7 @@ def gen_web(data: dict) -> str:
     order = [page] + [v for v in data["variants"] if v != page]
     buttons = [
         f'  <a class="cv-pdf" href="../assets/{data["variants"][v]["pdf"]}">'
-        f'{web_text(data["variants"][v]["label"].capitalize())}<small>PDF</small></a>'
+        f'{web_text(data["variants"][v]["label"])}<small>PDF</small></a>'
         for v in order
     ]
     out = [
@@ -364,6 +446,9 @@ def gen_web(data: dict) -> str:
             for e in sec["entries"]:
                 out += entry_html(e)
             out.append("</div>")
+        for ln in sec.get("lines", []):
+            meta = f' <span class="cv-where">· {web_text(ln["meta"])}</span>' if ln["meta"] else ""
+            out.append(f'<p class="cv-line">{web_text(ln["text"])}{meta}</p>')
         for sk in sec.get("skills", []):
             out.append(
                 f'<p class="cv-skill"><strong>{web_text(sk["label"])}</strong> '
@@ -388,9 +473,16 @@ def build_pdf(data: dict, variant: str) -> None:
     if proc.returncode != 0:
         sys.stderr.write(proc.stdout[-3000:] + "\n" + proc.stderr[-1000:] + "\n")
         sys.exit(f"latexmk failed on {variant} — see log above")
+    # A résumé is one page; a variant may allow more with `pages`. Overflow is
+    # an error, not a surprise found later in the PDF.
+    log = (build_dir / f"{stem}.log").read_text(errors="replace")
+    pages = int(re.search(r"Output written on .*?\((\d+) pages?", log, flags=re.S).group(1))
+    allowed = data["variants"][variant].get("pages", 1)
+    if pages > allowed:
+        sys.exit(f"{variant}: {pages} pages, allowed {allowed}")
     out = ASSETS / data["variants"][variant]["pdf"]
     shutil.copy(build_dir / f"{stem}.pdf", out)
-    print(f"PDF ({variant}): {out.relative_to(ROOT)}")
+    print(f"PDF ({variant}): {out.relative_to(ROOT)} ({pages} page{'s' if pages > 1 else ''})")
 
 
 def main() -> None:
